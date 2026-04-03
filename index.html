@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NOLIX – E-Commerce Conversion Optimization Agent</title>
+  <meta name="description" content="AI-powered conversion optimization agent for e-commerce stores. Maximize purchase probability with smart popup offers based on visitor behavior." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #09090f;
+      --bg2: #0f0f1a;
+      --bg3: #13131f;
+      --card: #16161f;
+      --card2: #1c1c2e;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --accent: #7c3aed;
+      --accent2: #a855f7;
+      --accent3: #c084fc;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --sky: #0ea5e9;
+      --text: #f1f5f9;
+      --text2: #94a3b8;
+      --text3: #64748b;
+      --glow: rgba(124,58,237,0.35);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Background Orbs ── */
+    .orb-wrap { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.18;
+      animation: drift 18s ease-in-out infinite alternate;
+    }
+    .orb-1 { width: 600px; height: 600px; background: #7c3aed; top: -200px; left: -150px; animation-delay: 0s; }
+    .orb-2 { width: 400px; height: 400px; background: #0ea5e9; bottom: -100px; right: -80px; animation-delay: -5s; }
+    .orb-3 { width: 300px; height: 300px; background: #10b981; top: 40%; left: 60%; animation-delay: -10s; }
+    @keyframes drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(40px, -30px) scale(1.08); } }
+
+    /* ── Layout ── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* ── Header ── */
+    header {
+      padding: 28px 0 20px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(9,9,15,0.85);
+    }
+    .header-inner { display: flex; align-items: center; gap: 14px; }
+    .logo-icon {
+      width: 28px; height: 32px;
+      background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 4 L88 26 L50 48 L12 26 Z' fill='%23ff003c' /%3E%3Cpath d='M54 52 L92 30 L92 74 L54 96 Z' fill='%23ff003c' /%3E%3Cpath d='M46 52 L8 30 L8 74 L20 81 L20 54 L34 62 L34 89 L46 96 Z' fill='%23ff003c' /%3E%3C/svg%3E");
+      background-size: contain;
+      background-repeat: no-repeat;
+    }
+    .logo-text { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; }
+    .logo-text span { color: var(--accent3); }
+    .header-badge {
+      margin-left: auto;
+      padding: 5px 12px;
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--emerald);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .pulse { width: 7px; height: 7px; background: var(--emerald); border-radius: 50%; animation: pulse 1.5s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+
+    /* ── Hero ── */
+    .hero { padding: 60px 0 40px; text-align: center; }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px;
+      background: rgba(124,58,237,0.12);
+      border: 1px solid rgba(124,58,237,0.3);
+      border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+      color: var(--accent3);
+      margin-bottom: 24px;
+      letter-spacing: .05em; text-transform: uppercase;
+    }
+    .hero h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(32px, 6vw, 58px);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 18px;
+    }
+    .hero h1 span { background: linear-gradient(135deg, var(--accent2), #ec4899, var(--amber)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero p { color: var(--text2); font-size: 18px; max-width: 560px; margin: 0 auto 40px; line-height: 1.7; }
+
+    /* ── Stats Bar ── */
+    .stats-bar {
+      display: flex; gap: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 48px;
+    }
+    .stat {
+      flex: 1; padding: 20px 24px; text-align: center;
+      border-right: 1px solid var(--border);
+      transition: background .2s;
+    }
+    .stat:last-child { border-right: none; }
+    .stat:hover { background: var(--card2); }
+    .stat-num { font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; color: var(--accent3); }
+    .stat-label { font-size: 12px; color: var(--text3); margin-top: 3px; text-transform: uppercase; letter-spacing: .06em; }
+
+    /* ── Main Grid ── */
+    .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 48px; }
+    @media(max-width:768px) { .main-grid { grid-template-columns: 1fr; } .stats-bar { flex-direction: column; } .stat { border-right: none; border-bottom: 1px solid var(--border); } }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .card:hover { border-color: var(--border2); box-shadow: 0 8px 40px rgba(124,58,237,0.1); }
+    .card-title {
+      font-size: 13px; font-weight: 600; color: var(--text2);
+      text-transform: uppercase; letter-spacing: .08em;
+      margin-bottom: 20px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-title-icon { font-size: 16px; }
+
+    /* ── Form ── */
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 8px; }
+    .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    select, input[type=number] {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      appearance: none;
+      cursor: pointer;
+    }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%2364748b' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; background-size: 18px; padding-right: 36px; }
+    select:focus, input[type=number]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,58,237,0.2); }
+    select option { background: #1c1c2e; }
+
+    /* Sliders */
+    .slider-wrap { display: flex; align-items: center; gap: 12px; }
+    input[type=range] {
+      flex: 1; -webkit-appearance: none; height: 5px;
+      background: var(--bg2); border-radius: 4px; outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px;
+      border-radius: 50%; background: var(--accent2);
+      cursor: pointer; box-shadow: 0 0 10px rgba(168,85,247,0.5);
+      transition: transform .15s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    .slider-val {
+      min-width: 46px; text-align: right;
+      font-size: 14px; font-weight: 600; color: var(--accent3);
+    }
+
+    /* Cards for radio */
+    .radio-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .radio-card { position: relative; }
+    .radio-card input { position: absolute; opacity: 0; pointer-events: none; }
+    .radio-card label {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; padding: 12px 8px; border-radius: 10px;
+      background: var(--bg2); border: 1px solid var(--border);
+      cursor: pointer; transition: all .2s;
+      text-align: center; font-size: 12px; font-weight: 500; color: var(--text2);
+    }
+    .radio-card label .ri { font-size: 20px; }
+    .radio-card input:checked + label {
+      border-color: var(--accent); background: rgba(124,58,237,0.12); color: var(--text);
+    }
+    .radio-card label:hover { border-color: var(--border2); }
+
+    /* ── CTA Button ── */
+    .btn-analyze {
+      width: 100%; padding: 16px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: 12px;
+      color: #fff; font-family: inherit; font-size: 16px; font-weight: 700;
+      cursor: pointer; letter-spacing: .02em;
+      transition: transform .15s, box-shadow .15s, opacity .15s;
+      box-shadow: 0 4px 24px var(--glow);
+      margin-top: 8px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-analyze:hover { transform: translateY(-2px); box-shadow: 0 8px 32px var(--glow); }
+    .btn-analyze:active { transform: translateY(0); }
+    .btn-analyze:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result Panel ── */
+    #result-panel { display: none; }
+    .result-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .intent-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    .intent-low    { background: rgba(244,63,94,.12); color: var(--rose);    border: 1px solid rgba(244,63,94,.3); }
+    .intent-medium { background: rgba(245,158,11,.12); color: var(--amber);  border: 1px solid rgba(245,158,11,.3); }
+    .intent-high   { background: rgba(16,185,129,.12);  color: var(--emerald);border: 1px solid rgba(16,185,129,.3); }
+
+    .decision-json {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text2);
+      margin-bottom: 20px;
+      white-space: pre-wrap;
+    }
+    .json-key   { color: var(--accent3); }
+    .json-str   { color: var(--emerald); }
+    .json-bool  { color: var(--sky); }
+    .json-num   { color: var(--amber); }
+
+    /* Popup preview */
+    .popup-preview-wrap {
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+    }
+    .preview-label { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+    .popup-preview {
+      border-radius: 18px;
+      padding: 28px 32px;
+      position: relative;
+      overflow: hidden;
+      animation: popIn .45s cubic-bezier(.34,1.56,.64,1);
+      display: none;
+    }
+    @keyframes popIn { from{opacity:0;transform:scale(.85) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
+    .popup-preview::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: inherit;
+      z-index: -1;
+    }
+    .popup-tag {
+      display: inline-block;
+      padding: 4px 10px; border-radius: 6px;
+      font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; margin-bottom: 12px;
+    }
+    .popup-headline {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 22px; font-weight: 700;
+      line-height: 1.25; margin-bottom: 8px;
+    }
+    .popup-sub { font-size: 14px; opacity: .85; line-height: 1.6; margin-bottom: 18px; }
+    .popup-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; border-radius: 10px;
+      font-weight: 700; font-size: 14px; cursor: pointer;
+      border: none; font-family: inherit;
+      transition: transform .15s, filter .15s;
+    }
+    .popup-cta:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    .popup-timer { font-size: 12px; margin-top: 12px; opacity: .7; font-weight: 500; }
+
+    /* Theme: discount */
+    .theme-discount { background: linear-gradient(135deg, #1a0a2e 0%, #2d1458 100%); border: 1px solid rgba(168,85,247,.3); }
+    .theme-discount .popup-tag  { background: rgba(168,85,247,.2); color: #c084fc; }
+    .theme-discount .popup-cta  { background: linear-gradient(135deg,#7c3aed,#a855f7); color:#fff; }
+
+    /* Theme: free-shipping */
+    .theme-shipping { background: linear-gradient(135deg, #0a1a2e 0%, #0c2a49 100%); border: 1px solid rgba(14,165,233,.3); }
+    .theme-shipping .popup-tag  { background: rgba(14,165,233,.15); color: #38bdf8; }
+    .theme-shipping .popup-cta  { background: linear-gradient(135deg,#0369a1,#0ea5e9); color:#fff; }
+
+    /* Theme: bundle */
+    .theme-bundle { background: linear-gradient(135deg, #0a1a10 0%, #0e2918 100%); border: 1px solid rgba(16,185,129,.3); }
+    .theme-bundle .popup-tag  { background: rgba(16,185,129,.12); color: #34d399; }
+    .theme-bundle .popup-cta  { background: linear-gradient(135deg,#059669,#10b981); color:#fff; }
+
+    /* Theme: urgency */
+    .theme-urgency { background: linear-gradient(135deg, #1f0a0a 0%, #3d1515 100%); border: 1px solid rgba(244,63,94,.3); }
+    .theme-urgency .popup-tag  { background: rgba(244,63,94,.12); color: #fb7185; }
+    .theme-urgency .popup-cta  { background: linear-gradient(135deg,#be123c,#f43f5e); color:#fff; }
+
+    /* Impact bar */
+    .impact-section { margin-top: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .impact-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; text-align: center;
+    }
+    .impact-val { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; }
+    .impact-lbl { font-size: 11px; color: var(--text3); margin-top: 3px; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* Reasoning */
+    .reasoning-box {
+      background: rgba(124,58,237,0.07);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text2);
+      margin-top: 20px;
+    }
+    .reasoning-box strong { color: var(--accent3); font-weight: 600; }
+
+    /* ── History ── */
+    .history-section { margin-bottom: 60px; }
+    .section-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 20px; font-weight: 700;
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .history-item {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px;
+      cursor: pointer; transition: all .2s;
+      animation: fadeUp .3s ease;
+    }
+    .history-item:hover { border-color: var(--border2); transform: translateY(-2px); }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .history-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .history-offer { font-size: 13px; font-weight: 700; color: var(--accent3); }
+    .history-ts   { font-size: 11px; color: var(--text3); }
+    .history-msg  { font-size: 13px; color: var(--text2); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .history-tags { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+    .htag { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: .04em; }
+
+    /* No-popup state */
+    .no-popup-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px; padding: 40px;
+      background: var(--bg2); border: 1px dashed var(--border2);
+      border-radius: 16px; text-align: center; color: var(--text3);
+      font-size: 14px;
+    }
+    .no-popup-state span { font-size: 40px; }
+
+    /* Footer */
+    footer { border-top: 1px solid var(--border); padding: 28px 0; text-align: center; color: var(--text3); font-size: 13px; }
+  </style>
+</head>
+<body>
+<div class="orb-wrap">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="logo-icon"></div>
+      <div class="logo-text">NOLIX<span style="color:#ff003c">X</span></div>
+      <div class="header-badge">
+        <div class="pulse"></div>
+        AI Agent Active
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">⚡ Revenue Optimization Engine</div>
+    <h1>Convert More Visitors<br/>Into <span>Paying Customers</span></h1>
+    <p>AI-driven behavioral analysis that detects purchase intent and deploys perfectly-timed, personalized offers to maximize conversion rate.</p>
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-num" id="total-analyzed">0</div><div class="stat-label">Sessions Analyzed</div></div>
+      <div class="stat"><div class="stat-num" id="total-shown">0</div><div class="stat-label">Offers Deployed</div></div>
+      <div class="stat"><div class="stat-num" id="show-rate">0%</div><div class="stat-label">Offer Rate</div></div>
+      <div class="stat"><div class="stat-num" id="top-offer">—</div><div class="stat-label">Top Offer Type</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MAIN ── -->
+<div class="container">
+  <div class="main-grid">
+
+    <!-- ── INPUT CARD ── -->
+    <div class="card">
+      <div class="card-title"><span class="card-title-icon">📊</span> Session Data Input</div>
+
+      <!-- Time on site -->
+      <div class="form-group">
+        <label for="time-on-site">Time on Site</label>
+        <div class="slider-wrap">
+          <input type="range" id="time-on-site" min="0" max="600" value="90" step="5" oninput="updateSlider('time-on-site','time-val', v => v+'s')"/>
+          <div class="slider-val" id="time-val">90s</div>
+        </div>
+      </div>
+
+      <!-- Pages viewed -->
+      <div class="form-group">
+        <label for="pages-viewed">Pages Viewed</label>
+        <div class="slider-wrap">
+          <input type="range" id="pages-viewed" min="1" max="20" value="4" oninput="updateSlider('pages-viewed','pages-val', v => v+' pages')"/>
+          <div class="slider-val" id="pages-val">4 pages</div>
+        </div>
+      </div>
+
+      <!-- Traffic & Cart -->
+      <div class="input-row">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Traffic Source</label>
+          <select id="traffic-source">
+            <option value="organic">🌱 Organic</option>
+            <option value="paid_ads" selected>🎯 Paid Ads</option>
+            <option value="direct">🔗 Direct</option>
+            <option value="email">📧 Email</option>
+            <option value="social">📱 Social</option>
+            <option value="referral">🤝 Referral</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Cart Status</label>
+          <select id="cart-status">
+            <option value="empty">🛒 Empty</option>
+            <option value="added" selected>➕ Item Added</option>
+            <option value="checkout">💳 Checkout Started</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Device -->
+      <div class="form-group" style="margin-top:18px">
+        <label>Device Type</label>
+        <div class="radio-cards">
+          <div class="radio-card">
+            <input type="radio" name="device" id="dev-desktop" value="desktop" checked/>
+            <label for="dev-desktop"><span class="ri">🖥️</span>Desktop</label>
+          </div>
+          <div class="radio-card">
+            <input type="radio" name="device" id="dev-mobile" value="mobile"/>
+            <label for="dev-mobile"><span class="ri">📱</span>Mobile</label>
+          </div>
+          <div class="radio-card">
+            <input type="radio" name="device" id="dev-tablet" value="tablet"/>
+            <label for="dev-tablet"><span class="ri">📟</span>Tablet</label>
+          </div>
+          <div class="radio-card">
+            <input type="radio" name="device" id="dev-smart" value="smart_tv"/>
+            <label for="dev-smart"><span class="ri">📺</span>Smart TV</label>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-analyze" id="analyze-btn" onclick="runAgent()">
+        <div class="spinner" id="spinner"></div>
+        <span id="btn-text">🚀 Analyze & Generate Offer</span>
+      </button>
+    </div>
+
+    <!-- ── RESULT CARD ── -->
+    <div class="card" id="result-panel">
+      <div class="card-title"><span class="card-title-icon">🧠</span> AI Decision</div>
+
+      <div class="result-header">
+        <span id="intent-badge" class="intent-badge intent-low">Low Intent</span>
+        <span id="show-popup-pill" style="font-size:13px;color:var(--text3)"></span>
+      </div>
+
+      <div id="json-output" class="decision-json"></div>
+
+      <div class="popup-preview-wrap">
+        <div class="preview-label">Live Popup Preview</div>
+        <div id="popup-preview" class="popup-preview"></div>
+        <div id="no-popup" class="no-popup-state">
+          <span>🚫</span>
+          No popup will be shown<br/>
+          <small>Visitor intent too low – focus on trust building</small>
+        </div>
+      </div>
+
+      <div class="impact-section" id="impact-cards"></div>
+      <div class="reasoning-box" id="reasoning-box"></div>
+    </div>
+
+    <!-- ── PLACEHOLDER CARD when no result ── -->
+    <div class="card" id="placeholder-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;padding:48px;">
+      <div style="font-size:56px;filter:drop-shadow(0 0 20px rgba(124,58,237,.5))">🤖</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;">Awaiting Session Data</div>
+      <div style="color:var(--text3);font-size:14px;line-height:1.6;max-width:280px;">Fill in the visitor session data on the left and click <strong style="color:var(--accent3)">Analyze</strong> to get an AI-optimized offer decision.</div>
+      <div style="margin-top:8px;padding:12px 20px;background:rgba(124,58,237,.1);border:1px dashed rgba(124,58,237,.3);border-radius:10px;font-size:13px;color:var(--accent3)">
+        💡 Intent scored across 8 behavioral dimensions
+      </div>
+    </div>
+  </div>
+
+  <!-- ── HISTORY ── -->
+  <div class="history-section">
+    <div class="section-title">📜 Session History <span style="font-size:14px;font-weight:500;color:var(--text3);" id="history-count"></span></div>
+    <div class="history-grid" id="history-grid">
+      <div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:30px;font-size:14px;">
+        🎯 No sessions analyzed yet. Run your first analysis above.
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="container">NOLIX &bull; AI-Powered Conversion Optimization &bull; Built for E-Commerce Revenue Growth</div>
+</footer>
+
+<script>
+  // ── State ──
+  const history = [];
+  const offerCounts = {};
+
+  function updateSlider(id, valId, fmt) {
+    const v = document.getElementById(id).value;
+    document.getElementById(valId).textContent = fmt(+v);
+  }
+
+  // ── Core Agent Logic ──
+  function computeIntent(session) {
+    let score = 0;
+
+    // Time on site (0-25 pts)
+    if (session.time >= 300)      score += 25;
+    else if (session.time >= 120) score += 16;
+    else if (session.time >= 60)  score += 8;
+    else if (session.time >= 30)  score += 3;
+
+    // Pages viewed (0-20 pts)
+    if (session.pages >= 10)     score += 20;
+    else if (session.pages >= 6) score += 14;
+    else if (session.pages >= 3) score += 8;
+    else                          score += 2;
+
+    // Cart status (0-35 pts)
+    if (session.cart === 'checkout')  score += 35;
+    else if (session.cart === 'added') score += 20;
+
+    // Traffic source (0-15 pts)
+    const srcMap = { paid_ads: 15, email: 14, direct: 12, referral: 10, social: 8, organic: 6 };
+    score += (srcMap[session.source] || 5);
+
+    // Device (0-5 pts)
+    if (session.device === 'desktop') score += 5;
+    else if (session.device === 'tablet') score += 3;
+    else if (session.device === 'mobile') score += 1;
+
+    return Math.min(100, score);
+  }
+
+  function classifyIntent(score) {
+    if (score >= 60) return 'high';
+    if (score >= 30) return 'medium';
+    return 'low';
+  }
+
+  function shouldShowPopup(session, score) {
+    // Don't show too early
+    if (session.time < 20) return false;
+    if (session.pages < 2) return false;
+    // Low intent — no popup
+    if (score < 28) return false;
+    return true;
+  }
+
+  function selectOffer(session, intent, score) {
+    if (intent === 'high') {
+      if (session.cart === 'checkout') return 'urgency';
+      if (session.cart === 'added')    return score >= 80 ? 'urgency' : 'discount-15';
+      return 'discount-10';
+    }
+    if (intent === 'medium') {
+      if (session.source === 'paid_ads' || session.source === 'email') return 'discount-10';
+      if (session.cart === 'added') return 'bundle';
+      return 'free_shipping';
+    }
+    // medium-low (score 28-29 edge)
+    return 'free_shipping';
+  }
+
+  function buildMessage(offer, session) {
+    const productEmoji = ['👟','👜','📦','🎧','✨','🏔️','🎮','💎'][Math.floor(Math.random()*8)];
+    const firstName = ['Alex','Jordan','Sam','Riley','Taylor','Morgan'][Math.floor(Math.random()*6)];
+
+    const msgs = {
+      'urgency': {
+        tag: '⏰ Limited Time',
+        headline: 'Your Cart Is About To Expire!',
+        sub: `You're so close to completing your order. Only <strong>${3 + Math.floor(Math.random()*10)}</strong> items left in stock — act now before someone else grabs yours.`,
+        cta: '✔ Complete My Order Now',
+        timer: `🔥 ${7+Math.floor(Math.random()*6)} people are viewing this right now`
+      },
+      'discount-5': {
+        tag: '🎁 Exclusive Offer',
+        headline: 'Here is 5% Off, Just For You',
+        sub: `Looks like you're exploring — here's a little nudge. Use code <strong>SAVE5</strong> at checkout. Valid for the next 18 minutes.`,
+        cta: '→ Claim 5% Discount',
+        timer: ''
+      },
+      'discount-10': {
+        tag: '💰 Special Offer',
+        headline: 'Enjoy 10% Off Your Order',
+        sub: `We noticed you're interested in some great products. Use code <strong>TAKE10</strong> to save 10% right now. Limited-time offer!`,
+        cta: '💳 Apply 10% Off Now',
+        timer: `⌛ Offer expires in 15 minutes`
+      },
+      'discount-15': {
+        tag: '🔥 Flash Deal',
+        headline: 'Take 15% Off — Today Only!',
+        sub: `Big intent, big reward! Use code <strong>FLASH15</strong> at checkout and save 15%. This exclusive deal disappears at midnight.`,
+        cta: '🛒 Grab 15% Off Now',
+        timer: `🕛 Deal resets at midnight`
+      },
+      'free_shipping': {
+        tag: '🚚 Free Shipping',
+        headline: 'Free Shipping On Your Order!',
+        sub: `Skip the shipping fee entirely — for the next 20 minutes your order ships completely free, no minimum. Just add to cart and checkout.`,
+        cta: '📦 Get Free Shipping',
+        timer: `✈ Ships within 24 hours`
+      },
+      'bundle': {
+        tag: '🎁 Bundle Deal',
+        headline: `Buy 2, Get the 3rd at 50% Off`,
+        sub: `You've already found something you love — why not make it even better? Mix and match anything in your cart for our exclusive bundle deal.`,
+        cta: '➕ Add More & Save',
+        timer: `🎁 Automatically applied at checkout`
+      }
+    };
+
+    return msgs[offer] || msgs['discount-10'];
+  }
+
+  function offerTheme(offer) {
+    if (offer === 'urgency')         return 'theme-urgency';
+    if (offer === 'free_shipping')   return 'theme-shipping';
+    if (offer === 'bundle')          return 'theme-bundle';
+    return 'theme-discount';
+  }
+
+  function offerLabel(offer) {
+    const m = {
+      'urgency':'Urgency Message','discount-5':'5% Discount','discount-10':'10% Discount',
+      'discount-15':'15% Discount','free_shipping':'Free Shipping','bundle':'Bundle Deal'
+    };
+    return m[offer] || offer;
+  }
+
+  function expectedImpact(intent, offer, session) {
+    if (intent === 'high') {
+      return { level:'High', cvr:'+18–32%', rev:'+25–40%', confidence:'92%' };
+    }
+    if (intent === 'medium') {
+      if (offer === 'free_shipping') return { level:'Medium', cvr:'+8–16%', rev:'+10–20%', confidence:'78%' };
+      return { level:'Medium', cvr:'+10–20%', rev:'+15–28%', confidence:'82%' };
+    }
+    return { level:'Low', cvr:'+3–8%', rev:'+4–10%', confidence:'61%' };
+  }
+
+  function buildReasoning(session, score, intent, offer, show) {
+    if (!show) {
+      return `<strong>No Offer Deployed.</strong> Visitor intent score is <strong>${score}/100</strong> — below the activation threshold. Showing an offer at this stage risks being annoying or appearing desperate. Instead, focus on <strong>building trust</strong>: show social proof, review ratings, and clear product benefits to nurture this visitor for a future conversion.`;
+    }
+    const intentDesc = {
+      high: `The visitor has a <strong>high intent score of ${score}/100</strong>. They've spent significant time, browsed multiple pages, and their cart status confirms they are ready to buy.`,
+      medium: `The visitor shows <strong>medium purchase intent (${score}/100)</strong>. They're engaged but haven't fully committed — a well-timed incentive should tip them over the edge.`,
+      low: `Despite a low intent score (${score}/100), the visitor is spending enough time and viewing enough pages to justify a soft, trust-based nudge.`
+    };
+    const sourceNote = session.source === 'paid_ads' ? ' Paid ad traffic has higher commitment expectations, reinforcing offer aggressiveness.' :
+                       session.source === 'email' ? ' Email traffic indicates prior brand familiarity — personalized offers convert well here.' : '';
+    const cartNote = session.cart === 'checkout' ? ' A checkout-started cart signals very high commitment — urgency is the best lever.' :
+                     session.cart === 'added' ? ' Cart with item added confirms product interest — a discount or bundle seals the deal.' : '';
+    return `${intentDesc[intent || 'medium']}${sourceNote}${cartNote} The AI selected <strong>"${offerLabel(offer)}"</strong> as the highest-probability conversion mechanism for this behavioral profile.`;
+  }
+
+  function syntaxHighlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return str.replace(/("[\w_]+")\s*:/g, '<span class="json-key">$1</span>:')
+              .replace(/:\s*(".*?")/g, ': <span class="json-str">$1</span>')
+              .replace(/:\s*(true|false)/g, ': <span class="json-bool">$&</span>'.replace('$&', (m, p1) => `: <span class="json-bool">${p1}</span>`))
+              .replace(/true|false/g, m => `<span class="json-bool">${m}</span>`)
+              .replace(/:\s*(\d+\.?\d*)/g, (m, n) => `: <span class="json-num">${n}</span>`);
+  }
+
+  async function runAgent() {
+    const btn = document.getElementById('analyze-btn');
+    const spinner = document.getElementById('spinner');
+    const btnText = document.getElementById('btn-text');
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    btnText.textContent = 'Analyzing…';
+
+    // Simulate async AI processing
+    await new Promise(r => setTimeout(r, 900 + Math.random() * 600));
+
+    const session = {
+      time:   +document.getElementById('time-on-site').value,
+      pages:  +document.getElementById('pages-viewed').value,
+      source: document.getElementById('traffic-source').value,
+      cart:   document.getElementById('cart-status').value,
+      device: document.querySelector('input[name=device]:checked').value,
+    };
+
+    const score  = computeIntent(session);
+    const intent = classifyIntent(score);
+    const show   = shouldShowPopup(session, score);
+    const offer  = show ? selectOffer(session, intent, score) : null;
+    const msgData = show ? buildMessage(offer, session) : null;
+    const impact  = show ? expectedImpact(intent, offer, session) : null;
+    const reasoning = buildReasoning(session, score, intent, offer, show);
+
+    const outputObj = {
+      show_popup: show,
+      offer_type: show ? offerLabel(offer) : null,
+      message:    show ? msgData.headline + ' — ' + msgData.sub.replace(/<[^>]+>/g,'') : null,
+      intent_level: intent,
+      intent_score: score,
+      expected_impact: show ? impact.level : null,
+      reasoning: reasoning.replace(/<[^>]+>/g,''),
+    };
+
+    // Update stats
+    history.unshift({ session, score, intent, show, offer, msg: msgData, impact, ts: new Date() });
+    updateStats();
+    renderHistory();
+
+    // Show result panel
+    document.getElementById('placeholder-panel').style.display = 'none';
+    const rp = document.getElementById('result-panel');
+    rp.style.display = 'block';
+
+    // Intent badge
+    const badge = document.getElementById('intent-badge');
+    badge.className = 'intent-badge intent-' + intent;
+    badge.textContent = (intent.charAt(0).toUpperCase() + intent.slice(1)) + ' Intent — ' + score + '/100';
+
+    document.getElementById('show-popup-pill').textContent = show ? '✅ Offer will be shown' : '⛔ No offer';
+
+    // JSON
+    document.getElementById('json-output').innerHTML = syntaxHighlightJSON(outputObj);
+
+    // Popup preview
+    const pp = document.getElementById('popup-preview');
+    const np = document.getElementById('no-popup');
+    if (show) {
+      pp.className = 'popup-preview ' + offerTheme(offer);
+      pp.style.display = 'block';
+      np.style.display  = 'none';
+      pp.innerHTML = `
+        <div class="popup-tag">${msgData.tag}</div>
+        <div class="popup-headline">${msgData.headline}</div>
+        <div class="popup-sub">${msgData.sub}</div>
+        <button class="popup-cta">${msgData.cta}</button>
+        ${msgData.timer ? `<div class="popup-timer">${msgData.timer}</div>` : ''}
+      `;
+    } else {
+      pp.style.display = 'none';
+      np.style.display = 'flex';
+    }
+
+    // Impact cards
+    const ic = document.getElementById('impact-cards');
+    if (show && impact) {
+      ic.innerHTML = `
+        <div class="impact-card"><div class="impact-val" style="color:var(--emerald)">${impact.cvr}</div><div class="impact-lbl">CVR Lift</div></div>
+        <div class="impact-card"><div class="impact-val" style="color:var(--sky)">${impact.rev}</div><div class="impact-lbl">Revenue Lift</div></div>
+        <div class="impact-card"><div class="impact-val" style="color:var(--accent3)">${impact.confidence}</div><div class="impact-lbl">Confidence</div></div>
+      `;
+    } else {
+      ic.innerHTML = `
+        <div class="impact-card"><div class="impact-val" style="color:var(--rose)">Trust</div><div class="impact-lbl">Strategy</div></div>
+        <div class="impact-card"><div class="impact-val" style="color:var(--amber)">Nurture</div><div class="impact-lbl">Approach</div></div>
+        <div class="impact-card"><div class="impact-val" style="color:var(--text3)">Low</div><div class="impact-lbl">Expected Impact</div></div>
+      `;
+    }
+
+    // Reasoning
+    document.getElementById('reasoning-box').innerHTML = `<strong>🧠 AI Reasoning:</strong><br/><br/>${reasoning}`;
+
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    btnText.textContent = '🚀 Analyze & Generate Offer';
+
+    // Scroll to result on mobile
+    if (window.innerWidth < 769) rp.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function updateStats() {
+    const total  = history.length;
+    const shown  = history.filter(h => h.show).length;
+    const rate   = total ? Math.round((shown / total) * 100) : 0;
+
+    document.getElementById('total-analyzed').textContent = total;
+    document.getElementById('total-shown').textContent    = shown;
+    document.getElementById('show-rate').textContent      = rate + '%';
+
+    // Top offer
+    const counts = {};
+    history.filter(h => h.show && h.offer).forEach(h => { counts[h.offer] = (counts[h.offer]||0)+1; });
+    const top = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
+    document.getElementById('top-offer').textContent = top ? offerLabel(top[0]).split(' ')[0] : '—';
+  }
+
+  function renderHistory() {
+    const grid = document.getElementById('history-grid');
+    document.getElementById('history-count').textContent = `(${history.length})`;
+    if (!history.length) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text3);padding:30px;font-size:14px;">No sessions yet.</div>'; return; }
+    grid.innerHTML = history.slice(0, 12).map(h => {
+      const intentColor = { high: 'var(--emerald)', medium: 'var(--amber)', low: 'var(--rose)' }[h.intent];
+      const intentBg    = { high: 'rgba(16,185,129,.1)', medium: 'rgba(245,158,11,.1)', low: 'rgba(244,63,94,.1)' }[h.intent];
+      const timeStr = h.ts.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+      const preview = h.show ? (h.msg.headline.substring(0,50) + '…') : 'No offer shown – trust building phase';
+      const offerStr = h.show ? offerLabel(h.offer) : 'No Offer';
+      return `
+        <div class="history-item">
+          <div class="history-top">
+            <span class="history-offer">${offerStr}</span>
+            <span class="history-ts">${timeStr}</span>
+          </div>
+          <div class="history-msg">${preview}</div>
+          <div class="history-tags">
+            <span class="htag" style="background:${intentBg};color:${intentColor}">${h.intent} intent</span>
+            <span class="htag" style="background:rgba(255,255,255,.05);color:var(--text3)">${h.session.cart.replace('_',' ')}</span>
+            <span class="htag" style="background:rgba(255,255,255,.05);color:var(--text3)">${h.session.source.replace('_',' ')}</span>
+            <span class="htag" style="background:rgba(124,58,237,.1);color:var(--accent3)">${h.score}/100</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // Init sliders
+  updateSlider('time-on-site', 'time-val', v => v + 's');
+  updateSlider('pages-viewed', 'pages-val', v => v + ' pages');
+</script>
+</body>
+</html>
