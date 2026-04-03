@@ -1,24 +1,32 @@
 {
-  "name": "project-3",
+  "name": "nolix-project-3",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "worker": "tsx worker/index.ts",
+    "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "next": "16.1.6",
+    "openai": "^4.91.0",
+    "pg": "^8.16.3",
+    "pg-boss": "^10.3.3",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pg": "^8.15.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "tsx": "^4.20.5",
     "typescript": "^5"
   }
 }
