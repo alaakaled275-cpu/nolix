@@ -11,7 +11,11 @@ function replaceColors(filePath) {
   
   // Replace references to ConvertAI with NOLIX
   content = content.replace(/ConvertAI/g, 'NOLIX');
+<<<<<<< HEAD
+  content = content.replace(/Convert/g, 'NOLIX');
+=======
   content = content.replace(/Convert/g, 'NOLI');
+>>>>>>> 30df60f2d864362de216379899d6f113d208f3ec
   content = content.replace(/🎯 <span>NOLI<\/span>AI/g, '<span className={styles.logoIcon}></span> NOLIX');
 
   // Add the grid styles to the CSS file
