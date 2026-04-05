@@ -10,9 +10,12 @@ type MetricsRollupJob = { tenantId: string };
 
 function pgConnectionString() {
   const env = getEnv();
-  const user = encodeURIComponent(env.PGUSER);
-  const pass = encodeURIComponent(env.PGPASSWORD);
-  return `postgres://${user}:${pass}@${env.PGHOST}:${env.PGPORT}/${env.PGDATABASE}`;
+  const user = encodeURIComponent(env.PGUSER ?? "");
+  const pass = encodeURIComponent(env.PGPASSWORD ?? "");
+  const host = env.PGHOST ?? "localhost";
+  const port = env.PGPORT ?? "5432";
+  const db   = env.PGDATABASE ?? "";
+  return `postgres://${user}:${pass}@${host}:${port}/${db}`;
 }
 
 async function callN8nWebhook(path: string, body: unknown): Promise<void> {

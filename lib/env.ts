@@ -4,12 +4,20 @@ const envSchema = z.object({
   NODE_ENV: z.string().optional(),
   PORT: z.string().optional(),
 
-  PGHOST: z.string().min(1),
-  PGPORT: z.string().min(1).default("5432"),
-  PGDATABASE: z.string().min(1),
-  PGUSER: z.string().min(1),
-  PGPASSWORD: z.string().min(1),
+  PGHOST: z.string().optional(),
+  PGPORT: z.string().optional().default("5432"),
+  PGDATABASE: z.string().optional(),
+  PGUSER: z.string().optional(),
+  PGPASSWORD: z.string().optional(),
 
+  GROQ_CHAT_KEY: z.string().optional(),
+  GROQ_CHAT_MODEL: z.string().optional(),
+  GROQ_ANALYZE_KEY: z.string().optional(),
+  GROQ_ANALYZE_MODEL: z.string().optional(),
+  GROQ_OPS_KEY: z.string().optional(),
+  GROQ_OPS_MODEL: z.string().optional(),
+  AI_BASE_URL: z.string().optional(),
+  // Legacy fallback
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().optional(),
 

@@ -217,19 +217,22 @@ Visitor context: ${s.time_on_site}s on site, ${s.pages_viewed} pages, source: ${
 Friction: ${ctx.friction}, Intent level: ${ctx.intent_level}
 A/B Variant: ${variant}`;
 
-  if (!env.OPENAI_API_KEY) throw new Error("No OpenAI key");
+  if (!env.GROQ_OPS_KEY && !env.OPENAI_API_KEY) throw new Error("No Ops API key");
 
-  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  const client = new OpenAI({ 
+    apiKey: env.GROQ_OPS_KEY ?? env.OPENAI_API_KEY!,
+    baseURL: env.AI_BASE_URL ?? "https://api.groq.com/openai/v1"
+  });
   const response = await client.chat.completions.create({
-    model: env.OPENAI_MODEL ?? "gpt-4o-mini",
+    model: env.GROQ_OPS_MODEL ?? "llama-3.1-8b-instant",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user",   content: userMsg },
     ],
     temperature: variant === "B" ? 0.85 : 0.65,
-    max_tokens: 150,
+    max_tokens: 120,
     response_format: { type: "json_object" },
-  }, { timeout: 10000 }); // strictly clamp OpenAI latency to 10s
+  }, { timeout: 8000 });
 
   const raw = response.choices[0]?.message?.content ?? "{}";
   return JSON.parse(raw);
