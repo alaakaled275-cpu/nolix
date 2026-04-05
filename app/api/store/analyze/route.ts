@@ -148,7 +148,7 @@ ${buildSignalBlock(signals)}
 === PHASE 1: FOUNDATION ANALYSIS ===
 
 MANDATORY RULES (NON-NEGOTIABLE):
-1. STEP 0 — VALIDATION: First, confirm this is an e-commerce store (has products/prices/cart/buy buttons). If NOT → set is_ecommerce=false, stop.
+1. DEEP SEARCH RULE: Analyze the entire site fully. Even if it is not a traditional e-commerce store, extract value, audience, and market potential. Do NOT stop.
 2. EVIDENCE RULE: Every claim needs "Based on: [detected signal]". No invention of details.
 3. DEPTH RULE: Do NOT stop at first signal. Cross-check ALL signals before concluding.
 4. HONESTY RULE: Do not flatter the store. Give brutal investor-grade truth.
@@ -496,19 +496,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Step 5: E-commerce gate ───────────────────────────────────────────────
-    if (foundation.is_ecommerce === false || foundation.ecommerce_confidence === "not_ecommerce") {
-      return NextResponse.json(
-        {
-          error: "This is not an e-commerce store. Zeno cannot perform revenue analysis.",
-          error_type: "not_ecommerce",
-          ecommerce_confidence: foundation.ecommerce_confidence,
-          url,
-        },
-        { status: 422 }
-      );
-    }
-
+    // ── Step 5: (E-commerce gate removed per user request) ────────────────────
+    
     // ── Step 6: Build summary ─────────────────────────────────────────────────
     const zenoSummary = buildZenoSummary(url, foundation, market, strategic, dataSource);
 
