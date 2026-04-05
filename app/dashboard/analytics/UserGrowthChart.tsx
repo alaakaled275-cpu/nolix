@@ -3,6 +3,8 @@
 import React from "react";
 import {
   ResponsiveContainer,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -48,11 +50,11 @@ export default function UserGrowthChart({ data }: LineChartProps) {
       <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
         <defs>
           <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor="#7c3aed" stopOpacity={0.35} />
+            <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.35} />
             <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="colorNew" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
+            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
             <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
           </linearGradient>
         </defs>

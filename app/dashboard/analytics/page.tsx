@@ -1,223 +1,153 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import {
-  DollarSign,
-  Users,
-  TrendingUp,
-  ShoppingCart,
-  Brain,
-} from "lucide-react";
-
-import styles from "./analytics.module.css";
-
-import FilterBar from "./FilterBar";
+import React, { useState, useMemo } from "react";
 import MetricCard from "./MetricCard";
 import UserGrowthChart from "./UserGrowthChart";
 import RevenueBarChart from "./RevenueBarChart";
 import FunnelChart from "./FunnelChart";
-import CustomersTable from "./CustomersTable";
 import InsightCard from "./InsightCard";
-import { SkeletonCard, SkeletonChart, SkeletonRow } from "./Skeleton";
-
+import CustomersTable from "./CustomersTable";
+import FilterBar from "./FilterBar";
 import {
-  type Period,
-  getMetrics,
-  getUserGrowth,
-  getRevenue,
-  getFunnel,
-  getInsights,
+  metricsData,
+  userGrowthData,
+  revenueData,
+  funnelData,
+  insightsData,
+  customersData,
 } from "@/lib/analytics/mockData";
+import styles from "./analytics.module.css";
 
-const METRIC_ICONS = [
-  <DollarSign size={18} key="rev" />,
-  <Users size={18} key="usr" />,
-  <TrendingUp size={18} key="cvr" />,
-  <ShoppingCart size={18} key="ord" />,
-];
+type Period = "7d" | "30d" | "90d" | "1y";
 
-export default function AnalyticsDashboard() {
-  const [period, setPeriod] = useState<Period>("7d");
-  const [loading, setLoading] = useState(true);
+function sliceGrowth(period: Period) {
+  const counts: Record<Period, number> = { "7d": 7, "30d": 14, "90d": 21, "1y": 28 };
+  return userGrowthData.slice(-counts[period]);
+}
 
-  // Simulate a realistic data-fetch delay
-  useEffect(() => {
-    setLoading(true);
-    const t = setTimeout(() => setLoading(false), 900);
-    return () => clearTimeout(t);
-  }, [period]);
+function sliceRevenue(period: Period) {
+  const counts: Record<Period, number> = { "7d": 3, "30d": 4, "90d": 6, "1y": 12 };
+  return revenueData.slice(-counts[period]);
+}
 
-  const metrics   = getMetrics(period);
-  const userGrowth = getUserGrowth(period);
-  const revenue   = getRevenue(period);
-  const funnel    = getFunnel(period);
-  const insights  = getInsights(period);
+export default function AnalyticsPage() {
+  const [period, setPeriod] = useState<Period>("30d");
+
+  const growthSlice  = useMemo(() => sliceGrowth(period),  [period]);
+  const revenueSlice = useMemo(() => sliceRevenue(period), [period]);
 
   return (
     <div className={styles.page}>
-      {/* ── Navigation ── */}
-      <nav className={styles.topNav}>
+      {/* ── Top Navigation ── */}
+      <nav className={styles.topNav} aria-label="Main navigation">
         <div className={styles.topNavInner}>
-          <a href="/dashboard" className={styles.navBrand}>
-            <span className={styles.navLogo} />
-            <span className={styles.navBrandName}>NOLI<span>X</span></span>
+          <a href="/" className={styles.navBrand} aria-label="NOLIX home">
+            <span className={styles.navLogo} aria-hidden />
+            <span className={styles.navBrandName}>NOL<span>IX</span></span>
           </a>
           <span className={styles.navSubtitle}>Analytics</span>
-
           <div className={styles.navRight}>
-            <a href="/dashboard" className={styles.navLink}>← Dashboard</a>
-            <a href="/zeno" className={styles.navBtn}>🧠 Zeno</a>
+            <a href="/dashboard" className={styles.navLink}>Dashboard</a>
+            <a href="/dashboard/analytics" className={styles.navLink}>Analytics</a>
+            <button className={styles.navBtn} id="nav-export-btn">Export</button>
           </div>
         </div>
       </nav>
 
-      {/* ── Page Content ── */}
-      <div className={styles.pageInner}>
-
-        {/* ── Header + Filter ── */}
-        <div className={styles.pageHeader}>
+      <main className={styles.pageInner}>
+        {/* ── Page Header ── */}
+        <header className={styles.pageHeader}>
           <div>
             <h1 className={styles.pageTitle}>
-              Revenue <span>Analytics</span>
+              Analytics <span>Overview</span>
             </h1>
             <p className={styles.pageSubtitle}>
-              Real-time insights for your e-commerce store
+              Real-time SaaS metrics · updated every 5 minutes
             </p>
           </div>
-          <FilterBar period={period} onChange={setPeriod} />
-        </div>
+          <FilterBar activePeriod={period} onChange={setPeriod} />
+        </header>
 
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* 1. METRIC CARDS                                                     */}
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        <div className={styles.metricsGrid}>
-          {loading
-            ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-            : metrics.map((m, i) => (
-                <MetricCard key={m.label} data={m} icon={METRIC_ICONS[i]} />
-              ))}
-        </div>
+        {/* ── AI Insights ── */}
+        <section aria-labelledby="insights-heading" className={styles.mb28}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2 id="insights-heading" className={styles.sectionTitle}>AI Insights</h2>
+              <p className={styles.sectionSubtitle}>Powered by trend analysis</p>
+            </div>
+            <span className={styles.aiLabel} aria-hidden>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                <circle cx="5" cy="5" r="5" />
+              </svg>
+              LIVE
+            </span>
+          </div>
+          <div className={styles.insightsGrid}>
+            {insightsData.map((insight) => (
+              <InsightCard key={insight.id} insight={insight} />
+            ))}
+          </div>
+        </section>
 
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* 2. CHARTS — User Growth + Revenue Bar                               */}
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        <div className={`${styles.chartsGrid} ${styles.mb16}`}>
-          {loading ? (
-            <>
-              <SkeletonChart />
-              <SkeletonChart />
-            </>
-          ) : (
-            <>
-              <div className={styles.chartCard}>
-                <div className={styles.sectionHeader}>
-                  <div>
-                    <div className={styles.sectionTitle}>User Growth</div>
-                    <div className={styles.sectionSubtitle}>Total &amp; new users over time</div>
-                  </div>
-                </div>
-                <UserGrowthChart data={userGrowth} />
+        {/* ── KPI Metric Cards ── */}
+        <section aria-labelledby="metrics-heading" className={styles.mb28}>
+          <div className={styles.sectionHeader}>
+            <h2 id="metrics-heading" className={styles.sectionTitle}>Key Metrics</h2>
+          </div>
+          <div className={styles.metricsGrid}>
+            {metricsData.map((m) => (
+              <MetricCard key={m.label} metric={m} />
+            ))}
+          </div>
+        </section>
+
+        {/* ── Charts Grid ── */}
+        <section aria-labelledby="charts-heading" className={styles.mb28}>
+          <h2 id="charts-heading" className="sr-only">Charts</h2>
+          <div className={`${styles.chartCard} ${styles.chartCardFull}`}>
+            <div className={styles.sectionHeader}>
+              <div>
+                <div className={styles.sectionTitle}>User Growth</div>
+                <div className={styles.sectionSubtitle}>Total &amp; new users over time</div>
               </div>
+            </div>
+            <UserGrowthChart data={growthSlice} />
+          </div>
 
-              <div className={styles.chartCard}>
-                <div className={styles.sectionHeader}>
-                  <div>
-                    <div className={styles.sectionTitle}>Daily Revenue</div>
-                    <div className={styles.sectionSubtitle}>Revenue attributed per day</div>
-                  </div>
+          <div className={styles.chartsGrid}>
+            <div className={styles.chartCard}>
+              <div className={styles.sectionHeader}>
+                <div>
+                  <div className={styles.sectionTitle}>Revenue</div>
+                  <div className={styles.sectionSubtitle}>MRR vs ARR</div>
                 </div>
-                <RevenueBarChart data={revenue} />
               </div>
-            </>
-          )}
-        </div>
+              <RevenueBarChart data={revenueSlice} />
+            </div>
 
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* 3. CONVERSION FUNNEL                                                */}
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        <div className={`${styles.chartCard} ${styles.chartCardFull} ${styles.mb28}`}>
-          {loading ? (
-            <SkeletonChart />
-          ) : (
-            <>
+            <div className={styles.chartCard}>
               <div className={styles.sectionHeader}>
                 <div>
                   <div className={styles.sectionTitle}>Conversion Funnel</div>
-                  <div className={styles.sectionSubtitle}>
-                    Visitors → Add to Cart → Checkout → Purchase
-                  </div>
+                  <div className={styles.sectionSubtitle}>Visitor → paying customer</div>
                 </div>
-                <span className={styles.aiLabel}>
-                  {funnel[funnel.length - 1].pct}% overall CVR
-                </span>
               </div>
-              <FunnelChart data={funnel} />
-            </>
-          )}
-        </div>
-
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* 4. AI INSIGHTS                                                      */}
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        <div className={styles.mb28}>
-          <div className={`${styles.sectionHeader} ${styles.mb16}`}>
-            <div>
-              <div className={styles.sectionTitle}>
-                🧠 AI Insights
-              </div>
-              <div className={styles.sectionSubtitle}>
-                Smart recommendations based on your store data
-              </div>
-            </div>
-            <span className={styles.aiLabel}>
-              <Brain size={11} />
-              Zeno-powered
-            </span>
-          </div>
-          {loading ? (
-            <div className={styles.insightsGrid}>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={styles.skeletonChart}
-                  style={{ height: 72, padding: "16px 18px" }}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className={styles.insightsGrid}>
-              {insights.map((ins) => (
-                <InsightCard key={ins.id} insight={ins} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* 5. CUSTOMERS TABLE                                                  */}
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        <div>
-          <div className={`${styles.sectionHeader} ${styles.mb16}`}>
-            <div>
-              <div className={styles.sectionTitle}>Customers</div>
-              <div className={styles.sectionSubtitle}>Top accounts by lifetime revenue</div>
+              <FunnelChart data={funnelData} />
             </div>
           </div>
-          {loading ? (
-            <div
-              className={styles.tableWrap}
-              style={{ background: "#0f0f1a", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}
-            >
-              {Array.from({ length: 6 }).map((_, i) => (
-                <SkeletonRow key={i} />
-              ))}
-            </div>
-          ) : (
-            <CustomersTable />
-          )}
-        </div>
+        </section>
 
-      </div>
+        {/* ── Customers Table ── */}
+        <section aria-labelledby="customers-heading">
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2 id="customers-heading" className={styles.sectionTitle}>Top Customers</h2>
+              <p className={styles.sectionSubtitle}>Sorted by revenue, all plans</p>
+            </div>
+          </div>
+          <CustomersTable customers={customersData} />
+        </section>
+      </main>
     </div>
   );
 }

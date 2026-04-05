@@ -3,7 +3,7 @@
 import React from "react";
 import styles from "./analytics.module.css";
 
-export function SkeletonCard() {
+export function SkeletonMetricCard() {
   return (
     <div className={styles.skeletonCard}>
       <div className={`${styles.skeletonLine} ${styles.skeletonIcon}`} />
@@ -22,7 +22,7 @@ export function SkeletonChart() {
   );
 }
 
-export function SkeletonRow() {
+export function SkeletonTableRow() {
   return (
     <div className={styles.skeletonRow}>
       <div className={`${styles.skeletonLine} ${styles.skeletonAvatar}`} style={{ borderRadius: "50%" }} />
@@ -30,7 +30,7 @@ export function SkeletonRow() {
         <div className={`${styles.skeletonLine} ${styles.skeletonRowName}`} />
         <div className={`${styles.skeletonLine} ${styles.skeletonRowEmail}`} />
       </div>
-      <div className={`${styles.skeletonLine} ${styles.skeletonBadge}`} style={{ borderRadius: 20 }} />
+      <div className={`${styles.skeletonLine} ${styles.skeletonBadge}`} />
       <div className={`${styles.skeletonLine} ${styles.skeletonRowRev}`} />
     </div>
   );

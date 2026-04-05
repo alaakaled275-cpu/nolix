@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { BarChart2 } from "lucide-react";
 import styles from "./analytics.module.css";
 
 interface EmptyStateProps {
@@ -11,15 +10,17 @@ interface EmptyStateProps {
 
 export default function EmptyState({
   title = "No data available",
-  description = "There's nothing to show here yet.",
+  description = "Try adjusting your filters or check back later.",
 }: EmptyStateProps) {
   return (
     <div className={styles.emptyState}>
-      <div className={styles.emptyIcon}>
-        <BarChart2 size={36} strokeWidth={1.5} />
+      <div className={styles.emptyIcon} aria-hidden>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 3h18v18H3z" rx="2" /><path d="M9 9h6M9 13h4" />
+        </svg>
       </div>
-      <h3 className={styles.emptyTitle}>{title}</h3>
-      <p className={styles.emptyDesc}>{description}</p>
+      <div className={styles.emptyTitle}>{title}</div>
+      <div className={styles.emptyDesc}>{description}</div>
     </div>
   );
 }

@@ -9,14 +9,13 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Cell,
 } from "recharts";
 import { type RevenuePoint } from "@/lib/analytics/mockData";
 import styles from "./analytics.module.css";
 
 interface CustomTooltipProps {
   active?: boolean;
-  payload?: Array<{ name: string; value: number }>;
+  payload?: Array<{ name: string; value: number; color: string }>;
   label?: string;
 }
 
@@ -25,52 +24,37 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   return (
     <div className={styles.tooltipBox}>
       <div className={styles.tooltipLabel}>{label}</div>
-      <div className={styles.tooltipRow}>
-        <span className={styles.tooltipDot} style={{ background: "#ff003c" }} />
-        <span className={styles.tooltipName}>Revenue</span>
-        <span className={styles.tooltipValue}>${payload[0].value.toLocaleString()}</span>
-      </div>
+      {payload.map((p) => (
+        <div key={p.name} className={styles.tooltipRow}>
+          <span className={styles.tooltipDot} style={{ background: p.color }} />
+          <span className={styles.tooltipName}>{p.name}</span>
+          <span className={styles.tooltipValue}>${p.value.toLocaleString()}</span>
+        </div>
+      ))}
     </div>
   );
 }
 
-interface RevenueChartProps {
-  data: RevenuePoint[];
-}
-
-export default function RevenueBarChart({ data }: RevenueChartProps) {
-  const maxRev = Math.max(...data.map((d) => d.revenue));
-  const tickInterval = data.length <= 7 ? 0 : Math.floor(data.length / 6);
-
+export default function RevenueBarChart({ data }: { data: RevenuePoint[] }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }} barCategoryGap="30%">
+      <BarChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }} barGap={4}>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
         <XAxis
-          dataKey="date"
+          dataKey="month"
           tick={{ fill: "#475569", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
-          interval={tickInterval}
         />
         <YAxis
           tick={{ fill: "#475569", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
-          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+          tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
         />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-        <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
-          {data.map((entry, index) => {
-            const intensity = 0.45 + 0.55 * (entry.revenue / maxRev);
-            return (
-              <Cell
-                key={`cell-${index}`}
-                fill={`rgba(255, 0, 60, ${intensity})`}
-              />
-            );
-          })}
-        </Bar>
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(124,58,237,0.06)" }} />
+        <Bar dataKey="mrr" name="MRR" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={28} />
+        <Bar dataKey="arr" name="ARR" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={28} />
       </BarChart>
     </ResponsiveContainer>
   );

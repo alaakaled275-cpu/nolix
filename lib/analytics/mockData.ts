@@ -1,193 +1,145 @@
-// ─── Mock Data for SaaS Analytics Dashboard ───────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-export type Period = "7d" | "30d";
-
-// ── Metric Card Data ──────────────────────────────────────────────────────────
-export interface MetricData {
-  label: string;
-  value: string;
-  change: number; // positive = increase, negative = decrease
-  prefix?: string;
-  suffix?: string;
-}
-
-export const getMetrics = (period: Period): MetricData[] => {
-  if (period === "7d") {
-    return [
-      { label: "Total Revenue", value: "24,830", prefix: "$", change: 12.4 },
-      { label: "Total Users", value: "3,291", change: 8.1 },
-      { label: "Conversion Rate", value: "4.72", suffix: "%", change: -2.3 },
-      { label: "Orders", value: "812", change: 15.6 },
-    ];
-  }
-  return [
-    { label: "Total Revenue", value: "98,450", prefix: "$", change: 22.7 },
-    { label: "Total Users", value: "14,820", change: 18.4 },
-    { label: "Conversion Rate", value: "5.18", suffix: "%", change: 3.9 },
-    { label: "Orders", value: "3,410", change: 21.2 },
-  ];
-};
-
-// ── User Growth (Line Chart) ─────────────────────────────────────────────────
 export interface UserGrowthPoint {
   date: string;
   users: number;
   newUsers: number;
 }
 
-const last30Days = (): string[] => {
-  const days: string[] = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    days.push(d.toLocaleDateString("en-US", { month: "short", day: "numeric" }));
-  }
-  return days;
-};
-
-const dates30 = last30Days();
-
-const rawUsers30 = [
-  312, 328, 305, 380, 410, 390, 425, 448, 460, 442,
-  480, 510, 495, 530, 562, 540, 585, 610, 598, 625,
-  642, 630, 668, 692, 710, 698, 730, 755, 742, 780,
-];
-
-const rawNew30 = [
-  42, 38, 35, 55, 62, 48, 70, 72, 65, 58,
-  80, 88, 75, 92, 98, 82, 95, 110, 98, 112,
-  108, 95, 118, 125, 132, 115, 138, 145, 130, 155,
-];
-
-export const getUserGrowth = (period: Period): UserGrowthPoint[] => {
-  const start = period === "7d" ? 23 : 0;
-  return dates30.slice(start).map((date, i) => ({
-    date,
-    users: rawUsers30[start + i],
-    newUsers: rawNew30[start + i],
-  }));
-};
-
-// ── Revenue per Day (Bar Chart) ───────────────────────────────────────────────
 export interface RevenuePoint {
-  date: string;
-  revenue: number;
-  orders: number;
+  month: string;
+  mrr: number;
+  arr: number;
 }
 
-const rawRevenue30 = [
-  2100, 1850, 2400, 3200, 2900, 3500, 4200,
-  2800, 3100, 3800, 4100, 3600, 4400, 5100,
-  3900, 4600, 5200, 4800, 5500, 6100, 4700,
-  5800, 6400, 5900, 6800, 7200, 5600, 7500, 6900, 8200,
-];
-
-const rawOrders30 = [
-  55, 48, 62, 82, 74, 88, 108,
-  72, 80, 96, 104, 92, 112, 128,
-  100, 116, 134, 122, 140, 154, 120,
-  148, 162, 150, 172, 184, 142, 190, 176, 208,
-];
-
-export const getRevenue = (period: Period): RevenuePoint[] => {
-  const start = period === "7d" ? 23 : 0;
-  return dates30.slice(start).map((date, i) => ({
-    date,
-    revenue: rawRevenue30[start + i],
-    orders: rawOrders30[start + i],
-  }));
-};
-
-// ── Conversion Funnel ─────────────────────────────────────────────────────────
 export interface FunnelStep {
   label: string;
   value: number;
-  pct: number;
   color: string;
 }
 
-export const getFunnel = (period: Period): FunnelStep[] => {
-  const mult = period === "30d" ? 4.3 : 1;
-  const visitors = Math.round(8240 * mult);
-  const addToCart = Math.round(3180 * mult);
-  const checkout = Math.round(1420 * mult);
-  const purchase = Math.round(812 * mult);
-  return [
-    { label: "Visitors",    value: visitors,   pct: 100,                                    color: "#7c3aed" },
-    { label: "Add to Cart", value: addToCart,  pct: Math.round((addToCart / visitors) * 100), color: "#6d28d9" },
-    { label: "Checkout",    value: checkout,   pct: Math.round((checkout / visitors) * 100),  color: "#ff6b35" },
-    { label: "Purchase",    value: purchase,   pct: Math.round((purchase / visitors) * 100),  color: "#10b981" },
-  ];
-};
-
-// ── Customers Table ───────────────────────────────────────────────────────────
 export interface Customer {
   id: string;
   name: string;
   email: string;
   status: "active" | "churned";
+  plan: string;
   revenue: number;
   orders: number;
   joinedAt: string;
-  avatar: string;
 }
 
-export const CUSTOMERS: Customer[] = [
-  { id: "1",  name: "Sarah Mitchell",  email: "sarah.m@techwave.io",    status: "active",  revenue: 4820, orders: 12, joinedAt: "Jan 14, 2025", avatar: "SM" },
-  { id: "2",  name: "James Thornton",  email: "j.thornton@nexify.co",   status: "active",  revenue: 3415, orders: 9,  joinedAt: "Feb 3, 2025",  avatar: "JT" },
-  { id: "3",  name: "Priya Sharma",    email: "priya@storefront.dev",   status: "churned", revenue: 1200, orders: 3,  joinedAt: "Nov 22, 2024", avatar: "PS" },
-  { id: "4",  name: "Carlos Reyes",    email: "carlos@shopblitz.com",   status: "active",  revenue: 6750, orders: 18, joinedAt: "Dec 8, 2024",  avatar: "CR" },
-  { id: "5",  name: "Emma Larsson",    email: "e.larsson@nordic.store", status: "active",  revenue: 2980, orders: 7,  joinedAt: "Mar 1, 2025",  avatar: "EL" },
-  { id: "6",  name: "Aiden Park",      email: "aiden@convrt.io",        status: "churned", revenue: 890,  orders: 2,  joinedAt: "Oct 15, 2024", avatar: "AP" },
-  { id: "7",  name: "Fatima Al-Zahra", email: "fatima@luxebrand.ae",    status: "active",  revenue: 9140, orders: 24, joinedAt: "Sep 30, 2024", avatar: "FA" },
-  { id: "8",  name: "Luca Ferrari",    email: "l.ferrari@milanos.eu",   status: "active",  revenue: 5530, orders: 15, joinedAt: "Jan 28, 2025", avatar: "LF" },
-  { id: "9",  name: "Olivia Bennett",  email: "olivia@dropvault.com",   status: "churned", revenue: 450,  orders: 1,  joinedAt: "Feb 18, 2025", avatar: "OB" },
-  { id: "10", name: "Marcus Webb",     email: "marcus@sellsphere.io",   status: "active",  revenue: 7220, orders: 20, joinedAt: "Nov 5, 2024",  avatar: "MW" },
-];
-
-// ── AI Insights ───────────────────────────────────────────────────────────────
 export interface Insight {
   id: string;
   type: "warning" | "positive" | "info";
   title: string;
   description: string;
-  metric?: string;
+  metric: string;
 }
 
-export const getInsights = (period: Period): Insight[] => [
+export interface MetricData {
+  label: string;
+  value: string;
+  prefix?: string;
+  suffix?: string;
+  change: number; // percent, positive = up
+  icon: "revenue" | "users" | "churn" | "conversion";
+}
+
+// ── Mock Data ─────────────────────────────────────────────────────────────────
+
+export const userGrowthData: UserGrowthPoint[] = [
+  { date: "Jan 1", users: 3200, newUsers: 420 },
+  { date: "Jan 8", users: 3580, newUsers: 380 },
+  { date: "Jan 15", users: 3940, newUsers: 360 },
+  { date: "Jan 22", users: 4210, newUsers: 270 },
+  { date: "Feb 1", users: 4650, newUsers: 440 },
+  { date: "Feb 8", users: 5010, newUsers: 360 },
+  { date: "Feb 15", users: 5300, newUsers: 290 },
+  { date: "Feb 22", users: 5720, newUsers: 420 },
+  { date: "Mar 1", users: 6100, newUsers: 380 },
+  { date: "Mar 8", users: 6580, newUsers: 480 },
+  { date: "Mar 15", users: 7020, newUsers: 440 },
+  { date: "Mar 22", users: 7550, newUsers: 530 },
+  { date: "Apr 1", users: 8100, newUsers: 550 },
+  { date: "Apr 8", users: 8640, newUsers: 540 },
+  { date: "Apr 15", users: 9180, newUsers: 540 },
+  { date: "Apr 22", users: 9750, newUsers: 570 },
+  { date: "May 1", users: 10400, newUsers: 650 },
+  { date: "May 8", users: 11000, newUsers: 600 },
+  { date: "May 15", users: 11600, newUsers: 600 },
+  { date: "May 22", users: 12300, newUsers: 700 },
+  { date: "Jun 1", users: 13100, newUsers: 800 },
+  { date: "Jun 8", users: 13900, newUsers: 800 },
+  { date: "Jun 15", users: 14800, newUsers: 900 },
+  { date: "Jun 22", users: 15700, newUsers: 900 },
+  { date: "Jul 1", users: 16700, newUsers: 1000 },
+  { date: "Jul 8", users: 17800, newUsers: 1100 },
+  { date: "Jul 15", users: 18900, newUsers: 1100 },
+  { date: "Jul 22", users: 20100, newUsers: 1200 },
+];
+
+export const revenueData: RevenuePoint[] = [
+  { month: "Jan", mrr: 42000, arr: 504000 },
+  { month: "Feb", mrr: 46500, arr: 558000 },
+  { month: "Mar", mrr: 51200, arr: 614400 },
+  { month: "Apr", mrr: 55800, arr: 669600 },
+  { month: "May", mrr: 61400, arr: 736800 },
+  { month: "Jun", mrr: 68200, arr: 818400 },
+  { month: "Jul", mrr: 74900, arr: 898800 },
+  { month: "Aug", mrr: 82100, arr: 985200 },
+  { month: "Sep", mrr: 88500, arr: 1062000 },
+  { month: "Oct", mrr: 95300, arr: 1143600 },
+  { month: "Nov", mrr: 103800, arr: 1245600 },
+  { month: "Dec", mrr: 112400, arr: 1348800 },
+];
+
+export const funnelData: FunnelStep[] = [
+  { label: "Visitors",       value: 120000, color: "#7c3aed" },
+  { label: "Sign-ups",       value:  32400, color: "#6d28d9" },
+  { label: "Trial Started",  value:  14800, color: "#a78bfa" },
+  { label: "Activated",      value:   8200, color: "#10b981" },
+  { label: "Converted",      value:   4100, color: "#34d399" },
+];
+
+export const customersData: Customer[] = [
+  { id: "c1",  name: "Ava Thompson",    email: "ava@prismatic.io",    status: "active",  plan: "Enterprise", revenue: 24000, orders: 12, joinedAt: "Jan 2024" },
+  { id: "c2",  name: "Liam Rodriguez",  email: "liam@synapse.co",     status: "active",  plan: "Pro",        revenue:  9600, orders: 8,  joinedAt: "Mar 2024" },
+  { id: "c3",  name: "Sofia Patel",     email: "sofia@novalabs.dev",  status: "active",  plan: "Enterprise", revenue: 31200, orders: 15, joinedAt: "Nov 2023" },
+  { id: "c4",  name: "Marcus Kim",      email: "marcus@loopify.app",  status: "churned", plan: "Pro",        revenue:  4800, orders: 4,  joinedAt: "Feb 2024" },
+  { id: "c5",  name: "Isabella Chen",   email: "isa@stackrise.io",    status: "active",  plan: "Starter",    revenue:  1800, orders: 6,  joinedAt: "May 2024" },
+  { id: "c6",  name: "Noah Williams",   email: "noah@gridforge.com",  status: "active",  plan: "Pro",        revenue:  8400, orders: 7,  joinedAt: "Apr 2024" },
+  { id: "c7",  name: "Mia Johnson",     email: "mia@cloudpeak.io",    status: "churned", plan: "Starter",    revenue:  1200, orders: 3,  joinedAt: "Jun 2024" },
+  { id: "c8",  name: "Ethan Davis",     email: "ethan@nexaflow.ai",   status: "active",  plan: "Enterprise", revenue: 18000, orders: 10, joinedAt: "Dec 2023" },
+];
+
+export const insightsData: Insight[] = [
   {
-    id: "1",
-    type: "warning",
-    title: "Checkout drop-off spike",
-    description: `Most users abandon at the checkout step — ${period === "7d" ? "68%" : "64%"} of users who reach checkout don't complete the purchase. Consider reducing form fields or adding trust badges.`,
-    metric: period === "7d" ? "-68% at checkout" : "-64% at checkout",
-  },
-  {
-    id: "2",
+    id: "i1",
     type: "positive",
-    title: "Friday drives peak revenue",
-    description: `Fridays outperform all other days by ${period === "7d" ? "34%" : "29%"} in both orders and revenue. Consider scheduling major promotions or email campaigns on Thursday evenings.`,
-    metric: period === "7d" ? "+34% vs avg" : "+29% vs avg",
+    title: "MRR Growth on Track",
+    description: "Revenue grew 12.4% this month, outperforming the 90-day trend. Enterprise tier is the primary driver.",
+    metric: "+12.4% MRR",
   },
   {
-    id: "3",
+    id: "i2",
     type: "warning",
-    title: "Conversion rate trending down",
-    description: `Conversion rate dropped ${period === "7d" ? "2.3%" : "1.1%"} compared to the previous period. Mobile users show the steepest decline — check mobile checkout flow for friction.`,
-    metric: period === "7d" ? "-2.3% CVR" : "-1.1% CVR",
+    title: "Churn Spike Detected",
+    description: "Starter plan churn increased by 3.2% over the last 14 days. Consider triggering in-app re-engagement flows.",
+    metric: "+3.2% churn",
   },
   {
-    id: "4",
+    id: "i3",
     type: "info",
-    title: "3 high-value customers at churn risk",
-    description: "Customers who haven't placed an order in 45+ days have historically churned. Fatima Al-Zahra, Marcus Webb and Carlos Reyes haven't engaged in the last 30 days.",
-    metric: "3 at-risk accounts",
+    title: "Funnel Bottleneck: Activation",
+    description: "Only 55% of trials reach the activation milestone. Optimising onboarding step 3 could add ~$8K MRR.",
+    metric: "55% activation",
   },
-  {
-    id: "5",
-    type: "positive",
-    title: "Add-to-cart rate improving",
-    description: `Add-to-cart conversion improved by ${period === "7d" ? "8.4%" : "12.1%"} this period. Product page changes from last sprint appear to be working — consider A/B testing the new layout more broadly.`,
-    metric: period === "7d" ? "+8.4% ATC rate" : "+12.1% ATC rate",
-  },
+];
+
+export const metricsData: MetricData[] = [
+  { label: "Monthly Revenue",    value: "112,400",  prefix: "$", change: +12.4, icon: "revenue"    },
+  { label: "Total Users",        value: "20,100",             change: +18.7, icon: "users"      },
+  { label: "Churn Rate",         value: "2.8",      suffix: "%", change: -0.4, icon: "churn"      },
+  { label: "Trial Conversion",   value: "27.7",     suffix: "%", change: +2.1, icon: "conversion" },
 ];

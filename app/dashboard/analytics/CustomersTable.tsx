@@ -1,10 +1,19 @@
 "use client";
 
 import React from "react";
-import { CUSTOMERS, type Customer } from "@/lib/analytics/mockData";
+import { type Customer } from "@/lib/analytics/mockData";
 import styles from "./analytics.module.css";
 
-export default function CustomersTable() {
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+export default function CustomersTable({ customers }: { customers: Customer[] }) {
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
@@ -12,18 +21,22 @@ export default function CustomersTable() {
           <tr>
             <th className={styles.th}>Customer</th>
             <th className={styles.th}>Status</th>
+            <th className={styles.th}>Plan</th>
             <th className={styles.th}>Orders</th>
-            <th className={styles.th} style={{ textAlign: "right" }}>Revenue</th>
+            <th className={styles.th}>Revenue</th>
             <th className={styles.th}>Joined</th>
           </tr>
         </thead>
         <tbody>
-          {CUSTOMERS.map((c) => (
+          {customers.map((c) => (
             <tr key={c.id} className={styles.tr}>
               <td className={styles.td}>
                 <div className={styles.customerCell}>
-                  <div className={`${styles.avatar} ${c.status === "churned" ? styles.avatarChurned : ""}`}>
-                    {c.avatar}
+                  <div
+                    className={`${styles.avatar} ${c.status === "churned" ? styles.avatarChurned : ""}`}
+                    aria-hidden
+                  >
+                    {initials(c.name)}
                   </div>
                   <div>
                     <div className={styles.customerName}>{c.name}</div>
@@ -38,9 +51,12 @@ export default function CustomersTable() {
                 </span>
               </td>
               <td className={styles.td}>
+                <span style={{ fontSize: 13, color: "#94a3b8", fontWeight: 600 }}>{c.plan}</span>
+              </td>
+              <td className={styles.td}>
                 <span className={styles.orderCount}>{c.orders}</span>
               </td>
-              <td className={styles.td} style={{ textAlign: "right" }}>
+              <td className={styles.td}>
                 <span className={styles.revenueValue}>${c.revenue.toLocaleString()}</span>
               </td>
               <td className={styles.td}>
