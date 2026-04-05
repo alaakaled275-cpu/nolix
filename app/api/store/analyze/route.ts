@@ -509,57 +509,68 @@ export async function POST(req: NextRequest) {
     const masterScrutiny = masterResponse?.choices[0]?.message?.content || "Proceeding with direct signal analysis.";
     console.log("[analyze] Master Scrutiny complete.");
 
-    // ── Step 4: Run all 3 phases in parallel (Distributed) ────────────────────
-    console.log("[analyze] Running Phases 1-3 concurrently (Load Balanced)...");
-    const [foundationResult, marketResult, strategicResult] = await Promise.allSettled([
-      clientP1.chat.completions.create({
-        model: modelDeep,
-        messages: [{ role: "user", content: buildFoundationPrompt(signals, masterScrutiny) }],
-        temperature: 0.1,
-        max_tokens: 2000,
-        response_format: { type: "json_object" },
-      }, { timeout: 59000 }),
-      clientP2.chat.completions.create({
-        model: modelDeep,
-        messages: [{ role: "user", content: buildMarketPrompt(signals, masterScrutiny) }],
-        temperature: 0.1,
-        max_tokens: 2000,
-        response_format: { type: "json_object" },
-      }, { timeout: 59000 }),
-      clientP3.chat.completions.create({
-        model: modelDeep,
-        messages: [{ role: "user", content: buildStrategicPrompt(signals, masterScrutiny) }],
-        temperature: 0.1,
-        max_tokens: 6000,
-        response_format: { type: "json_object" },
-      }, { timeout: 59000 }),
-    ]);
+    // ── Step 4: Run all 3 phases sequentially to avoid IP Rate Limits ─────────
+    console.log("[analyze] Running Phase 1 (Foundation)...");
+    const foundationResponse = await clientP1.chat.completions.create({
+      model: modelDeep,
+      messages: [{ role: "user", content: buildFoundationPrompt(signals, masterScrutiny) }],
+      temperature: 0.1,
+      max_tokens: 2000,
+      response_format: { type: "json_object" },
+    }, { timeout: 30000 }).catch(e => ({ _error: e.message }));
 
-    // ── Step 5: Handle failures ───────────────────────────────────────────────
-    function parseAI<T>(result: PromiseSettledResult<OpenAI.Chat.ChatCompletion>): T | null {
-      if (result.status === "rejected") {
-        console.error("[analyze] AI phase failed:", result.reason?.message ?? result.reason);
-        return null;
+    console.log("[analyze] Running Phase 2 (Market)...");
+    const marketResponse = await clientP2.chat.completions.create({
+      model: modelDeep,
+      messages: [{ role: "user", content: buildMarketPrompt(signals, masterScrutiny) }],
+      temperature: 0.1,
+      max_tokens: 2000,
+      response_format: { type: "json_object" },
+    }, { timeout: 30000 }).catch(e => ({ _error: e.message }));
+
+    console.log("[analyze] Running Phase 3 (Strategic)...");
+    const strategicResponse = await clientP3.chat.completions.create({
+      model: modelDeep,
+      messages: [{ role: "user", content: buildStrategicPrompt(signals, masterScrutiny) }],
+      temperature: 0.1,
+      max_tokens: 4000,
+      response_format: { type: "json_object" },
+    }, { timeout: 40000 }).catch(e => ({ _error: e.message }));
+
+    // ── Step 5: Handle failures & Robust JSON Parse ───────────────────────────
+    function parseAI<T>(res: any, phaseName: string): T | { _error: string } {
+      if (!res || '_error' in res) {
+        return { _error: res?._error || "Timeout or API rejection" };
       }
+      
+      let content = res.choices?.[0]?.message?.content || "{}";
+      
+      // Strip markdown code fences if AI injected them
+      content = content.trim();
+      if (content.startsWith("```json")) content = content.substring(7);
+      if (content.startsWith("```")) content = content.substring(3);
+      if (content.endsWith("```")) content = content.substring(0, content.length - 3);
+      content = content.trim();
+      
       try {
-        return JSON.parse(result.value.choices[0]?.message?.content ?? "{}") as T;
-      } catch {
-        return null;
+        return JSON.parse(content) as T;
+      } catch (err) {
+        return { _error: "Invalid JSON syntax returned by AI" };
       }
     }
 
-    const foundation = parseAI<FoundationAnalysis>(foundationResult);
-    const market = parseAI<MarketIntelligence>(marketResult);
-    const strategic = parseAI<StrategicAudit>(strategicResult);
+    const foundation = parseAI<FoundationAnalysis>(foundationResponse, "Phase 1");
+    const market = parseAI<MarketIntelligence>(marketResponse, "Phase 2");
+    const strategic = parseAI<StrategicAudit>(strategicResponse, "Phase 3");
 
-    if (!foundation || !market || !strategic) {
-      const reason = [
-        !foundation ? "Phase 1 (Foundation)" : "",
-        !market ? "Phase 2 (Market)" : "",
-        !strategic ? "Phase 3 (Strategic)" : "",
-      ].filter(Boolean).join(", ");
+    const errors = [];
+    if ('_error' in foundation) errors.push(`Phase 1 (${foundation._error})`);
+    if ('_error' in market) errors.push(`Phase 2 (${market._error})`);
+    if ('_error' in strategic) errors.push(`Phase 3 (${strategic._error})`);
+
+    if (errors.length > 0) {
       return NextResponse.json(
-        { error: `Zeno could not complete analysis. AI service error in: ${reason}. Check your API key.` },
+        { error: `Zeno could not complete analysis. AI service error: ${errors.join(" | ")}. Please wait 1 minute and try again.` },
         { status: 502 }
       );
     }
@@ -567,7 +578,13 @@ export async function POST(req: NextRequest) {
     // ── Step 5: (E-commerce gate removed per user request) ────────────────────
     
     // ── Step 6: Build summary ─────────────────────────────────────────────────
-    const zenoSummary = buildZenoSummary(url, foundation, market, strategic, dataSource);
+    const zenoSummary = buildZenoSummary(
+      url, 
+      foundation as FoundationAnalysis, 
+      market as MarketIntelligence, 
+      strategic as StrategicAudit, 
+      dataSource
+    );
 
     const result: StoreAnalysisResult = {
       url: signals.url,
@@ -583,9 +600,9 @@ export async function POST(req: NextRequest) {
         nicheHints: signals.nicheHints,
         wordCount: signals.wordCount,
       },
-      foundation,
-      market,
-      strategic,
+      foundation: foundation as FoundationAnalysis,
+      market: market as MarketIntelligence,
+      strategic: strategic as StrategicAudit,
       zeno_summary: zenoSummary,
     };
 
