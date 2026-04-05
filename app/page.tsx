@@ -56,12 +56,33 @@ const SAMPLE_RESULTS = [
 export default function ConvertAIPage() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   function handleAnalyze(e: React.FormEvent) {
     e.preventDefault();
-    if (!url.trim()) return;
+    setErrorMsg("");
+    
+    let targetUrl = url.trim();
+    if (!targetUrl) return;
+
+    // Auto-prepend https if missing for parsing
+    if (!/^https?:\/\//i.test(targetUrl)) {
+      targetUrl = "https://" + targetUrl;
+    }
+
+    try {
+      const parsed = new URL(targetUrl);
+      if (!parsed.hostname.includes(".")) {
+        setErrorMsg("Please enter a valid website URL");
+        return;
+      }
+    } catch (err) {
+      setErrorMsg("Please enter a valid website URL");
+      return;
+    }
+
     setLoading(true);
-    const params = new URLSearchParams({ store: url.trim() });
+    const params = new URLSearchParams({ store: targetUrl });
     setTimeout(() => {
       window.location.href = `/results?${params.toString()}`;
     }, 800);
@@ -134,6 +155,10 @@ export default function ConvertAIPage() {
                 )}
               </button>
             </div>
+
+            {errorMsg && (
+              <div style={{ color: "#ef4444", fontSize: "0.875rem", marginTop: "0.5rem", textAlign: "center", fontWeight: "500", background: "rgba(239, 68, 68, 0.1)", padding: "0.25rem 0.75rem", borderRadius: "100px", display: "inline-block", alignSelf: "center", justifySelf: "center", width: "fit-content", margin: "1rem auto 0" }}>{errorMsg}</div>
+            )}
 
             {/* Trust badges */}
             <div className={styles.trustRow}>
