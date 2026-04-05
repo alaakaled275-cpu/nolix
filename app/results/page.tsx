@@ -596,14 +596,14 @@ export default function ResultsPage() {
                 <div className={styles.trafficCard}>
                   <div className={styles.trafficCardLabel}>Daily Visitors</div>
                   <div className={styles.trafficCardValue}>
-                    {m.daily_visitors_low.toLocaleString()}–{m.daily_visitors_high.toLocaleString()}
+                    {m.daily_visitors_low?.toLocaleString() ?? "N/A"}–{m.daily_visitors_high?.toLocaleString() ?? "N/A"}
                   </div>
                   <div className={styles.trafficCardNote}>Estimated unique daily visits</div>
                 </div>
                 <div className={styles.trafficCard}>
                   <div className={styles.trafficCardLabel}>Monthly Visitors</div>
                   <div className={styles.trafficCardValue}>
-                    {m.monthly_visitors_low.toLocaleString()}–{m.monthly_visitors_high.toLocaleString()}
+                    {m.monthly_visitors_low?.toLocaleString() ?? "N/A"}–{m.monthly_visitors_high?.toLocaleString() ?? "N/A"}
                   </div>
                   <div className={styles.trafficCardNote}>Based on store quality + niche signals</div>
                 </div>
@@ -630,26 +630,26 @@ export default function ResultsPage() {
                 </div>
                 <div className={styles.revenueTableRow}>
                   <span className={styles.rtMetric}>Monthly Customers</span>
-                  <span className={styles.rtLow}>{m.monthly_customers_low.toLocaleString()}</span>
-                  <span className={styles.rtHigh}>{m.monthly_customers_high.toLocaleString()}</span>
-                  <span className={styles.rtNote}>At {m.cvr_est}% CVR</span>
+                  <span className={styles.rtLow}>{m.monthly_customers_low?.toLocaleString() ?? "N/A"}</span>
+                  <span className={styles.rtHigh}>{m.monthly_customers_high?.toLocaleString() ?? "N/A"}</span>
+                  <span className={styles.rtNote}>At {m.cvr_est ?? "N/A"}% CVR</span>
                 </div>
                 <div className={styles.revenueTableRow}>
                   <span className={styles.rtMetric}>Avg. Order Value (AOV)</span>
-                  <span className={styles.rtLow}>${m.aov_est}</span>
-                  <span className={styles.rtHigh}>${m.aov_est}</span>
+                  <span className={styles.rtLow}>${m.aov_est ?? "N/A"}</span>
+                  <span className={styles.rtHigh}>${m.aov_est ?? "N/A"}</span>
                   <span className={styles.rtNote}>Inferred from price signals</span>
                 </div>
                 <div className={styles.revenueTableRow}>
                   <span className={styles.rtMetric}>Monthly Revenue</span>
-                  <span className={styles.rtLow}>${m.monthly_revenue_low.toLocaleString()}</span>
-                  <span className={styles.rtHigh}>${m.monthly_revenue_high.toLocaleString()}</span>
+                  <span className={styles.rtLow}>${m.monthly_revenue_low?.toLocaleString() ?? "N/A"}</span>
+                  <span className={styles.rtHigh}>${m.monthly_revenue_high?.toLocaleString() ?? "N/A"}</span>
                   <span className={styles.rtNote}>Customers × AOV</span>
                 </div>
                 <div className={styles.revenueTableRow}>
-                  <span className={styles.rtMetric}>Monthly Profit ({m.profit_margin_pct}% margin)</span>
-                  <span className={styles.rtLow}>${m.monthly_profit_low.toLocaleString()}</span>
-                  <span className={styles.rtHigh}>${m.monthly_profit_high.toLocaleString()}</span>
+                  <span className={styles.rtMetric}>Monthly Profit ({m.profit_margin_pct ?? "N/A"}% margin)</span>
+                  <span className={styles.rtLow}>${m.monthly_profit_low?.toLocaleString() ?? "N/A"}</span>
+                  <span className={styles.rtHigh}>${m.monthly_profit_high?.toLocaleString() ?? "N/A"}</span>
                   <span className={styles.rtNote}>Est. gross margin</span>
                 </div>
               </div>
@@ -681,7 +681,7 @@ export default function ResultsPage() {
                 <div className={styles.valuationLeft}>
                   <div className={styles.valuationLabel}>Business Valuation Estimate</div>
                   <div className={styles.valuationRange}>
-                    ${m.valuation_low.toLocaleString()} – <em>${m.valuation_high.toLocaleString()}</em>
+                    ${m.valuation_low?.toLocaleString() ?? "N/A"} – <em>${m.valuation_high?.toLocaleString() ?? "N/A"}</em>
                   </div>
                 </div>
                 <div className={styles.valuationRight}>
@@ -689,7 +689,7 @@ export default function ResultsPage() {
                     📐 Based on <span>12–36×</span> monthly profit multiple
                   </div>
                   <div className={styles.valuationPill}>
-                    💰 Monthly profit: <span>${m.monthly_profit_low.toLocaleString()}–${m.monthly_profit_high.toLocaleString()}</span>
+                    💰 Monthly profit: <span>${m.monthly_profit_low?.toLocaleString() ?? "N/A"}–${m.monthly_profit_high?.toLocaleString() ?? "N/A"}</span>
                   </div>
                   <div className={styles.valuationPill}>
                     📊 Market: <span style={{ color: m.market_strength === "Strong" ? "#22c55e" : m.market_strength === "Weak" ? "#ef4444" : "#f59e0b" }}>{m.market_strength}</span>
