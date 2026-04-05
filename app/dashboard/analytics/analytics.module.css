@@ -1,0 +1,703 @@
+/* ──────────────────────────────────────────────────────────────────────────────
+   SaaS Analytics Dashboard — analytics.module.css
+   Dark theme: #09090f bg, NOLIX red #ff003c, purple #7c3aed, emerald #10b981
+──────────────────────────────────────────────────────────────────────────────*/
+
+/* ── Page Layout ─────────────────────────────────────────────────────────── */
+.page {
+  background: #09090f;
+  color: #f1f5f9;
+  min-height: 100vh;
+  font-family: var(--font-outfit), 'Outfit', 'Inter', sans-serif;
+}
+
+.pageInner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ── Top Nav ─────────────────────────────────────────────────────────────── */
+.topNav {
+  background: rgba(9,9,15,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.topNavInner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.navBrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: #f1f5f9;
+}
+
+.navLogo {
+  display: inline-block;
+  width: 22px;
+  height: 26px;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 4 L88 26 L50 48 L12 26 Z' fill='%23ff003c' /%3E%3Cpath d='M54 52 L92 30 L92 74 L54 96 Z' fill='%23ff003c' /%3E%3Cpath d='M46 52 L8 30 L8 74 L20 81 L20 54 L34 62 L34 89 L46 96 Z' fill='%23ff003c' /%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.navBrandName {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.navBrandName span { color: #ff003c; }
+
+.navSubtitle {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 500;
+  padding: 3px 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  background: rgba(255,255,255,0.03);
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navLink {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+}
+.navLink:hover { color: #f1f5f9; background: rgba(255,255,255,0.04); }
+
+.navBtn {
+  font-size: 13px;
+  font-weight: 600;
+  color: #a78bfa;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(124,92,252,0.3);
+  background: rgba(124,92,252,0.08);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+.navBtn:hover { background: rgba(124,92,252,0.18); }
+
+/* ── Page Header ──────────────────────────────────────────────────────────── */
+.pageHeader {
+  padding: 36px 0 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pageTitle {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.pageTitle span { color: #ff003c; }
+
+.pageSubtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+/* ── Filter Bar ──────────────────────────────────────────────────────────── */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filterLabel {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.filterGroup {
+  display: flex;
+  gap: 4px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.filterBtn {
+  padding: 6px 16px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.filterBtn:hover { color: #f1f5f9; }
+
+.filterBtnActive {
+  background: #ff003c;
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 12px rgba(255,0,60,0.35);
+}
+
+/* ── Section Headers ─────────────────────────────────────────────────────── */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.sectionSubtitle {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+/* ── Metric Cards ────────────────────────────────────────────────────────── */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+@media (max-width: 1024px) { .metricsGrid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 540px)  { .metricsGrid { grid-template-columns: 1fr; } }
+
+.metricCard {
+  background: #0f0f1a;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 22px 20px;
+  cursor: default;
+  transition: transform 0.2s ease, border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.metricCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 70% 20%, rgba(124,58,237,0.06), transparent 65%);
+  pointer-events: none;
+}
+.metricCard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(124,58,237,0.3);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(124,58,237,0.12);
+}
+
+.metricCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.metricIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(124,58,237,0.12);
+  border: 1px solid rgba(124,58,237,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+.metricBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+.metricBadgeUp {
+  background: rgba(16,185,129,0.12);
+  color: #10b981;
+  border: 1px solid rgba(16,185,129,0.25);
+}
+
+.metricBadgeDown {
+  background: rgba(239,68,68,0.1);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+
+.metricValue {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  margin-bottom: 6px;
+  color: #f1f5f9;
+}
+
+.metricPrefix {
+  font-size: 18px;
+  font-weight: 700;
+  color: #94a3b8;
+  vertical-align: top;
+  line-height: 1.6;
+}
+
+.metricSuffix {
+  font-size: 18px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.metricLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Charts Section ──────────────────────────────────────────────────────── */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) { .chartsGrid { grid-template-columns: 1fr; } }
+
+.chartCard {
+  background: #0f0f1a;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 22px 18px 16px;
+  transition: border-color 0.2s;
+}
+.chartCard:hover { border-color: rgba(255,255,255,0.12); }
+
+.chartCardFull {
+  margin-bottom: 16px;
+}
+
+/* ── Tooltip ─────────────────────────────────────────────────────────────── */
+.tooltipBox {
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  font-size: 13px;
+}
+
+.tooltipLabel {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.tooltipRow:last-child { margin-bottom: 0; }
+
+.tooltipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tooltipName { color: #94a3b8; flex: 1; }
+.tooltipValue { font-weight: 700; color: #f1f5f9; }
+
+/* ── Funnel Chart ────────────────────────────────────────────────────────── */
+.funnelWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 8px 0 4px;
+}
+
+/* .funnelStep — no additional styles needed beyond flex parent */
+
+.funnelMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.funnelLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.funnelRight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.funnelDropOff {
+  font-size: 11px;
+  color: #f87171;
+  font-weight: 600;
+}
+
+.funnelPct {
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+  min-width: 36px;
+  text-align: right;
+}
+
+.funnelVal {
+  font-size: 12px;
+  color: #64748b;
+  min-width: 60px;
+  text-align: right;
+}
+
+.funnelTrack {
+  height: 10px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.funnelFill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── AI Insights ────────────────────────────────────────────────────────── */
+.insightsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.insightCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: default;
+}
+.insightCard:hover {
+  transform: translateX(4px);
+}
+
+.insightCard_warning {
+  background: rgba(245,158,11,0.06);
+  border-color: rgba(245,158,11,0.2);
+}
+.insightCard_positive {
+  background: rgba(16,185,129,0.06);
+  border-color: rgba(16,185,129,0.2);
+}
+.insightCard_info {
+  background: rgba(99,102,241,0.07);
+  border-color: rgba(99,102,241,0.2);
+}
+
+.insightIconWrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.insightIcon_warning  { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.insightIcon_positive { background: rgba(16,185,129,0.14); color: #10b981; }
+.insightIcon_info     { background: rgba(99,102,241,0.14); color: #818cf8; }
+
+.insightBody { flex: 1; min-width: 0; }
+
+.insightTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 4px;
+}
+
+.insightDesc {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.55;
+}
+
+.insightMetric {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  align-self: center;
+  border: 1px solid;
+}
+.insightMetric_warning  { background: rgba(245,158,11,0.12); color: #fbbf24; border-color: rgba(245,158,11,0.25); }
+.insightMetric_positive { background: rgba(16,185,129,0.12); color: #34d399; border-color: rgba(16,185,129,0.25); }
+.insightMetric_info     { background: rgba(99,102,241,0.12); color: #a5b4fc; border-color: rgba(99,102,241,0.25); }
+
+/* ── Customers Table ─────────────────────────────────────────────────────── */
+.tableWrap {
+  background: #0f0f1a;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #475569;
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+  white-space: nowrap;
+}
+
+.tr {
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+}
+.tr:last-child { border-bottom: none; }
+.tr:hover { background: rgba(124,58,237,0.05); }
+
+.td {
+  padding: 14px 20px;
+  vertical-align: middle;
+}
+
+.customerCell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #ff003c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.avatarChurned {
+  background: linear-gradient(135deg, #374151, #4b5563);
+  opacity: 0.7;
+}
+
+.customerName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  white-space: nowrap;
+}
+
+.customerEmail {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.statusActive  { background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+.statusChurned { background: rgba(239,68,68,0.08); color: #f87171; border: 1px solid rgba(239,68,68,0.15); }
+
+.statusDot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.statusDotActive  { background: #10b981; box-shadow: 0 0 6px #10b981; }
+.statusDotChurned { background: #ef4444; }
+
+.orderCount { font-size: 14px; font-weight: 600; color: #94a3b8; }
+.revenueValue { font-size: 14px; font-weight: 700; color: #f1f5f9; }
+.joinedAt { font-size: 12px; color: #64748b; }
+
+/* ── Loading Skeletons ───────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.skeletonLine {
+  background: linear-gradient(90deg, #1a1a2a 25%, #252537 50%, #1a1a2a 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 6px;
+  height: 12px;
+}
+
+.skeletonCard {
+  background: #0f0f1a;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeletonIcon     { width: 38px; height: 38px; border-radius: 10px; }
+.skeletonValueLg  { width: 60%; height: 28px; border-radius: 6px; }
+.skeletonValueSm  { width: 40%; height: 12px; }
+
+.skeletonChart {
+  background: #0f0f1a;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skeletonChartTitle { width: 140px; height: 16px; }
+.skeletonChartBody  { height: 220px; background: linear-gradient(90deg, #1a1a2a 25%, #252537 50%, #1a1a2a 75%); background-size: 400px 100%; animation: shimmer 1.4s ease infinite; border-radius: 10px; }
+
+.skeletonRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.skeletonAvatar { width: 36px; height: 36px; flex-shrink: 0; }
+.skeletonRowName  { width: 140px; height: 14px; }
+.skeletonRowEmail { width: 200px; height: 12px; }
+.skeletonBadge    { width: 64px; height: 24px; border-radius: 20px; }
+.skeletonRowRev   { width: 80px; height: 14px; border-radius: 4px; }
+
+/* ── Empty State ─────────────────────────────────────────────────────────── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 60px 24px;
+  text-align: center;
+  color: #64748b;
+}
+
+.emptyIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.emptyTitle { font-size: 16px; font-weight: 700; color: #94a3b8; }
+.emptyDesc  { font-size: 13px; color: #475569; }
+
+/* ── Bottom spacing helper ───────────────────────────────────────────────── */
+.mb4  { margin-bottom: 4px; }
+.mb16 { margin-bottom: 16px; }
+.mb28 { margin-bottom: 28px; }
+
+/* ── Insight section label ───────────────────────────────────────────────── */
+.aiLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #a78bfa;
+  background: rgba(124,92,252,0.1);
+  border: 1px solid rgba(124,92,252,0.25);
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
