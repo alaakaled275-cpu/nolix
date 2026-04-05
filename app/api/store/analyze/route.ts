@@ -516,23 +516,23 @@ export async function POST(req: NextRequest) {
         model: modelDeep,
         messages: [{ role: "user", content: buildFoundationPrompt(signals, masterScrutiny) }],
         temperature: 0.1,
-        max_tokens: 1500,
+        max_tokens: 2000,
         response_format: { type: "json_object" },
-      }, { timeout: 25000 }),
+      }, { timeout: 59000 }),
       clientP2.chat.completions.create({
         model: modelDeep,
         messages: [{ role: "user", content: buildMarketPrompt(signals, masterScrutiny) }],
         temperature: 0.1,
-        max_tokens: 1500,
+        max_tokens: 2000,
         response_format: { type: "json_object" },
-      }, { timeout: 25000 }),
+      }, { timeout: 59000 }),
       clientP3.chat.completions.create({
         model: modelDeep,
         messages: [{ role: "user", content: buildStrategicPrompt(signals, masterScrutiny) }],
         temperature: 0.1,
-        max_tokens: 2000,
+        max_tokens: 6000,
         response_format: { type: "json_object" },
-      }, { timeout: 25000 }),
+      }, { timeout: 59000 }),
     ]);
 
     // ── Step 5: Handle failures ───────────────────────────────────────────────

@@ -189,18 +189,30 @@ export default function ResultsPage() {
   useEffect(() => {
     let i = 0;
     const t = setInterval(() => {
-      if (i < loadingSteps.length) {
+      if (i < 7) { // 7 corresponds to "Building investment verdict…" at 95%
         setLoadMsg(loadingSteps[i].msg);
         setLoadPct(loadingSteps[i].pct);
         i++;
       } else {
-        clearInterval(t);
-        setTimeout(() => setPhase("ready"), 300);
+        clearInterval(t); // Hold at 95%
       }
-    }, 520);
+    }, 1800); // Slower interval (1.8s) better matches deep AI processing time
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Advance to "ready" ONLY when the backend actually finishes
+  useEffect(() => {
+    if (!analysisLoading && !analysisError) {
+      setLoadMsg(loadingSteps[7].msg); // "Analysis complete."
+      setLoadPct(100);
+      setTimeout(() => setPhase("ready"), 600);
+    } else if (!analysisLoading && analysisError) {
+      // If error occurs, jump to ready to show the error screen instead of hanging
+      setPhase("ready");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysisLoading, analysisError]);
 
   // ── Fetch real AI analysis (runs in background) ──
   useEffect(() => {
