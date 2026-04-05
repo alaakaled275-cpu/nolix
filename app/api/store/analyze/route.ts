@@ -139,10 +139,35 @@ function buildSignalBlock(signals: StoreSignals): string {
   ].join("\n");
 }
 
+// ── PHASE 0: Master Strategic Scrutiny ──────────────────────────────────────────
+function buildMasterScrutinyPrompt(signals: StoreSignals): string {
+  return `You are Zeno, an elite-level investor and master strategic consultant.
+You are analyzing raw scraped data from a website to form a deep, uncompromising "Master Scrutiny" of this business before breaking it down into smaller parts.
+
+${buildSignalBlock(signals)}
+
+INSTRUCTIONS:
+Do NOT output JSON. Write a cohesive, analytical text report (markdown) that connects all the dots.
+Analyze:
+1. What does this site REALLY do? If it isn't an e-commerce store, what is its exact value proposition?
+2. Who is the exact audience and what is their psychology?
+3. How does the brand, pricing (if any), and trust indicators align with the audience?
+4. What is the market potential, competition, and saturation?
+5. What are the brutal, uncompromising weaknesses or risks?
+6. What is the final, overarching investor verdict based on all signals combined?
+
+Think deeply, logically, and stringently. Leave no stone unturned. Be brutal and realistic. Determine exactly how all these pieces fit together.`;
+}
+
 // ── PHASE 1: Foundation Prompt ─────────────────────────────────────────────────
-function buildFoundationPrompt(signals: StoreSignals): string {
+function buildFoundationPrompt(signals: StoreSignals, masterScrutiny: string): string {
   return `You are Zeno — a senior investor and e-commerce analyst. You think like someone risking real money.
 
+=== MASTER INTELLIGENCE CONTEXT ===
+The following is your own deep strategic scrutiny of the business. Use this exact context to align all your JSON output perfectly. Do NOT contradict the Master Context.
+${masterScrutiny}
+
+=== RAW SIGNALS ===
 ${buildSignalBlock(signals)}
 
 === PHASE 1: FOUNDATION ANALYSIS ===
@@ -211,12 +236,17 @@ Reply ONLY with valid JSON:
 }
 
 // ── PHASE 2: Market & Numbers Prompt ──────────────────────────────────────────
-function buildMarketPrompt(signals: StoreSignals): string {
+function buildMarketPrompt(signals: StoreSignals, masterScrutiny: string): string {
   const hasPricing = signals.lowestPrice !== null;
   const hasContent = signals.wordCount > 100;
 
   return `You are Zeno — a data-driven e-commerce market analyst. Think like an investor calculating real ROI.
 
+=== MASTER INTELLIGENCE CONTEXT ===
+The following is your own deep strategic scrutiny of the business. Use this exact context to align all your JSON output perfectly. Do NOT contradict the Master Context.
+${masterScrutiny}
+
+=== RAW SIGNALS ===
 ${buildSignalBlock(signals)}
 
 === PHASE 2: MARKET & NUMBERS ANALYSIS ===
@@ -306,9 +336,14 @@ Reply ONLY with valid JSON:
 }
 
 // ── PHASE 3: Strategic Audit Prompt ───────────────────────────────────────────
-function buildStrategicPrompt(signals: StoreSignals): string {
+function buildStrategicPrompt(signals: StoreSignals, masterScrutiny: string): string {
   return `You are Zeno — a strategic investment advisor for e-commerce. You do NOT give generic advice. You give decisive verdicts backed by data.
 
+=== MASTER INTELLIGENCE CONTEXT ===
+The following is your own deep strategic scrutiny of the business. Use this exact context to align all your JSON output perfectly. Do NOT contradict the Master Context.
+${masterScrutiny}
+
+=== RAW SIGNALS ===
 ${buildSignalBlock(signals)}
 
 === PHASE 3: DEEP STRATEGIC ANALYSIS ===
@@ -442,25 +477,40 @@ export async function POST(req: NextRequest) {
     const client = new OpenAI({ apiKey, baseURL });
     const model = env.GROQ_ANALYZE_MODEL ?? env.OPENAI_MODEL ?? "llama-3.3-70b-versatile";
 
-    // ── Step 3: Run all 3 phases in parallel ──────────────────────────────────
+    // ── Step 3: Master Scrutiny (Sequential) ──────────────────────────────────
+    console.log("[analyze] Running Step 0: Master Scrutiny...");
+    const masterResponse = await client.chat.completions.create({
+      model,
+      messages: [{ role: "user", content: buildMasterScrutinyPrompt(signals) }],
+      temperature: 0.2,
+      max_tokens: 1500,
+    }, { timeout: 35000 }).catch(e => {
+       console.error("[analyze] Master Scrutiny failed:", e);
+       return null;
+    });
+
+    const masterScrutiny = masterResponse?.choices[0]?.message?.content || "Proceeding with direct signal analysis.";
+    console.log("[analyze] Master Scrutiny complete.");
+
+    // ── Step 4: Run all 3 phases in parallel ──────────────────────────────────
     const [foundationResult, marketResult, strategicResult] = await Promise.allSettled([
       client.chat.completions.create({
         model,
-        messages: [{ role: "user", content: buildFoundationPrompt(signals) }],
+        messages: [{ role: "user", content: buildFoundationPrompt(signals, masterScrutiny) }],
         temperature: 0.1,
         max_tokens: 1500,
         response_format: { type: "json_object" },
       }, { timeout: 25000 }),
       client.chat.completions.create({
         model,
-        messages: [{ role: "user", content: buildMarketPrompt(signals) }],
+        messages: [{ role: "user", content: buildMarketPrompt(signals, masterScrutiny) }],
         temperature: 0.1,
         max_tokens: 1500,
         response_format: { type: "json_object" },
       }, { timeout: 25000 }),
       client.chat.completions.create({
         model,
-        messages: [{ role: "user", content: buildStrategicPrompt(signals) }],
+        messages: [{ role: "user", content: buildStrategicPrompt(signals, masterScrutiny) }],
         temperature: 0.1,
         max_tokens: 2000,
         response_format: { type: "json_object" },
