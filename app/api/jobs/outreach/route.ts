@@ -11,9 +11,17 @@ const bodySchema = z.object({
 
 function pgConnectionString() {
   const env = getEnv();
-  const user = encodeURIComponent(env.PGUSER);
-  const pass = encodeURIComponent(env.PGPASSWORD);
-  return `postgres://${user}:${pass}@${env.PGHOST}:${env.PGPORT}/${env.PGDATABASE}`;
+
+  // Safely fall back to empty string so TypeScript is happy.
+  // PgBoss will fail with a clear connection error if DB vars are missing,
+  // rather than crashing at the TypeScript / build stage.
+  const user = encodeURIComponent(env.PGUSER ?? "");
+  const pass = encodeURIComponent(env.PGPASSWORD ?? "");
+  const host = env.PGHOST ?? "localhost";
+  const port = env.PGPORT ?? "5432";
+  const db   = env.PGDATABASE ?? "";
+
+  return `postgres://${user}:${pass}@${host}:${port}/${db}`;
 }
 
 export async function POST(req: Request) {
