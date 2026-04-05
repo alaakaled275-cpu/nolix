@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import styles from "./styles.module.css";
@@ -15,7 +15,7 @@ const LIVE_EVENTS = [
 
 // ── Post-activation state messages ──────────────────────────────────────
 const ACTIVATION_STEPS = [
-  { icon: "⚡", text: "ConvertAI is now active", delay: 0 },
+  { icon: "⚡", text: "NOLIX is now active", delay: 0 },
   { icon: "👁️", text: "Analyzing your visitors in real-time...", delay: 1800 },
   { icon: "🧠", text: "Behavior engine initialized", delay: 3200 },
   { icon: "✅", text: "First revenue insights available within 24 hours", delay: 5000 },
@@ -36,7 +36,7 @@ export default function ActivatePage() {
   const liveIdx = useRef(0);
 
   const revLoss = rawLoss ? `$${Number(rawLoss).toLocaleString()}` : "$3,200";
-  const scriptTag = `<script src="https://cdn.convertai.co/v1/engine.js" data-store="${store || "yourstore.com"}"></script>`;
+  const scriptTag = `<script src="https://cdn.NOLIX.co/v1/engine.js" data-store="${store || "yourstore.com"}"></script>`;
 
   // Boot live feed
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function ActivatePage() {
       <div className={styles.page}>
         <header className={styles.header}>
           <div className={styles.container}>
-            <a href="/" className={styles.logo}>Convert<span className={styles.logoAccent}>AI</span></a>
+            <a href="/" className={styles.logo}>NOLI<span className={styles.logoAccent}>X</span></a>
           </div>
         </header>
 
@@ -89,7 +89,7 @@ export default function ActivatePage() {
           <div className={styles.activationGlow} aria-hidden />
           <div className={styles.activationContent}>
             <div className={styles.activationPulse} aria-hidden />
-            <div className={styles.activationBrand}>Convert<span className={styles.logoAccent}>AI</span></div>
+            <div className={styles.activationBrand}>NOLI<span className={styles.logoAccent}>X</span></div>
 
             <div className={styles.activationStepList}>
               {ACTIVATION_STEPS.map((step, i) => (
@@ -107,7 +107,7 @@ export default function ActivatePage() {
               <div className={styles.activationDone}>
                 <div className={styles.activationDoneTitle}>You&apos;re live.</div>
                 <p className={styles.activationDoneSub}>
-                  ConvertAI is now watching your visitors and protecting every checkout.
+                  NOLIX is now watching your visitors and protecting every checkout.
                   Check your dashboard for live conversions.
                 </p>
                 <a href="/dashboard" className={styles.activationDoneBtn} id="post-activation-dashboard-btn">
@@ -146,7 +146,7 @@ export default function ActivatePage() {
       <header className={styles.header}>
         <div className={styles.container}>
           <a href="/" className={styles.logo}>
-            Convert<span className={styles.logoAccent}>AI</span>
+            NOLI<span className={styles.logoAccent}>X</span>
           </a>
           {store && (
             <div className={styles.headerStore}>
@@ -183,7 +183,7 @@ export default function ActivatePage() {
             </div>
             <p className={styles.heroSub}>
               Every minute you wait, that money walks out the door.
-              ConvertAI stops it — one click, zero risk.
+              NOLIX stops it — one click, zero risk.
             </p>
             <a href="#install" className={styles.heroCtaBtn} id="hero-cta-btn">
               Start Recovering This Revenue →
@@ -199,7 +199,7 @@ export default function ActivatePage() {
           <div className={styles.liveSection}>
             <div className={styles.liveSectionHeader}>
               <span className={styles.liveDot} />
-              <span className={styles.liveSectionTitle}>Happening right now — across ConvertAI stores</span>
+              <span className={styles.liveSectionTitle}>Happening right now — across NOLIX stores</span>
             </div>
             <div className={styles.liveFeed}>
               {liveEvents.map((ev, i) => (
@@ -330,7 +330,7 @@ export default function ActivatePage() {
                 <div className={styles.optionTag}>🤝 We Do Everything For You</div>
                 <h3 className={styles.optionTitle}>We&apos;ll install everything for you — free</h3>
                 <p className={styles.optionDesc}>
-                  Tell us your store. Our team will have ConvertAI running within 2 hours.
+                  Tell us your store. Our team will have NOLIX running within 2 hours.
                   You don&apos;t need to touch a single line of code.
                 </p>
                 <div className={styles.assistedFeatures}>
@@ -368,7 +368,7 @@ export default function ActivatePage() {
                 { icon: "🔒", title: "No access to your store data", desc: "We never read your products, orders, or customer info." },
                 { icon: "👁️", title: "Behavior analysis only", desc: "We only analyze behavior — like Google Analytics. Nothing personal is ever stored." },
                 { icon: "⚡", title: "Zero performance impact", desc: "The script is async and loads after your page. Your store speed is not affected." },
-                { icon: "🗑️", title: "Removable anytime", desc: "Delete one line of code and ConvertAI is gone. No traces, no lock-in." },
+                { icon: "🗑️", title: "Removable anytime", desc: "Delete one line of code and NOLIX is gone. No traces, no lock-in." },
               ].map((t) => (
                 <div key={t.title} className={styles.trustCard}>
                   <div className={styles.trustIcon}>{t.icon}</div>
@@ -383,9 +383,9 @@ export default function ActivatePage() {
           <div className={styles.riskBox}>
             <div className={styles.riskGlow} aria-hidden />
             <div className={styles.riskMark}>💎</div>
-            <div className={styles.riskTitle}>Try ConvertAI for 7 days — completely free</div>
+            <div className={styles.riskTitle}>Try NOLIX for 7 days — completely free</div>
             <p className={styles.riskText}>
-              If ConvertAI doesn&apos;t generate additional revenue within 7 days,
+              If NOLIX doesn&apos;t generate additional revenue within 7 days,
               remove the script instantly. One line of code. No questions asked.
               No billing. No obligations.
             </p>
@@ -427,8 +427,8 @@ export default function ActivatePage() {
           <span className={styles.stickyPulse} />
           <span>
             {store
-              ? <>ConvertAI is ready to activate for <strong>{store}</strong> — every minute costs you money.</>
-              : <>ConvertAI is ready to activate — start recovering revenue now.</>
+              ? <>NOLIX is ready to activate for <strong>{store}</strong> — every minute costs you money.</>
+              : <>NOLIX is ready to activate — start recovering revenue now.</>
             }
           </span>
         </div>

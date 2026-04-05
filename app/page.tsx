@@ -1,271 +1,158 @@
 "use client";
+
 import { useState } from "react";
 import styles from "./landing.module.css";
 
-const STEPS = [
-  {
-    icon: "🔗",
-    num: "01",
-    title: "Enter URL",
-    desc: "Paste your store URL — no login, no access needed.",
-  },
-  {
-    icon: "🤖",
-    num: "02",
-    title: "AI Analyzes Store",
-    desc: "Our engine scans your funnel, pricing, UX, and checkout in seconds.",
-  },
-  {
-    icon: "💰",
-    num: "03",
-    title: "Get Revenue Insights",
-    desc: "Receive a clear breakdown of what's leaking revenue and how to fix it.",
-  },
-];
+export default function WaitlistPage() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [message, setMessage] = useState("");
 
-const TRUST = [
-  { icon: "⚡", text: "Instant analysis in 10 seconds" },
-  { icon: "🔒", text: "No access to your store needed" },
-  { icon: "📦", text: "No installation required" },
-];
-
-const SAMPLE_RESULTS = [
-  {
-    label: "Revenue Opportunity",
-    value: "$4,200 / mo",
-    detail: "Based on your current traffic and conversion gap",
-    color: "#22c55e",
-    icon: "💰",
-  },
-  {
-    label: "Conversion Issues",
-    value: "7 found",
-    detail: "Product page, cart abandonment, trust signals",
-    color: "#f59e0b",
-    icon: "📉",
-  },
-  {
-    label: "Checkout Friction",
-    value: "High",
-    detail: "3 friction points blocking purchase completion",
-    color: "#ef4444",
-    icon: "🚧",
-  },
-];
-
-export default function ConvertAIPage() {
-  const [url, setUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-
-  function handleAnalyze(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg("");
-    
-    let targetUrl = url.trim();
-    if (!targetUrl) return;
+    if (!email) return;
 
-    // Auto-prepend https if missing for parsing
-    if (!/^https?:\/\//i.test(targetUrl)) {
-      targetUrl = "https://" + targetUrl;
-    }
+    setStatus("loading");
+    setMessage("");
 
     try {
-      const parsed = new URL(targetUrl);
-      // Ensure the hostname has a valid top-level domain (like .com, .net, .store)
-      if (!/\.[a-zA-Z]{2,}$/.test(parsed.hostname)) {
-        setErrorMsg("Please enter a valid store URL (e.g., mystore.com)");
-        return;
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatus("error");
+        setMessage(data.error || "Failed to join waitlist. Please try again.");
+      } else {
+        setStatus("success");
+        setMessage(data.message || "You're on the list!");
+        setEmail("");
       }
     } catch (err) {
-      setErrorMsg("Please enter a valid store URL (e.g., mystore.com)");
-      return;
+      setStatus("error");
+      setMessage("Something went wrong. Please check your connection.");
     }
-
-    setLoading(true);
-    const params = new URLSearchParams({ store: targetUrl });
-    setTimeout(() => {
-      window.location.href = `/results?${params.toString()}`;
-    }, 800);
-  }
+  };
 
   return (
     <div className={styles.page}>
-      {/* ── HEADER ── */}
-      <header className={styles.header}>
-        <div className={styles.container}>
-          <div className={styles.nav}>
-            <div className={styles.logo}>
-              Convert<span className={styles.logoAccent}>AI</span>
+      {/* Background Interactive Video (muted, autoplay, loop) */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className={styles.videoBg}
+      >
+        <source src="/TensorPix - zm3291x49nrmr0cwbp7vb4nx38_result_.mp4" type="video/mp4" />
+      </video>
+
+      {/* Dark Overlay for readability */}
+      <div className={styles.overlay} aria-hidden />
+
+      {/* Main Content Container over video */}
+      <div className={styles.contentContainer}>
+        
+        {/* The Mockup Layout */}
+        <div className={styles.splitLayout}>
+          
+          {/* Left Column (Top in mobile) */}
+          <div className={styles.leftCol}>
+            {/* Logo replacement for "Untitled" */}
+            <div className={styles.eyebrow}>
+              <div className={styles.logoText}>NOLI<span className={styles.eyebrowX}>X</span></div>
             </div>
-            <a href="#analyzer" className={styles.navCta}>
-              Analyze My Store
-            </a>
-          </div>
-        </div>
-      </header>
-
-      {/* ── HERO ── */}
-      <section className={styles.hero} id="analyzer">
-        <div className={styles.heroGlow} aria-hidden />
-        <div className={styles.container}>
-          {/* Eyebrow */}
-          <div className={styles.heroEyebrow}>
-            <span className={styles.eyebrowDot} />
-            AI-Powered Revenue Analysis
-          </div>
-
-          {/* Headline */}
-          <h1 className={styles.heroTitle}>
-            See how much revenue your store is{" "}
-            <span className={styles.gradient}>losing — instantly</span>
-          </h1>
-          <p className={styles.heroSub}>
-            Enter your store URL below and ConvertAI will pinpoint your biggest
-            revenue leaks in under 10 seconds. No code. No access.
-          </p>
-
-          {/* ── ANALYZER INPUT ── */}
-          <form
-            className={styles.analyzerForm}
-            onSubmit={handleAnalyze}
-            id="analyzer-form"
-          >
-            <div className={styles.inputWrap}>
-              <span className={styles.inputIcon}>🌐</span>
-              <input
-                id="store-url-input"
-                type="text"
-                className={styles.urlInput}
-                placeholder="Enter your store URL (e.g. yourstore.com)"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <button
-                id="analyze-btn"
-                type="submit"
-                className={styles.analyzeBtn}
-                disabled={loading || !url.trim()}
-              >
-                {loading ? (
-                  <span className={styles.btnSpinner} />
-                ) : (
-                  "Analyze My Store →"
-                )}
-              </button>
-            </div>
-
-            {errorMsg && (
-              <div style={{ color: "#ef4444", fontSize: "0.875rem", marginTop: "0.5rem", textAlign: "center", fontWeight: "500", background: "rgba(239, 68, 68, 0.1)", padding: "0.25rem 0.75rem", borderRadius: "100px", display: "inline-block", alignSelf: "center", justifySelf: "center", width: "fit-content", margin: "1rem auto 0" }}>{errorMsg}</div>
-            )}
-
-            {/* Trust badges */}
-            <div className={styles.trustRow}>
-              {TRUST.map((t) => (
-                <div key={t.text} className={styles.trustBadge}>
-                  <span>{t.icon}</span>
-                  <span>{t.text}</span>
-                </div>
-              ))}
-            </div>
-          </form>
-        </div>
-      </section>
-
-      {/* ── 3-STEP FLOW ── */}
-      <section className={styles.stepsSection}>
-        <div className={styles.container}>
-          <div className={styles.sectionLabel}>How It Works</div>
-          <div className={styles.stepsGrid}>
-            {STEPS.map((s, i) => (
-              <div key={s.num} className={styles.stepCard}>
-                <div className={styles.stepTop}>
-                  <div className={styles.stepNum}>{s.num}</div>
-                  <div className={styles.stepIcon}>{s.icon}</div>
-                </div>
-                <h3 className={styles.stepTitle}>{s.title}</h3>
-                <p className={styles.stepDesc}>{s.desc}</p>
-                {i < STEPS.length - 1 && (
-                  <div className={styles.stepArrow} aria-hidden>
-                    →
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── RESULTS PREVIEW ── */}
-      <section className={styles.previewSection}>
-        <div className={styles.container}>
-          <div className={styles.sectionLabel}>Sample Report</div>
-          <h2 className={styles.previewTitle}>
-            Here&apos;s what a typical analysis reveals
-          </h2>
-          <p className={styles.previewSub}>
-            Real stores uncover thousands in hidden revenue on their first scan.
-          </p>
-
-          <div className={styles.previewGrid}>
-            {SAMPLE_RESULTS.map((r) => (
-              <div key={r.label} className={styles.previewCard}>
-                <div className={styles.previewBlurOverlay} aria-hidden>
-                  <div className={styles.lockBadge}>
-                    🔒 Analyze your store to unlock
-                  </div>
-                </div>
-                <div className={styles.previewIcon}>{r.icon}</div>
-                <div className={styles.previewLabel}>{r.label}</div>
-                <div
-                  className={styles.previewValue}
-                  style={{ color: r.color }}
-                >
-                  {r.value}
-                </div>
-                <div className={styles.previewDetail}>{r.detail}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FINAL CTA ── */}
-      <section className={styles.ctaSection}>
-        <div className={styles.container}>
-          <div className={styles.ctaBox}>
-            <div className={styles.ctaGlow} aria-hidden />
-            <h2 className={styles.ctaTitle}>
-              Stop guessing. Start growing.
-            </h2>
-            <p className={styles.ctaSub}>
-              Your competitors are already optimizing. Don&apos;t let revenue leave
-              through the back door.
+            
+            <h1 className={styles.title}>
+              Dignissim ac col sociis<br />commodo sagittis
+            </h1>
+            
+            <p className={styles.description}>
+              Neque, euismod mauris etiam aptent aliquam, Rusum urna dolor 
+              etiam mattis felis enim nec præsent. ullamcorper sagitis tempus 
+              ipsum sedugufas venedlies.
             </p>
-            <a href="#analyzer" className={styles.analyzeBtn} id="cta-analyze-btn">
-              Analyze My Store — It&apos;s Free →
-            </a>
           </div>
-        </div>
-      </section>
 
-      {/* ── FOOTER ── */}
-      <footer className={styles.footer}>
-        <div className={styles.container}>
-          <div className={styles.logo}>
-            Convert<span className={styles.logoAccent}>AI</span>
+          {/* Right Column (Form & Socials) */}
+          <div className={styles.rightCol}>
+            <form onSubmit={handleSubmit} className={styles.formBox}>
+              <div className={styles.inputWrap}>
+                <input
+                  type="email"
+                  className={styles.inputField}
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={status === "loading" || status === "success"}
+                  required
+                />
+              </div>
+              
+              <button 
+                type="submit" 
+                className={styles.submitBtn}
+                disabled={status === "loading" || status === "success"}
+              >
+                <span>{status === "loading" ? "Joining..." : status === "success" ? "Subscribed" : "Get Notified"}</span>
+                <span>→</span>
+              </button>
+              
+              {message && (
+                <div className={`${styles.message} ${status === "success" ? styles.messageSuccess : styles.messageError}`}>
+                  {message}
+                </div>
+              )}
+            </form>
+
+            {/* Social Icons row */}
+            <div className={styles.socialIcons}>
+              {/* Instagram */}
+              <a href="#" className={styles.socialIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+              </a>
+              
+              {/* Facebook */}
+              <a href="#" className={styles.socialIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+                </svg>
+              </a>
+              
+              {/* X / Twitter icon SVG */}
+              <a href="#" className={styles.socialIcon}>
+                <svg width="18" height="18" viewBox="0 0 1200 1227" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z" fill="currentColor"/>
+                </svg>
+              </a>
+
+              {/* TikTok icon SVG */}
+              <a href="#" className={styles.socialIcon}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.01.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.95v7.4c-.01 2.98-1.73 5.82-4.5 6.94-2.82 1.15-6.22.42-8.32-1.57-2.06-1.92-2.73-4.9-1.76-7.55C3.01 10.61 5.6 8.78 8.44 8.52c.31-.03.62-.03.93-.01v4.06c-1.39.08-2.78.89-3.4 2.15-.6 1.22-.44 2.72.39 3.79s2.1 1.65 3.51 1.51c1.37-.14 2.58-1.14 2.89-2.48.11-.47.16-1.19.16-1.74V.02h-.4z" />
+                </svg>
+              </a>
+              
+              {/* Mail */}
+              <a href="mailto:contact@nolix.app" className={styles.socialIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                </svg>
+              </a>
+            </div>
           </div>
-          <p className={styles.footerTagline}>
-            AI-Powered Revenue Analysis for E-Commerce Stores
-          </p>
-          <div className={styles.footerLinks}>
-            <a href="/dashboard">Dashboard</a>
-            <a href="#analyzer">Analyze</a>
-          </div>
+          
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

@@ -963,7 +963,7 @@ export default function ResultsPage() {
               <div className={styles.ctaBox} style={{ marginTop: 48, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "16px" }}>
                 <h2 style={{ fontSize: "24px", color: "#fff", marginBottom: "12px", textAlign: "center" }}>Ready to deploy these fixes?</h2>
                 <p style={{ color: "#a1a1aa", fontSize: "16px", textAlign: "center", marginBottom: "28px" }}>
-                  Activate ConvertAI to instantly implement Zeno's recommended growth plan on {storeUrl}.
+                  Activate NOLIX to instantly implement Zeno's recommended growth plan on {storeUrl}.
                 </p>
                 <div style={{ display: "flex", gap: "16px", justifyContent: "center" }}>
                   <a href={`/activate?store=${encodeURIComponent(storeUrl)}`} className={styles.btnPrimary}>

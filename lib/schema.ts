@@ -55,6 +55,12 @@ export async function ensureConvertAISchema(): Promise<void> {
         embed_key text unique not null default gen_random_uuid()::text,
         created_at timestamptz not null default now()
       );
+
+      create table if not exists waitlist (
+        id uuid primary key default gen_random_uuid(),
+        email text unique not null,
+        created_at timestamptz not null default now()
+      );
     `);
 
     // Add new columns if they don't exist (one by one to avoid total failure)
