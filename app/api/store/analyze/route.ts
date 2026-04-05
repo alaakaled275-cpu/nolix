@@ -12,6 +12,8 @@ import OpenAI from "openai";
 import { scrapeStore, type StoreSignals } from "@/lib/scraper";
 import { getEnv } from "@/lib/env";
 
+export const maxDuration = 60; // Allow Vercel to run up to 60s for the analysis pipeline
+
 // ── Input ──────────────────────────────────────────────────────────────────────
 const inputSchema = z.object({ url: z.string().min(3).max(500) });
 
@@ -465,22 +467,37 @@ export async function POST(req: NextRequest) {
     const signals = await scrapeStore(url);
     const dataSource: "live" | "benchmark" = signals.wordCount > 0 ? "live" : "benchmark";
 
-    // ── Step 2: Build AI client — Key 2 (Analysis) + 70B model ─────────────────
-    const apiKey = env.GROQ_ANALYZE_KEY ?? env.OPENAI_API_KEY;
-    if (!apiKey) {
+    // ── Step 2: Build AI clients (Load Balancing) ──────────────────────────────
+    // To avoid Groq's 6000 TPM limit on the free tier, we distribute requests across
+    // the user's API keys and use a faster, lighter model for the Scrutiny phase.
+    const baseURL = env.AI_BASE_URL ?? "https://api.groq.com/openai/v1";
+    
+    // Fallbacks if only 1 key is provided
+    const keyMaster = env.OPENAI_API_KEY || env.GROQ_ANALYZE_KEY || env.GROQ_CHAT_KEY || env.GROQ_OPS_KEY;
+    const keyP1 = env.GROQ_CHAT_KEY || keyMaster;
+    const keyP2 = env.GROQ_ANALYZE_KEY || keyMaster;
+    const keyP3 = env.GROQ_OPS_KEY || keyMaster;
+
+    if (!keyMaster) {
       return NextResponse.json(
-        { error: "Zeno is not configured. Add GROQ_ANALYZE_KEY in your Vercel Project Settings -> Environment Variables, then Redeploy." },
+        { error: "Zeno is not configured. Add your API keys in Vercel Project Settings." },
         { status: 500 }
       );
     }
-    const baseURL = env.AI_BASE_URL ?? "https://api.groq.com/openai/v1";
-    const client = new OpenAI({ apiKey, baseURL });
-    const model = env.GROQ_ANALYZE_MODEL ?? env.OPENAI_MODEL ?? "llama-3.3-70b-versatile";
+
+    const clientMaster = new OpenAI({ apiKey: keyMaster, baseURL });
+    const clientP1 = new OpenAI({ apiKey: keyP1, baseURL });
+    const clientP2 = new OpenAI({ apiKey: keyP2, baseURL });
+    const clientP3 = new OpenAI({ apiKey: keyP3, baseURL });
+
+    // Use extreme speed model for Phase 0 to save heavy tokens, and 70b strictly for JSON phases
+    const modelDeep = env.GROQ_ANALYZE_MODEL ?? env.OPENAI_MODEL ?? "llama-3.3-70b-versatile";
+    const modelFast = "llama-3.1-8b-instant";
 
     // ── Step 3: Master Scrutiny (Sequential) ──────────────────────────────────
-    console.log("[analyze] Running Step 0: Master Scrutiny...");
-    const masterResponse = await client.chat.completions.create({
-      model,
+    console.log("[analyze] Running Step 0: Master Scrutiny (using 8b)...");
+    const masterResponse = await clientMaster.chat.completions.create({
+      model: modelFast,
       messages: [{ role: "user", content: buildMasterScrutinyPrompt(signals) }],
       temperature: 0.2,
       max_tokens: 1500,
@@ -492,24 +509,25 @@ export async function POST(req: NextRequest) {
     const masterScrutiny = masterResponse?.choices[0]?.message?.content || "Proceeding with direct signal analysis.";
     console.log("[analyze] Master Scrutiny complete.");
 
-    // ── Step 4: Run all 3 phases in parallel ──────────────────────────────────
+    // ── Step 4: Run all 3 phases in parallel (Distributed) ────────────────────
+    console.log("[analyze] Running Phases 1-3 concurrently (Load Balanced)...");
     const [foundationResult, marketResult, strategicResult] = await Promise.allSettled([
-      client.chat.completions.create({
-        model,
+      clientP1.chat.completions.create({
+        model: modelDeep,
         messages: [{ role: "user", content: buildFoundationPrompt(signals, masterScrutiny) }],
         temperature: 0.1,
         max_tokens: 1500,
         response_format: { type: "json_object" },
       }, { timeout: 25000 }),
-      client.chat.completions.create({
-        model,
+      clientP2.chat.completions.create({
+        model: modelDeep,
         messages: [{ role: "user", content: buildMarketPrompt(signals, masterScrutiny) }],
         temperature: 0.1,
         max_tokens: 1500,
         response_format: { type: "json_object" },
       }, { timeout: 25000 }),
-      client.chat.completions.create({
-        model,
+      clientP3.chat.completions.create({
+        model: modelDeep,
         messages: [{ role: "user", content: buildStrategicPrompt(signals, masterScrutiny) }],
         temperature: 0.1,
         max_tokens: 2000,
@@ -517,7 +535,7 @@ export async function POST(req: NextRequest) {
       }, { timeout: 25000 }),
     ]);
 
-    // ── Step 4: Handle failures ───────────────────────────────────────────────
+    // ── Step 5: Handle failures ───────────────────────────────────────────────
     function parseAI<T>(result: PromiseSettledResult<OpenAI.Chat.ChatCompletion>): T | null {
       if (result.status === "rejected") {
         console.error("[analyze] AI phase failed:", result.reason?.message ?? result.reason);
