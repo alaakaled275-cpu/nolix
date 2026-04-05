@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+/* ── Custom theme tokens ───────────────────────────────────── */
+@theme {
+  --color-dark-900: #0a0a12;
+  --color-dark-800: #0f0f1a;
+  --color-dark-700: #151525;
+  --color-dark-600: #1a1a2e;
+  --color-dark-500: #22223a;
+  --color-dark-400: #2d2d4a;
+  --color-dark-300: #3d3d5c;
+  --color-slate-200: #c9d1d9;
+  --color-slate-300: #8b949e;
+  --color-neon-green: #10b981;
+  --color-neon-blue: #6366f1;
+  --color-neon-purple: #a855f7;
+  --color-neon-amber: #f59e0b;
+  --color-neon-red: #ef4444;
+  --color-neon-cyan: #22d3ee;
+  --color-glass-bg: rgba(15, 15, 26, 0.6);
+  --color-glass-border: rgba(255, 255, 255, 0.06);
+  --color-glass-highlight: rgba(255, 255, 255, 0.03);
+}
+
+/* ── Glass card utility ────────────────────────────────────── */
+@utility glass {
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-glass-border);
+}
+
+@utility glass-hover {
+  &:hover {
+    background: rgba(20, 20, 36, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+  }
+}
+
+@utility text-gradient {
+  background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Animations ─────────────────────────────────────────── */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@utility animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+@utility animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out both;
+}
+
+@utility animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@utility animate-count-up {
+  animation: countUp 0.4s ease-out both;
+}

@@ -235,7 +235,8 @@ export default function ConvertAIPage() {
             AI-Powered Revenue Analysis for E-Commerce Stores
           </p>
           <div className={styles.footerLinks}>
-            <a href="/dashboard">Dashboard</a>
+            <a href="/dashboard/analytics">Analytics Dashboard</a>
+            <a href="/dashboard">NOLIX Dashboard</a>
             <a href="#analyzer">Analyze</a>
           </div>
         </div>
