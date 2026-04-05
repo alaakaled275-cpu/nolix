@@ -6,10 +6,11 @@ import ZenoChat from "@/app/components/ZenoChat";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface FoundationAnalysis {
+  business_model: string;
   foundation_score: number;
-  judgment: "Strong foundation" | "Average" | "Weak";
+  judgment: string;
   store_name_verdict: string;
-  business_type: "Dropshipping" | "Brand" | "Reseller" | "Manufacturer" | "Unknown";
+  business_type: string;
   business_type_reasoning: string;
   product_problem: string;
   product_classification: "NEED" | "WANT";
@@ -46,6 +47,7 @@ interface MarketIntelligence {
   valuation_high: number;
   repeat_purchase: boolean;
   repeat_cycle_days: number | null;
+  repeat_purchase_analysis?: string;
   upsell_potential: string | null;
 }
 
@@ -86,6 +88,7 @@ interface StrategicAudit {
 interface StoreAnalysisResult {
   url: string;
   data_source: "live" | "benchmark";
+  business_model: string;
   signals: {
     title: string | null;
     platform: string | null;
@@ -641,28 +644,42 @@ export default function ResultsPage() {
                   <span>Note</span>
                 </div>
                 <div className={styles.revenueTableRow}>
-                  <span className={styles.rtMetric}>Monthly Customers</span>
+                  <span className={styles.rtMetric}>
+                    {f?.business_model === "Content/Media" ? "Active Users (Est.)" : f?.business_model === "SaaS/Tool" ? "Active Subscribers" : "Monthly Customers"}
+                  </span>
                   <span className={styles.rtLow}>{m.monthly_customers_low?.toLocaleString() ?? "N/A"}</span>
                   <span className={styles.rtHigh}>{m.monthly_customers_high?.toLocaleString() ?? "N/A"}</span>
-                  <span className={styles.rtNote}>At {m.cvr_est ?? "N/A"}% CVR</span>
+                  <span className={styles.rtNote}>
+                    {f?.business_model === "Content/Media" ? `At ${m.cvr_est ?? "N/A"}% Ad/Sub CVR` : `At ${m.cvr_est ?? "N/A"}% CVR`}
+                  </span>
                 </div>
                 <div className={styles.revenueTableRow}>
-                  <span className={styles.rtMetric}>Avg. Order Value (AOV)</span>
+                  <span className={styles.rtMetric}>
+                    {f?.business_model === "Content/Media" ? "Est. RPM ($ / 1k views)" : f?.business_model === "SaaS/Tool" ? "ARPU" : "Avg. Order Value (AOV)"}
+                  </span>
                   <span className={styles.rtLow}>${m.aov_est ?? "N/A"}</span>
                   <span className={styles.rtHigh}>${m.aov_est ?? "N/A"}</span>
-                  <span className={styles.rtNote}>Inferred from price signals</span>
+                  <span className={styles.rtNote}>
+                    {f?.business_model === "Content/Media" ? "Inferred ad/sponsorship rates" : "Inferred from price signals"}
+                  </span>
                 </div>
                 <div className={styles.revenueTableRow}>
-                  <span className={styles.rtMetric}>Monthly Revenue</span>
+                  <span className={styles.rtMetric}>
+                    {f?.business_model === "Content/Media" ? "Ad/Sponsorship Revenue" : f?.business_model === "SaaS/Tool" ? "Monthly MRR" : "Monthly Revenue"}
+                  </span>
                   <span className={styles.rtLow}>${m.monthly_revenue_low?.toLocaleString() ?? "N/A"}</span>
                   <span className={styles.rtHigh}>${m.monthly_revenue_high?.toLocaleString() ?? "N/A"}</span>
-                  <span className={styles.rtNote}>Customers × AOV</span>
+                  <span className={styles.rtNote}>
+                    {f?.business_model === "Content/Media" ? "(Traffic / 1000) × RPM" : "Customers × AOV"}
+                  </span>
                 </div>
                 <div className={styles.revenueTableRow}>
                   <span className={styles.rtMetric}>Monthly Profit ({m.profit_margin_pct ?? "N/A"}% margin)</span>
                   <span className={styles.rtLow}>${m.monthly_profit_low?.toLocaleString() ?? "N/A"}</span>
                   <span className={styles.rtHigh}>${m.monthly_profit_high?.toLocaleString() ?? "N/A"}</span>
-                  <span className={styles.rtNote}>Est. gross margin</span>
+                  <span className={styles.rtNote}>
+                    {f?.business_model === "Content/Media" ? "Operating margin" : "Est. gross margin"}
+                  </span>
                 </div>
               </div>
 
@@ -673,12 +690,20 @@ export default function ResultsPage() {
                 </div>
                 <div>
                   <div className={styles.repeatTitle}>
-                    {m.repeat_purchase ? "Repeat Purchase Product" : "One-Time Product — Upsell Strategy Needed"}
+                    {f?.business_model === "Content/Media" 
+                      ? "Engagement & Ad Revenue" 
+                      : m.repeat_purchase 
+                        ? "Repeat Purchase Product" 
+                        : "One-Time Product — Upsell Strategy Needed"
+                    }
                   </div>
                   <div className={styles.repeatDesc}>
-                    {m.repeat_purchase
-                      ? `Customers likely repurchase every ~${m.repeat_cycle_days} days. Strong LTV potential — email retention and subscription offers are high-leverage.`
-                      : m.upsell_potential ?? "Focus on upsell at checkout and post-purchase to maximize revenue per customer."}
+                    {f?.business_model === "Content/Media"
+                      ? m.repeat_purchase_analysis || "Traffic and content retention drive consistent recurring ad impressions. Scaling unique viewership is paramount."
+                      : m.repeat_purchase
+                        ? `Customers likely repurchase every ~${m.repeat_cycle_days} days. Strong LTV potential — email retention and subscription offers are high-leverage.`
+                        : m.upsell_potential ?? "Focus on upsell at checkout and post-purchase to maximize revenue per customer."
+                    }
                   </div>
                   {m.repeat_purchase && m.repeat_cycle_days && (
                     <div className={styles.repeatCycleBadge}>

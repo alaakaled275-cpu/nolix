@@ -19,15 +19,15 @@ const inputSchema = z.object({ url: z.string().min(3).max(500) });
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface FoundationAnalysis {
-  is_ecommerce: boolean;
-  ecommerce_confidence: "confident" | "likely" | "unclear" | "not_ecommerce";
+  business_model: "E-Commerce" | "Content/Media" | "SaaS/Tool" | "LeadGen" | "Unknown";
+  model_confidence: "confident" | "likely" | "unclear" | "not_detected";
   foundation_score: number;
   judgment: string;
   store_name_verdict: string;
-  business_type: "Dropshipping" | "Brand" | "Reseller" | "Manufacturer" | "Unknown";
+  business_type: "Dropshipping" | "Brand" | "Reseller" | "Manufacturer" | "News/Blog" | "Service" | "Unknown";
   business_type_reasoning: string;
   product_problem: string;
-  product_classification: "NEED" | "WANT" | "INSUFFICIENT_DATA";
+  product_classification: "NEED" | "WANT" | "INSUFFICIENT_DATA" | "NOT_APPLICABLE";
   is_consumable: boolean | null;
   audience_age: string;
   audience_income: string;
@@ -114,7 +114,7 @@ export interface StrategicAudit {
 export interface StoreAnalysisResult {
   url: string;
   data_source: "live" | "benchmark";
-  is_ecommerce: boolean;
+  business_model: "E-Commerce" | "Content/Media" | "SaaS/Tool" | "LeadGen" | "Unknown";
   signals: Pick<StoreSignals, "title" | "platform" | "prices" | "lowestPrice" | "highestPrice" | "trustKeywords" | "nicheHints" | "wordCount">;
   foundation: FoundationAnalysis;
   market: MarketIntelligence;
@@ -163,273 +163,115 @@ Think deeply, logically, and stringently. Leave no stone unturned. Be brutal and
 
 // ── PHASE 1: Foundation Prompt ─────────────────────────────────────────────────
 function buildFoundationPrompt(signals: StoreSignals, masterScrutiny: string): string {
-  return `You are Zeno — a senior investor and e-commerce analyst. You think like someone risking real money.
+  return `You are Zeno, completing Phase 1: Foundation.
+Using this Master Scrutiny context: """${masterScrutiny}"""
 
-=== MASTER INTELLIGENCE CONTEXT ===
-The following is your own deep strategic scrutiny of the business. Use this exact context to align all your JSON output perfectly. Do NOT contradict the Master Context.
-${masterScrutiny}
-
-=== RAW SIGNALS ===
-${buildSignalBlock(signals)}
-
-=== PHASE 1: FOUNDATION ANALYSIS ===
-
-MANDATORY RULES (NON-NEGOTIABLE):
-1. DEEP SEARCH RULE: Analyze the entire site fully. Even if it is not a traditional e-commerce store, extract value, audience, and market potential. Do NOT stop.
-2. EVIDENCE RULE: Every claim needs "Based on: [detected signal]". No invention of details.
-3. DEPTH RULE: Do NOT stop at first signal. Cross-check ALL signals before concluding.
-4. HONESTY RULE: Do not flatter the store. Give brutal investor-grade truth.
-5. If a field truly cannot be determined → use "INSUFFICIENT_DATA" for strings, null for numbers.
-
-ANALYZE (deep, not surface-level):
-
-A) STORE NAME:
-   - Memorability (1-10 with reasoning)
-   - Does it reflect the product/niche?
-   - Market fit (right name for right audience?)
-   - Competitive positioning of the name
-
-B) BUSINESS TYPE (justify with detected signals):
-   - Dropshipping / Brand / Reseller / Manufacturer
-   - Evidence of inventory ownership vs third-party
-
-C) PRODUCT ANALYSIS (dig deep):
-   - What exact problem does it solve?
-   - Is this a NEED (functional, essential) or WANT (emotional, luxury)?
-   - Is it consumable (repeat purchases) or one-time?
-   - Price-to-value perception from visible pricing
-
-D) AUDIENCE ANALYSIS (infer from all signals):
-   - Age range (with reasoning)
-   - Income level (Low/Mid/High/Mid-High with evidence)
-   - Geography/Market (domestic/international signals)
-   - Buying behavior: Impulsive / Logical / Price-sensitive
-   - How quickly would they decide to buy?
-
-E) HOMEPAGE EVALUATION:
-   - Clarity of main offer (1-10)
-   - Trust elements present (list what you see vs what's missing)
-   - CTA strength (compelling or weak?)
-   - Overall homepage score (1-10 with detailed reasoning)
-
+Determine the website's business model. Be highly critical.
 Reply ONLY with valid JSON:
 {
-  "is_ecommerce": <boolean>,
-  "ecommerce_confidence": <"confident"|"likely"|"unclear"|"not_ecommerce">,
-  "foundation_score": <1-10, 0 if not ecommerce>,
-  "judgment": <"Strong foundation"|"Average"|"Weak">,
-  "store_name_verdict": <"[verdict]. Based on: [signal]">,
-  "business_type": <"Dropshipping"|"Brand"|"Reseller"|"Manufacturer"|"Unknown">,
-  "business_type_reasoning": <"[reason]. Based on: [signal]">,
-  "product_problem": <"[problem]. Based on: [signal]" or "INSUFFICIENT_DATA">,
-  "product_classification": <"NEED"|"WANT"|"INSUFFICIENT_DATA">,
-  "is_consumable": <true|false|null>,
-  "audience_age": <"18-35" or "INSUFFICIENT_DATA">,
-  "audience_income": <"Low"|"Mid"|"High"|"Mid-High"|"INSUFFICIENT_DATA">,
-  "audience_geography": <string or "INSUFFICIENT_DATA">,
-  "audience_behavior": <"Impulsive"|"Logical"|"Price-sensitive"|"INSUFFICIENT_DATA">,
-  "homepage_score": <1-10>,
-  "homepage_clarity": <string — specific analysis of the main offer clarity>,
-  "homepage_trust_elements": [<detected trust signals>],
-  "homepage_cta_strength": <"Strong"|"Medium"|"Weak">,
-  "strengths": ["[strength]. Based on: [signal]", "[strength]. Based on: [signal]"],
-  "weaknesses": ["[weakness]. Based on: [signal]", "[weakness]. Based on: [signal]"]
+  "business_model": <"E-Commerce"|"Content/Media"|"SaaS/Tool"|"LeadGen"|"Unknown">,
+  "model_confidence": <"confident"|"likely"|"unclear"|"not_detected">,
+  "foundation_score": <int 0-100 — rate core structure>,
+  "judgment": <string — brutal 1 sentence verdict>,
+  "store_name_verdict": <string — evaluation of the brand/domain name>,
+  "business_type": <"Dropshipping"|"Brand"|"Reseller"|"Manufacturer"|"News/Blog"|"Service"|"Unknown">,
+  "business_type_reasoning": <string>,
+  "product_problem": <string — what problem does this site/product solve? Use "N/A" if just news>,
+  "product_classification": <"NEED"|"WANT"|"INSUFFICIENT_DATA"|"NOT_APPLICABLE">,
+  "is_consumable": <boolean | null>,
+  "audience_age": <string — e.g. "18-35">,
+  "audience_income": <string — e.g. "Low", "Mid", "High">,
+  "audience_geography": <string — e.g. "Middle East", "Global">,
+  "audience_behavior": <string — e.g. "Impulse buyers", "Information seekers">,
+  "homepage_score": <int 0-10>,
+  "homepage_clarity": <string>,
+  "homepage_trust_elements": ["trust signal 1", "trust signal 2"],
+  "homepage_cta_strength": <string>,
+  "strengths": ["strength 1", "strength 2"],
+  "weaknesses": ["weakness 1", "weakness 2"]
 }`;
 }
 
 // ── PHASE 2: Market & Numbers Prompt ──────────────────────────────────────────
 function buildMarketPrompt(signals: StoreSignals, masterScrutiny: string): string {
-  const hasPricing = signals.lowestPrice !== null;
-  const hasContent = signals.wordCount > 100;
+  return `You are Zeno, completing Phase 2: Market & Revenue Intelligence.
+Using this Master Scrutiny context: """${masterScrutiny}"""
 
-  return `You are Zeno — a data-driven e-commerce market analyst. Think like an investor calculating real ROI.
+CALCULATE NUMBERS BASED ON MODEL:
+If Content/Media (News, sports, etc.):
+- Visitors should be massive (Hundreds of thousands or Millions).
+- cvr_low/mid/high represents Ad click-through rates or subscriber rates.
+- monthly_customers = Active users / impressions.
+- aov_est = RPM (Revenue per 1,000 visitors in dollars).
+- monthly_revenue = (Visitors / 1000) * RPM.
 
-=== MASTER INTELLIGENCE CONTEXT ===
-The following is your own deep strategic scrutiny of the business. Use this exact context to align all your JSON output perfectly. Do NOT contradict the Master Context.
-${masterScrutiny}
-
-=== RAW SIGNALS ===
-${buildSignalBlock(signals)}
-
-=== PHASE 2: MARKET & NUMBERS ANALYSIS ===
-
-DATA AVAILABILITY:
-- Pricing signals: ${hasPricing ? `✅ DETECTED (${signals.lowestPrice}–${signals.highestPrice}) — revenue estimates ALLOWED` : "❌ NONE — set all revenue/AOV/profit/valuation fields to null"}
-- Content depth: ${hasContent ? `✅ ${signals.wordCount} words — traffic estimation POSSIBLE` : "⚠️ LIMITED — use very wide ranges"}
-- Platform: ${signals.platform ?? "Unknown — factor this into estimates"}
-
-MANDATORY RULES:
-1. DEPTH: Analyze market size, saturation, AND competition separately — do not merge them.
-2. EVIDENCE: All estimates must cite what signals informed them.
-3. REALISM: Use realistic numbers. A small niche store ≠ millions/month. Be honest.
-4. NO MIXING: If pricing not detected → revenue/AOV fields MUST be null. Do not estimate them.
-5. SCENARIOS: Provide low (1%), mid (2.5%), and high (5%) CVR estimates separately.
-
-ANALYZE (deep, thorough):
-
-A) MARKET SIZE & DEMAND:
-   - Is this a niche or mass market?
-   - Growth trend (growing/stable/declining)
-   - Seasonal patterns if applicable
-
-B) COMPETITION:
-   - How many similar stores exist?
-   - Barrier to entry in this niche
-   - What would differentiate a new entrant?
-
-C) TRAFFIC ESTIMATION (wide honest ranges):
-   - Daily visitors (low/high)
-   - Monthly visitors (low/high)
-   - What signals informed this? (platform, content depth, niche signals)
-
-D) CONVERSION ANALYSIS — 3 SCENARIOS:
-   - 1% CVR (pessimistic): customers per month
-   - 2.5% CVR (realistic): customers per month  
-   - 5% CVR (optimistic): customers per month
-
-E) REVENUE (only if pricing detected):
-   - AOV based on visible prices
-   - Monthly revenue range
-   - Profit margin estimate (if product type known)
-   - Monthly profit range
-
-F) REPEAT PURCHASE ANALYSIS:
-   - If consumable: How often would a customer reorder?
-   - If one-time: What upsell/cross-sell opportunities exist?
-   - LTV implications
-
-G) VALUATION:
-   - Formula: monthly profit × 12-36 multiplier
-   - Give low (×12) and high (×36) range
+If E-Commerce:
+- Use standard Conversion rate logic.
+- aov_est = Average Order Value.
 
 Reply ONLY with valid JSON:
 {
   "market_strength": <"Strong"|"Moderate"|"Weak">,
-  "market_size_analysis": <string — niche vs mass, size estimate, growth trend>,
+  "market_size_analysis": <string>,
   "demand_level": <"High"|"Medium"|"Low">,
   "is_saturated": <boolean>,
-  "saturation_analysis": <string — how crowded is this space, barriers to entry>,
+  "saturation_analysis": <string>,
   "competitor_strength": <"Dominant"|"Strong"|"Moderate"|"Fragmented">,
-  "competitor_analysis": <string — who are the competitors and how strong>,
-  "daily_visitors_low": <integer>,
-  "daily_visitors_high": <integer>,
-  "monthly_visitors_low": <integer>,
-  "monthly_visitors_high": <integer>,
-  "cvr_low": <1.0>,
-  "cvr_mid": <2.5>,
-  "cvr_high": <5.0>,
-  "cvr_reasoning": <string — MUST cite which signals informed these estimates>,
-  "monthly_customers_low": <integer>,
-  "monthly_customers_high": <integer>,
-  "aov_est": <integer or null>,
-  "monthly_revenue_low": <integer or null>,
-  "monthly_revenue_high": <integer or null>,
-  "profit_margin_pct": <integer or null>,
-  "monthly_profit_low": <integer or null>,
-  "monthly_profit_high": <integer or null>,
-  "valuation_low": <integer or null>,
-  "valuation_high": <integer or null>,
+  "competitor_analysis": <string>,
+  "daily_visitors_low": <int>,
+  "daily_visitors_high": <int>,
+  "monthly_visitors_low": <int>,
+  "monthly_visitors_high": <int>,
+  "cvr_low": <float — e.g. 0.5>,
+  "cvr_mid": <float — e.g. 1.2>,
+  "cvr_high": <float — e.g. 3.0>,
+  "cvr_reasoning": <string — explain why this CVR/CTR applies to this site type>,
+  "monthly_customers_low": <int>,
+  "monthly_customers_high": <int>,
+  "aov_est": <int | null — AOV for ecomm, or RPM for media>,
+  "monthly_revenue_low": <int | null>,
+  "monthly_revenue_high": <int | null>,
+  "profit_margin_pct": <int | null>,
+  "monthly_profit_low": <int | null>,
+  "monthly_profit_high": <int | null>,
+  "valuation_low": <int | null — profit * 12>,
+  "valuation_high": <int | null — profit * 36>,
   "repeat_purchase": <boolean>,
-  "repeat_cycle_days": <integer or null>,
-  "repeat_purchase_analysis": <string — LTV impact if consumable, upsell path if not>,
-  "upsell_potential": <string or null>,
-  "market_verdict": <string — 2-3 sentences: is this market worth entering NOW?>
+  "repeat_cycle_days": <int | null>,
+  "repeat_purchase_analysis": <string>,
+  "upsell_potential": <string | null — "N/A" for news/media>,
+  "market_verdict": <string>
 }`;
 }
 
 // ── PHASE 3: Strategic Audit Prompt ───────────────────────────────────────────
 function buildStrategicPrompt(signals: StoreSignals, masterScrutiny: string): string {
-  return `You are Zeno — a strategic investment advisor for e-commerce. You do NOT give generic advice. You give decisive verdicts backed by data.
+  return `You are Zeno, completing Phase 3: Deep Strategic Audit.
+Using this Master Scrutiny context: """${masterScrutiny}"""
 
-=== MASTER INTELLIGENCE CONTEXT ===
-The following is your own deep strategic scrutiny of the business. Use this exact context to align all your JSON output perfectly. Do NOT contradict the Master Context.
-${masterScrutiny}
-
-=== RAW SIGNALS ===
-${buildSignalBlock(signals)}
-
-=== PHASE 3: DEEP STRATEGIC ANALYSIS ===
-
-MANDATORY RULES:
-1. EVIDENCE: Every strength and weakness MUST end with "Based on: [specific detected signal]"
-2. DEPTH: Analyze marketing, UX, trust, AND growth separately — do not merge.
-3. BRUTAL HONESTY: Do NOT compliment a store unless signals justify it. Investors lose money from over-optimism.
-4. SCENARIOS: Base them ONLY on actual signals. No fictional optimism.
-5. HEALTH SCORE: Each sub-score must reflect real findings.
-
-ANALYZE (investor consulting level):
-
-A) MARKETING ANALYSIS:
-   - Is the store 100% ad-dependent (no organic presence)?
-   - Evidence of brand building (memorable, consistent)
-   - Content channels detected (social, SEO, TikTok)
-   - Risk level: if ads stop, does the store die?
-
-B) UX ANALYSIS:
-   - Speed perception from page structure signals
-   - Navigation: easy to find products / confusing?
-   - Checkout path: estimated steps
-   - Mobile UX signals (if detectable)
-   - Friction points that would kill conversions
-
-C) TRUST ANALYSIS:
-   - Legitimacy: does this look like a real business?
-   - Reviews: present/strong/fake/none?
-   - Brand consistency: logos, colors, voice
-   - Return policy, guarantees, SSL signals
-
-D) STRENGTHS (exactly 3):
-   Each must be SPECIFIC and evidence-backed.
-   Format: "[Specific strength]. Based on: [detected signal]"
-
-E) WEAKNESSES (exactly 3 — brutal):
-   Reasons a real buyer would NOT complete purchase.
-   Format: "[Specific blocker]. Based on: [detected signal]"
-
-F) SCENARIOS:
-   - Best case: Everything goes right. What happens?
-   - Worst case: Current problems persist. What happens?
-   - Realistic: Most likely outcome in 6 months. Be honest.
-
-G) GROWTH ROADMAP:
-   - Fix first: ONE single highest-leverage action (with reasoning)
-   - 2x performance: Specific tactical steps to double revenue
-   - 10x performance: Strategic transformation required
-
-H) ZENO HEALTH SCORE (1-100):
-   - Foundation (1-100)
-   - Market (1-100)
-   - UX (1-100)
-   - Trust (1-100)
-   - Revenue Potential (1-100)
-   - Overall score = weighted average
-   - Why not 100: List top 2 reasons
-   - Top priority: Single most impactful fix
-
-I) FINAL VERDICT:
-   Answer: "Is this business worth real money right now?"
-   One of: 🔥 High potential / ⚠️ Medium risk / ❌ Not recommended
-   5-step action plan (ordered by impact)
+Execute a brutal strategic audit.
+If the site is Content/Media: Evaluate Ads, engagement, content quality, and retention. Drop e-commerce checkout concerns.
+If the site is E-Commerce: Evaluate cart friction, upsells, and trust.
 
 Reply ONLY with valid JSON:
 {
   "is_ad_dependent": <boolean>,
   "has_brand_identity": <boolean>,
   "content_presence": <"Strong"|"Moderate"|"Minimal"|"None">,
-  "content_channels": [<detected channels>],
-  "marketing_analysis": <string — ad dependency risk, brand signals, content assessment>,
-  "ux_speed_score": <1-10>,
-  "ux_navigation_score": <1-10>,
-  "ux_analysis": <string — specific friction points and UX findings>,
-  "checkout_friction": <"High"|"Medium"|"Low">,
-  "checkout_steps_est": <2-7>,
-  "trust_score": <1-10>,
+  "content_channels": ["channel 1", "channel 2"],
+  "marketing_analysis": <string>,
+  "ux_speed_score": <int 0-10>,
+  "ux_navigation_score": <int 0-10>,
+  "ux_analysis": <string>,
+  "checkout_friction": <"High"|"Medium"|"Low"|"N/A">,
+  "checkout_steps_est": <int | null>,
+  "trust_score": <int 0-10>,
   "trust_legitimacy": <"High"|"Medium"|"Low">,
   "review_strength": <"Strong"|"Moderate"|"Weak"|"None">,
   "branding_consistency": <"High"|"Medium"|"Low">,
-  "trust_analysis": <string — legitimacy, reviews, brand consistency details>,
-  "strengths": ["[strength]. Based on: [signal]", "[strength]. Based on: [signal]", "[strength]. Based on: [signal]"],
-  "weaknesses": ["[weakness blocker]. Based on: [signal]", "[weakness blocker]. Based on: [signal]", "[weakness blocker]. Based on: [signal]"],
+  "trust_analysis": <string>,
+  "strengths": ["[strength blocker]. Based on: [signal]", "[strength blocker]. Based on: [signal]"],
+  "weaknesses": ["[weakness blocker]. Based on: [signal]", "[weakness blocker]. Based on: [signal]"],
   "scenario_best": <string — specific, evidence-based best case>,
   "scenario_worst": <string — specific, evidence-based worst case>,
   "scenario_realistic": <string — honest realistic 6-month outlook>,
@@ -586,10 +428,12 @@ export async function POST(req: NextRequest) {
       dataSource
     );
 
+    const finalFoundation = foundation as FoundationAnalysis;
+    
     const result: StoreAnalysisResult = {
       url: signals.url,
       data_source: dataSource,
-      is_ecommerce: true,
+      business_model: finalFoundation.business_model || "Unknown",
       signals: {
         title: signals.title,
         platform: signals.platform,
