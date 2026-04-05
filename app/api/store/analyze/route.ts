@@ -434,7 +434,7 @@ export async function POST(req: NextRequest) {
     const apiKey = env.GROQ_ANALYZE_KEY ?? env.OPENAI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Zeno is not configured. Add GROQ_ANALYZE_KEY to your .env file." },
+        { error: "Zeno is not configured. Add GROQ_ANALYZE_KEY in your Vercel Project Settings -> Environment Variables, then Redeploy." },
         { status: 500 }
       );
     }

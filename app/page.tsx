@@ -72,12 +72,13 @@ export default function ConvertAIPage() {
 
     try {
       const parsed = new URL(targetUrl);
-      if (!parsed.hostname.includes(".")) {
-        setErrorMsg("Please enter a valid website URL");
+      // Ensure the hostname has a valid top-level domain (like .com, .net, .store)
+      if (!/\.[a-zA-Z]{2,}$/.test(parsed.hostname)) {
+        setErrorMsg("Please enter a valid store URL (e.g., mystore.com)");
         return;
       }
     } catch (err) {
-      setErrorMsg("Please enter a valid website URL");
+      setErrorMsg("Please enter a valid store URL (e.g., mystore.com)");
       return;
     }
 
