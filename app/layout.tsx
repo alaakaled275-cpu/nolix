@@ -14,13 +14,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-<<<<<<< HEAD
-    <html lang="en" className={outfitVariable}>
-      <body>{children}</body>
-=======
-    <html lang="en" className={outfit.variable} suppressHydrationWarning>
+    <html lang="en" className={outfitVariable} suppressHydrationWarning>
       <body suppressHydrationWarning>{children}</body>
->>>>>>> 31c2dd0f71bc9ff3353df4e0b656489db5614e92
     </html>
   );
 }
