@@ -72,142 +72,32 @@ function generateInsights(data: {
 
 // ── Mock data generator (used when DB is unavailable) ─────────────────────────
 function generateMockResponse() {
-  const now = Date.now();
-
-  const intents: Array<"high" | "medium" | "low"> = ["high", "medium", "low"];
-  const actions = ["urgency", "discount_5", "discount_10", "discount_15", "free_shipping", "bundle", "do_nothing", null];
-  const frictions = ["stuck_cart", "bounce_risk", "paralysis", "none", null];
-  const sources = ["google_ads", "organic", "direct", "social", "email"];
-  const carts = ["has_items", "empty_cart", "checkout_page"];
-  const devices = ["desktop", "mobile", "tablet"];
-
-  // Generate 50 realistic mock sessions over the past 7 days
-  const mockSessions = Array.from({ length: 50 }, (_, i) => {
-    const intentLevel = intents[Math.floor(Math.random() * 3)];
-    const intentScore = intentLevel === "high" ? 70 + Math.floor(Math.random() * 30) :
-                        intentLevel === "medium" ? 40 + Math.floor(Math.random() * 30) :
-                        10 + Math.floor(Math.random() * 30);
-    const action = actions[Math.floor(Math.random() * actions.length)];
-    const friction = frictions[Math.floor(Math.random() * frictions.length)];
-    const showPopup = action !== "do_nothing" && action !== null;
-    const converted = showPopup ? Math.random() > 0.55 : Math.random() > 0.85;
-    const orderValue = converted ? Math.round(20 + Math.random() * 280) : null;
-    const discountAvoided = converted && (action === "urgency" || action === "do_nothing" || action === null);
-    const createdAt = new Date(now - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000)).toISOString();
-
-    const reasoning = `intent=${intentLevel},score=${intentScore},friction=${friction ?? "none"},cart=has_items`;
-
-    return {
-      id: `mock-${i + 1}`,
-      session_id: `sess-mock-${1000 + i}`,
-      created_at: createdAt,
-      intent_level: intentLevel,
-      intent_score: intentScore,
-      friction_detected: friction,
-      show_popup: showPopup,
-      offer_type: action,
-      action_taken: action,
-      converted,
-      order_value: orderValue,
-      discount_avoided: discountAvoided,
-      reasoning,
-      traffic_source: sources[Math.floor(Math.random() * sources.length)],
-      cart_status: carts[Math.floor(Math.random() * carts.length)],
-      device: devices[Math.floor(Math.random() * devices.length)],
-      business_explanation: toBusinessLanguage(reasoning, action),
-    };
-  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-  // Compute aggregate stats from mock sessions
-  const total = mockSessions.length;
-  const shown = mockSessions.filter(s => s.show_popup).length;
-  const convs = mockSessions.filter(s => s.converted).length;
-  const revenue = mockSessions.reduce((sum, s) => sum + (s.order_value ?? 0), 0);
-  const discountAvoided = mockSessions.filter(s => s.discount_avoided && s.converted).length;
-  const discountCount = mockSessions.filter(s => s.action_taken?.startsWith("discount") && s.converted).length;
-  const highIntent = mockSessions.filter(s => s.intent_level === "high").length;
-
-  const cvr = shown > 0 ? +((convs / shown) * 100).toFixed(1) : 0;
-  const offerRate = total > 0 ? +((shown / total) * 100).toFixed(1) : 0;
-  const totalConverted = discountAvoided + discountCount;
-  const discountSavedPct = totalConverted > 0 ? Math.round((discountAvoided / totalConverted) * 100) : 0;
-
-  // Intent distribution
-  const intentDist = intents.map(level => ({
-    intent_level: level,
-    count: String(mockSessions.filter(s => s.intent_level === level).length),
-  }));
-
-  // Friction distribution
-  const frictionMap = new Map<string, number>();
-  mockSessions.forEach(s => {
-    const f = s.friction_detected ?? "none";
-    frictionMap.set(f, (frictionMap.get(f) ?? 0) + 1);
-  });
-  const frictionDist = Array.from(frictionMap.entries()).map(([k, v]) => ({
-    friction_detected: k,
-    count: String(v),
-  }));
-
-  const frictionCounts = Object.fromEntries(frictionDist.map(r => [r.friction_detected, Number(r.count)]));
-
-  // Top action (best CVR among actions with popups)
-  const actionGroups = new Map<string, { shown: number; converted: number }>();
-  mockSessions.filter(s => s.show_popup && s.action_taken).forEach(s => {
-    const a = s.action_taken!;
-    const g = actionGroups.get(a) ?? { shown: 0, converted: 0 };
-    g.shown++;
-    if (s.converted) g.converted++;
-    actionGroups.set(a, g);
-  });
-  let topAction: string | null = null;
-  let topActionCvr = 0;
-  actionGroups.forEach((v, k) => {
-    const c = v.shown > 0 ? +((v.converted / v.shown) * 100).toFixed(1) : 0;
-    if (c > topActionCvr) { topActionCvr = c; topAction = k; }
-  });
-
-  // Today's stats (sessions from today)
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todaySessions = mockSessions.filter(s => new Date(s.created_at) >= todayStart);
-
-  const insights = generateInsights({ total, highIntent, shown, convs, discountCount, discountAvoided, frictionCounts });
-
-  // Mock A/B results
-  const abResults = [
-    { variant: "A", offer_type: "urgency",    impressions: 38, conversions: 14 },
-    { variant: "A", offer_type: "discount_5",  impressions: 22, conversions: 7 },
-    { variant: "B", offer_type: "urgency",    impressions: 35, conversions: 18 },
-    { variant: "B", offer_type: "discount_10", impressions: 20, conversions: 9 },
-  ];
-
   return {
-    total_sessions:        total,
-    high_intent_sessions:  highIntent,
-    popups_shown:          shown,
-    total_conversions:     convs,
-    cvr_pct:               cvr,
-    offer_rate_pct:        offerRate,
-    revenue_attributed:    revenue,
-    revenue_lift_est:      cvr > 0 ? `+${(cvr * 1.4).toFixed(1)}%` : "—",
-    discount_avoided_count: discountAvoided,
-    discount_saved_pct:     discountSavedPct,
+    total_sessions:        0,
+    high_intent_sessions:  0,
+    popups_shown:          0,
+    total_conversions:     0,
+    cvr_pct:               0,
+    offer_rate_pct:        0,
+    revenue_attributed:    0,
+    revenue_lift_est:      "—",
+    discount_avoided_count: 0,
+    discount_saved_pct:     0,
     today: {
-      analyzed:          todaySessions.length,
-      actions_taken:     todaySessions.filter(s => s.show_popup).length,
-      conversions:       todaySessions.filter(s => s.converted).length,
-      revenue:           todaySessions.reduce((sum, s) => sum + (s.order_value ?? 0), 0),
-      discounts_avoided: todaySessions.filter(s => s.discount_avoided && s.converted).length,
+      analyzed:          0,
+      actions_taken:     0,
+      conversions:       0,
+      revenue:           0,
+      discounts_avoided: 0,
     },
-    top_action:     topAction,
-    top_action_cvr: topActionCvr,
-    intent_distribution:   intentDist,
-    friction_distribution: frictionDist,
-    ab_results:            abResults,
-    insights,
-    sessions: mockSessions,
-    _mock: true, // flag so frontend can tell it's mock data if needed
+    top_action:     null,
+    top_action_cvr: 0,
+    intent_distribution:   [],
+    friction_distribution: [],
+    ab_results:            [],
+    insights:              ["No data available yet. Start getting traffic to see insights."],
+    sessions:              [],
+    _mock:                 true, // flag so frontend can tell it's mock data if needed
   };
 }
 
