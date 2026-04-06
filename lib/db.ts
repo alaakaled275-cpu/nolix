@@ -5,18 +5,12 @@ let pool: Pool | undefined;
 
 export function getPool(): Pool {
   if (pool) return pool;
-  const env = getEnv();
 
   pool = new Pool({
-    host: env.PGHOST,
-    port: Number(env.PGPORT),
-    database: env.PGDATABASE,
-    user: env.PGUSER,
-    password: env.PGPASSWORD,
-    max: 10,
-    connectionTimeoutMillis: 5000,   // fail fast if DB unreachable
-    idleTimeoutMillis: 30000,
-    statement_timeout: 8000,          // no query can run longer than 8s
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false,
+    },
   });
 
   return pool;
