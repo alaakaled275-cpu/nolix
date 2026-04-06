@@ -15,7 +15,7 @@ import { getEnv } from "@/lib/env";
 export const maxDuration = 60; // Allow Vercel to run up to 60s for the analysis pipeline
 
 // ── Input ──────────────────────────────────────────────────────────────────────
-const inputSchema = z.object({ url: z.string().min(3).max(500) });
+const inputSchema = z.object({ url: z.string().min(3).max(500), userAnswers: z.any().optional() });
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface FoundationAnalysis {
@@ -142,11 +142,17 @@ function buildSignalBlock(signals: StoreSignals): string {
 }
 
 // ── PHASE 0: Master Strategic Scrutiny ──────────────────────────────────────────
-function buildMasterScrutinyPrompt(signals: StoreSignals): string {
+function buildMasterScrutinyPrompt(signals: StoreSignals, userAnswers?: any): string {
+  const answersSection = userAnswers 
+    ? `\n=== CRITICAL: OWNER PROVIDED BUSINESS CONTEXT (FACTS) ===\n${JSON.stringify(userAnswers, null, 2)}\n`
+    : "";
+
   return `You are Zeno, an elite-level investor and master strategic consultant.
 You are analyzing raw scraped data from a website to form a deep, uncompromising "Master Scrutiny" of this business before breaking it down into smaller parts.
+You MUST heavily prioritize the "OWNER PROVIDED BUSINESS CONTEXT" (if present) to customize your insights.
 
 ${buildSignalBlock(signals)}
+${answersSection}
 
 INSTRUCTIONS:
 Do NOT output JSON. Write a cohesive, analytical text report (markdown) that connects all the dots.
@@ -301,7 +307,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     }
 
-    const { url } = parsed.data;
+    const { url, userAnswers } = parsed.data;
     const env = getEnv();
 
 
@@ -340,7 +346,7 @@ export async function POST(req: NextRequest) {
     console.log("[analyze] Running Step 0: Master Scrutiny (using 8b)...");
     const masterResponse = await clientMaster.chat.completions.create({
       model: modelFast,
-      messages: [{ role: "user", content: buildMasterScrutinyPrompt(signals) }],
+      messages: [{ role: "user", content: buildMasterScrutinyPrompt(signals, userAnswers) }],
       temperature: 0.2,
       max_tokens: 1500,
     }, { timeout: 35000 }).catch(e => {

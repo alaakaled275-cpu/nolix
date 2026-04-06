@@ -238,6 +238,197 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ── WIZARD UI ── */
+.wideBox {
+  min-width: 100%;
+}
+.stepIndicator {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 0.5rem;
+}
+.formTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: #fff;
+}
+.formSubtitle {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 1.5rem;
+}
+.optionsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.optionCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+.optionCard:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.optionCard.selected {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fff;
+}
+.optionRadio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.optionCard.selected .optionRadio {
+  border-color: #EF4444;
+}
+.radioInner {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #EF4444;
+  opacity: 0;
+  transition: all 0.2s;
+  transform: scale(0);
+}
+.optionCard.selected .radioInner {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ── URL / ANALYZER UI ── */
+.centerLayout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.urlContainer {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 5vh;
+}
+.urlContent {
+  width: 100%;
+  animation: slideUp 0.6s ease-out forwards;
+}
+.urlIconWrap {
+  width: 56px;
+  height: 56px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem auto;
+}
+.urlIcon {
+  width: 32px;
+  height: 32px;
+}
+.urlTitle {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.urlDesc {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.1rem;
+  margin-bottom: 2.5rem;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+.urlForm {
+  background: rgba(15, 15, 26, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.5rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+}
+.urlInputWrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+.urlInputWrap:focus-within {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.urlProtocol {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 1rem;
+  font-family: inherit;
+  margin-right: 0.25rem;
+}
+.urlInputField {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  font-family: inherit;
+  padding: 1.2rem 0;
+  outline: none;
+}
+.urlInputField::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+.urlSubmitBtn {
+  margin-top: 0;
+  padding: 0 2rem;
+  font-size: 1rem;
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @media (max-width: 768px) {
   .topHeader {
     padding: 1.5rem;

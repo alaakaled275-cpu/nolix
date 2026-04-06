@@ -222,11 +222,18 @@ export default function ResultsPage() {
     if (!storeUrl) return;
     setAnalysisLoading(true);
     setAnalysisError(null);
-    fetch("/api/store/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: storeUrl }),
-    })
+      // Get the answers saved from the wizard landing page
+      const cachedAnswers = localStorage.getItem("zeno_quiz_answers");
+      let userAnswers = null;
+      if (cachedAnswers) {
+        try { userAnswers = JSON.parse(cachedAnswers); } catch(e){}
+      }
+
+      fetch("/api/store/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: storeUrl, userAnswers }),
+      })
       .then(r => r.json())
       .then((data: any) => {
         if (data.error) {

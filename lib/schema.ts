@@ -61,6 +61,7 @@ export async function ensureConvertAISchema(): Promise<void> {
         email text unique not null,
         name text,
         store_url text,
+        quiz_answers jsonb,
         created_at timestamptz not null default now()
       );
     `);
@@ -78,6 +79,7 @@ export async function ensureConvertAISchema(): Promise<void> {
       ["store_configs", "max_discount_pct", "int not null default 15"],
       ["waitlist", "name", "text"],
       ["waitlist", "store_url", "text"],
+      ["waitlist", "quiz_answers", "jsonb"],
     ];
 
     for (const [table, col, type] of columns) {
