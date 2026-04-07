@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { query, ensureConvertAISchema } from "@/lib/schema";
+import { query, ensureNolixSchema } from "@/lib/schema";
 
 let schemaReady = false;
 
@@ -108,7 +108,7 @@ export async function GET() {
     // Ensure schema exists (only first call)
     if (!schemaReady) {
       try {
-        await ensureConvertAISchema();
+        await ensureNolixSchema();
         schemaReady = true;
       } catch (schemaErr) {
         console.warn("[stats] ⚠ Schema not ready, falling back to mock data:", (schemaErr as Error).message);

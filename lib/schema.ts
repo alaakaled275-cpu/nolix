@@ -7,7 +7,7 @@ export { query };
 const globalAny: any = global;
 let migrationPromise: Promise<void> | null = globalAny._convertAISchemaPromise || null;
 
-export async function ensureConvertAISchema(): Promise<void> {
+export async function ensureNolixSchema(): Promise<void> {
   if (migrationPromise) return migrationPromise;
 
   migrationPromise = (async () => {
@@ -60,6 +60,7 @@ export async function ensureConvertAISchema(): Promise<void> {
         id uuid primary key default gen_random_uuid(),
         email text unique not null,
         name text,
+        password text,
         store_url text,
         quiz_answers jsonb,
         created_at timestamptz not null default now()
@@ -78,6 +79,7 @@ export async function ensureConvertAISchema(): Promise<void> {
       ["store_configs", "mode", "text not null default 'balanced'"],
       ["store_configs", "max_discount_pct", "int not null default 15"],
       ["waitlist", "name", "text"],
+      ["waitlist", "password", "text"],
       ["waitlist", "store_url", "text"],
       ["waitlist", "quiz_answers", "jsonb"],
     ];

@@ -77,6 +77,7 @@ export default function WaitlistPage() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 1=Email, 2=Name, 3=Questions, 4=URL
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
 
@@ -103,7 +104,7 @@ export default function WaitlistPage() {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -297,7 +298,19 @@ export default function WaitlistPage() {
                     required
                   />
                 </div>
-                <button type="submit" className="submitBtn" disabled={status === "loading"}>
+                <div className="inputWrap" style={{ marginTop: '1rem' }}>
+                  <input
+                    type="password"
+                    className="inputField"
+                    placeholder="Enter a Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={status === "loading"}
+                    required
+                    minLength={4}
+                  />
+                </div>
+                <button type="submit" className="submitBtn" disabled={status === "loading"} style={{ marginTop: '2rem' }}>
                   <span>{status === "loading" ? "Processing..." : "Continue"}</span>
                   <span>→</span>
                 </button>

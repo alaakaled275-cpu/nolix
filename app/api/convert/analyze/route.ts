@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
-import { query, ensureConvertAISchema } from "@/lib/schema";
+import { query, ensureNolixSchema } from "@/lib/schema";
 import { getEnv } from "@/lib/env";
 
 // ─────────────────────────────────────────────
@@ -259,7 +259,7 @@ function fallbackCopy(action: ActionType): { headline: string; sub_message: stri
 
 export async function POST(req: NextRequest) {
   try {
-    await ensureConvertAISchema();
+    await ensureNolixSchema();
 
     const body  = await req.json();
     const parsed = sessionSchema.safeParse(body);

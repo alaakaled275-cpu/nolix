@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import styles from "./styles.module.css";
 
-// ── Live activity feed entries ──────────────────────────────────────────
+// -- Live activity feed entries ------------------------------------------
 const LIVE_EVENTS = [
   { icon: "🛒", store: "petflow.co", action: "Cart hesitation detected", result: "10% offer shown → Converted", delta: "+$87" },
   { icon: "⚡", store: "luminestore.com", action: "Checkout abandonment caught", result: "Urgency message triggered", delta: "+$134" },
@@ -13,7 +13,7 @@ const LIVE_EVENTS = [
   { icon: "⚡", store: "nexgear.io", action: "Email click with full cart", result: "Urgency nudge → Order placed", delta: "+$149" },
 ];
 
-// ── Post-activation state messages ──────────────────────────────────────
+// -- Post-activation state messages --------------------------------------
 const ACTIVATION_STEPS = [
   { icon: "⚡", text: "NOLIX is now active", delay: 0 },
   { icon: "👁️", text: "Analyzing your visitors in real-time...", delay: 1800 },
@@ -75,7 +75,7 @@ export default function ActivatePage() {
     setRequestSent(true);
   }
 
-  // ── POST-ACTIVATION SCREEN ────────────────────────────────────────────
+  // -- POST-ACTIVATION SCREEN --------------------------------------------
   if (activated) {
     return (
       <div className={styles.page}>
@@ -111,16 +111,16 @@ export default function ActivatePage() {
                   Check your dashboard for live conversions.
                 </p>
                 <a href="/dashboard" className={styles.activationDoneBtn} id="post-activation-dashboard-btn">
-                  Go to My Dashboard →
+                  Go to My Dashboard &rarr;
                 </a>
               </div>
             )}
           </div>
 
-          {/* Live feed in activation screen */}
+            {/* Live feed in activation screen */}
           <div className={styles.activationFeed}>
             <div className={styles.feedHeader}>
-              <span className={styles.liveDot} /> Other stores — right now
+              <span className={styles.liveDot} /> Other stores - right now
             </div>
             {liveEvents.slice(0, 3).map((ev, i) => (
               <div key={i} className={`${styles.feedItem} ${i === 0 ? styles.feedItemNew : ""}`}>
@@ -138,11 +138,11 @@ export default function ActivatePage() {
     );
   }
 
-  // ── MAIN ACTIVATION PAGE ──────────────────────────────────────────────
+  // -- MAIN ACTIVATION PAGE ----------------------------------------------
   return (
     <div className={styles.page}>
 
-      {/* ── HEADER ── */}
+      {/* -- HEADER -- */}
       <header className={styles.header}>
         <div className={styles.container}>
           <a href="/" className={styles.logo}>
@@ -163,15 +163,15 @@ export default function ActivatePage() {
       <main className={styles.main}>
         <div className={styles.container}>
 
-          {/* ── SECTION 1 + 2: HEADLINE + REVENUE REINFORCEMENT ── */}
+          {/* -- SECTION 1 + 2: HEADLINE + REVENUE REINFORCEMENT -- */}
           <div className={styles.hero}>
             <div className={styles.heroGlow} aria-hidden />
             <div className={styles.heroBadge}>
               <span className={styles.badgeDot} />
-              Revenue Recovery Engine — Ready
+              Revenue Recovery Engine - Ready
             </div>
             <h1 className={styles.heroTitle}>
-              Turn your lost visitors into revenue —{" "}
+              Turn your lost visitors into revenue -{" "}
               <span className={styles.titleGradient}>starting now</span>
             </h1>
             <div className={styles.revenueBanner}>
@@ -183,10 +183,10 @@ export default function ActivatePage() {
             </div>
             <p className={styles.heroSub}>
               Every minute you wait, that money walks out the door.
-              NOLIX stops it — one click, zero risk.
+              NOLIX stops it - one click, zero risk.
             </p>
             <a href="#install" className={styles.heroCtaBtn} id="hero-cta-btn">
-              Start Recovering This Revenue →
+              Start Recovering This Revenue &rarr;
             </a>
             <div className={styles.heroTrust}>
               <span>✓ 7-day free trial</span>
@@ -195,7 +195,7 @@ export default function ActivatePage() {
             </div>
           </div>
 
-          {/* ── LIVE FEED (Section 10: Live Feel) ── */}
+          {/* -- LIVE FEED (Section 10: Live Feel) -- */}
           <div className={styles.liveSection}>
             <div className={styles.liveSectionHeader}>
               <span className={styles.liveDot} />

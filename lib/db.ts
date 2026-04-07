@@ -6,12 +6,23 @@ let pool: Pool | undefined;
 export function getPool(): Pool {
   if (pool) return pool;
 
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false,
-    },
-  });
+  const connectionString = process.env.DATABASE_URL;
+  
+  if (connectionString) {
+    pool = new Pool({
+      connectionString,
+      ssl: { rejectUnauthorized: false },
+    });
+  } else {
+    pool = new Pool({
+      user: process.env.PGUSER || "postgres",
+      host: process.env.PGHOST || "localhost",
+      database: process.env.PGDATABASE || "postgres",
+      password: process.env.PGPASSWORD || "postgres",
+      port: parseInt(process.env.PGPORT || "5432"),
+      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+    });
+  }
 
   return pool;
 }
