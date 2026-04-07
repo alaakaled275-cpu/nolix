@@ -1,0 +1,171 @@
+import Image from "next/image";
+import styles from "./page.module.css";
+import {
+  ArrowRight,
+  BarChart3,
+  Calendar,
+  Mail,
+  Sparkles,
+  Target,
+  Workflow,
+} from "lucide-react";
+
+export default function Home() {
+  return (
+    <div className={styles.page}>
+      <main className={styles.main}>
+        <div className={styles.hero}>
+          <div className={styles.heroTop}>
+            <div className={styles.brand}>
+              <div className={styles.brandMark}>
+                <Sparkles className={styles.brandIcon} aria-hidden="true" />
+              </div>
+              <div className={styles.brandText}>
+                <div className={styles.brandName}>AI LeadGen System</div>
+                <div className={styles.brandTag}>Revenue machine for sales teams</div>
+              </div>
+            </div>
+            <div className={styles.badge}>
+              <Target className={styles.badgeIcon} aria-hidden="true" />
+              <span>24/7 Automation</span>
+            </div>
+          </div>
+
+          <div className={styles.heroGrid}>
+            <div className={styles.heroLeft}>
+              <h1 className={styles.h1}>
+                System بيجيب Leads مؤهلة
+                <span className={styles.h1Accent}> ويحجز مواعيد تلقائيًا</span>
+              </h1>
+              <p className={styles.lead}>
+                Lead → Message → Reply → Qualification (Hot/Warm/Cold) → Booking → CRM Sync.
+                هدفه واحد: <span className={styles.leadStrong}>Meetings + Revenue</span>.
+              </p>
+
+              <div className={styles.ctas}>
+                <a className={styles.primary} href="/dashboard">
+                  Open Dashboard
+                  <ArrowRight className={styles.ctaIcon} aria-hidden="true" />
+                </a>
+                <a className={styles.secondary} href="/api/health">
+                  API Health
+                </a>
+              </div>
+
+              <div className={styles.kpiStrip}>
+                <div className={styles.kpiItem}>
+                  <div className={styles.kpiLabel}>Leads</div>
+                  <div className={styles.kpiValue}>+10–20 / week</div>
+                </div>
+                <div className={styles.kpiItem}>
+                  <div className={styles.kpiLabel}>Qualified</div>
+                  <div className={styles.kpiValue}>Hot / Warm / Cold</div>
+                </div>
+                <div className={styles.kpiItem}>
+                  <div className={styles.kpiLabel}>Meetings</div>
+                  <div className={styles.kpiValue}>Auto-booked</div>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.heroRight}>
+              <div className={styles.orbit} aria-hidden="true" />
+              <div className={styles.featureCard}>
+                <div className={styles.featureIcon}>
+                  <Mail aria-hidden="true" />
+                </div>
+                <div className={styles.featureBody}>
+                  <div className={styles.featureTitle}>Outreach</div>
+                  <div className={styles.featureText}>Personalized Email/LinkedIn messages.</div>
+                </div>
+              </div>
+
+              <div className={styles.featureCard}>
+                <div className={styles.featureIcon}>
+                  <Workflow aria-hidden="true" />
+                </div>
+                <div className={styles.featureBody}>
+                  <div className={styles.featureTitle}>Qualification</div>
+                  <div className={styles.featureText}>AI classifies leads by intent and score.</div>
+                </div>
+              </div>
+
+              <div className={styles.featureCard}>
+                <div className={styles.featureIcon}>
+                  <Calendar aria-hidden="true" />
+                </div>
+                <div className={styles.featureBody}>
+                  <div className={styles.featureTitle}>Booking</div>
+                  <div className={styles.featureText}>Calendly / Google Calendar scheduling.</div>
+                </div>
+              </div>
+
+              <div className={styles.featureCard}>
+                <div className={styles.featureIcon}>
+                  <BarChart3 aria-hidden="true" />
+                </div>
+                <div className={styles.featureBody}>
+                  <div className={styles.featureTitle}>Dashboard</div>
+                  <div className={styles.featureText}>Leads, replies, booked, conversion rate.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section className={styles.section}>
+          <h2 className={styles.h2}>How it works</h2>
+          <div className={styles.steps}>
+            <div className={styles.step}>
+              <div className={styles.stepNum}>1</div>
+              <div className={styles.stepTitle}>Lead Generation</div>
+              <div className={styles.stepText}>Find qualified companies/people for your niche.</div>
+            </div>
+            <div className={styles.step}>
+              <div className={styles.stepNum}>2</div>
+              <div className={styles.stepTitle}>Outreach</div>
+              <div className={styles.stepText}>Automated personalized messages that start conversations.</div>
+            </div>
+            <div className={styles.step}>
+              <div className={styles.stepNum}>3</div>
+              <div className={styles.stepTitle}>Qualification</div>
+              <div className={styles.stepText}>Budget / Need / Timing → Hot/Warm/Cold.</div>
+            </div>
+            <div className={styles.step}>
+              <div className={styles.stepNum}>4</div>
+              <div className={styles.stepTitle}>Booking</div>
+              <div className={styles.stepText}>Hot leads get meetings booked on your calendar.</div>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.bottomCta}>
+            <div>
+              <div className={styles.bottomTitle}>Ready to show a client a working demo?</div>
+              <div className={styles.bottomText}>
+                Open the dashboard and share KPIs: leads, replies, booked meetings, conversion.
+              </div>
+            </div>
+            <a className={styles.primary} href="/dashboard">
+              View Dashboard
+              <ArrowRight className={styles.ctaIcon} aria-hidden="true" />
+            </a>
+          </div>
+        </section>
+
+        <div className={styles.footer}>
+          <div className={styles.footerLeft}>
+            <Image className={styles.footerLogo} src="/vercel.svg" alt="" width={16} height={16} />
+            <span>LeadGen System</span>
+          </div>
+          <div className={styles.footerRight}>
+            <a href="/api/tenants">Tenants</a>
+            <a href="/api/metrics?tenantId=__TENANT_ID__">Metrics</a>
+            <a href="/api/webhooks/n8n">Webhook</a>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

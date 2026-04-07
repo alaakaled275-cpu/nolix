@@ -1,42 +1,44 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-function replaceColors(filePath) {
-  let content = fs.readFileSync(filePath, 'utf8');
+const htmlPath = path.join(__dirname, "New folder (11)", "index.html");
+let html = fs.readFileSync(htmlPath, "utf-8");
 
-  // Replace Purples with Nolix Reds
-  content = content.replace(/#a855f7/g, '#ff003c'); // bright purple -> primary red
-  content = content.replace(/#7c3aed/g, '#ba0027'); // dark purple -> dark red
-  content = content.replace(/#c084fc/g, '#ff4d79'); // light purple -> pinkish red
-  
-  // Replace references to ConvertAI with NOLIX
-  content = content.replace(/ConvertAI/g, 'NOLIX');
-  content = content.replace(/Convert/g, 'NOLI');
-  content = content.replace(/🎯 <span>NOLI<\/span>AI/g, '<span className={styles.logoIcon}></span> NOLIX');
+// Rebrand Text Details (ONLY the name as requested)
+html = html.replace(/AdCentrl/g, "NOLIX");
+html = html.replace(/ADCENTRL/g, "NOLIX");
 
-  // Dashboard logo
-  if (filePath.endsWith('dashboard\\page.tsx') || filePath.endsWith('dashboard/page.tsx')) {
-    content = content.replace(/🎯 <span>NOLI<\/span>AI/g, '<span className={styles.dashboardLogoBox}></span> NOLIX');
-  }
+// Change the logo SVG string
+const nolixLogoSvg = `<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20"><path d="M50 15 L85 35 L85 75 L50 95 L50 63 L65 54 L65 43 L50 34 L35 43 L35 54 L50 63 L50 95 L15 75 L15 35 Z" fill="#EF4444" /></svg>`;
+html = html.replace(/<svg width="20" height="20" viewBox="0 0 20 20".*?<\/svg>/gs, nolixLogoSvg);
+html = html.replace(/<span class="logo-text">NOLIX<\/span>/g, '<span class="logo-text" style="display:flex;align-items:center;font-weight:900;letter-spacing:1px;font-size:1.1rem;"><span style="color:#fff">NOLI</span><span style="color:#EF4444">X</span></span>');
 
-  fs.writeFileSync(filePath, content, 'utf8');
-  console.log('Updated', filePath);
+// Change CTA links to /waitlist
+html = html.replace(/href="#"/g, 'href="/waitlist"');
+html = html.replace(/href="#pricing"/g, 'href="/waitlist"');
+
+// Extract body contents inside <body> </body>
+const bodyMatch = html.match(/<body>(.*)<\/body>/s);
+if (!bodyMatch) throw new Error("Could not find body tag");
+
+let bodyContent = bodyMatch[1];
+// Strip the script tag from the body since we handle it via next/script
+bodyContent = bodyContent.replace(/<script src="app\.js"><\/script>/, "");
+
+const componentCode = `"use client";
+import Script from "next/script";
+import "./iso-style.css";
+import "./iso-animations.css";
+
+export default function Home() {
+  return (
+    <>
+      <div dangerouslySetInnerHTML={{ __html: \`${bodyContent.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\` }} />
+      <Script src="/iso-app.js" strategy="lazyOnload" />
+    </>
+  );
 }
+`;
 
-const files = [
-  path.join(__dirname, 'app', 'dashboard', 'page.tsx'),
-  path.join(__dirname, 'app', 'dashboard', 'styles.module.css')
-];
-
-for (const file of files) {
-  if (fs.existsSync(file)) replaceColors(file);
-}
-
-// Add the dashboardLogoBox style to styles.module.css
-const cssPath = path.join(__dirname, 'app', 'dashboard', 'styles.module.css');
-let dCss = fs.readFileSync(cssPath, 'utf8');
-if (!dCss.includes('dashboardLogoBox')) {
-  dCss += `\n.dashboardLogoBox {\n  display: inline-block;\n  width: 18px;\n  height: 20px;\n  background-color: #ff003c;\n  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);\n  margin-right: 6px;\n  position: relative;\n  top: 2px;\n}\n`;
-  fs.writeFileSync(cssPath, dCss);
-}
-console.log('Done fix');
+fs.writeFileSync(path.join(__dirname, "app", "page.tsx"), componentCode);
+console.log("Successfully rebuilt app/page.tsx with pure CSS imports");

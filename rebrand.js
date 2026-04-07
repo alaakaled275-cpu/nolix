@@ -1,90 +1,62 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-function replaceColors(filePath) {
-  let content = fs.readFileSync(filePath, 'utf8');
+const htmlPath = path.join(__dirname, "New folder (11)", "index.html");
+let html = fs.readFileSync(htmlPath, "utf-8");
 
-  // Replace Purples with Nolix Reds
-  content = content.replace(/#a855f7/g, '#ff003c'); // bright purple -> primary red
-  content = content.replace(/#7c3aed/g, '#ba0027'); // dark purple -> dark red
-  content = content.replace(/#c084fc/g, '#ff4d79'); // light purple -> pinkish red
-  
-  // Replace references to ConvertAI with NOLIX
-  content = content.replace(/ConvertAI/g, 'NOLIX');
-  content = content.replace(/Convert/g, 'NOLIX');
-  content = content.replace(/🎯 <span>NOLI<\/span>AI/g, '<span className={styles.logoIcon}></span> NOLIX');
+// Rebrand Text Details
+html = html.replace(/AdCentrl/gi, "NOLIX");
+html = html.replace(/The Future of Ad Tracking Software/gi, "The Future of Revenue Intelligence");
+html = html.replace(/The Future of<br \/>Ad Tracking<br \/>Software/g, "The Future of<br />Revenue<br />Intelligence");
+html = html.replace(/Track, manage, and optimize all your advertising campaigns in one place/gi, "Track, manage, and optimize your e-commerce revenue with Zeno AI in one centralized system.");
+html = html.replace(/Now supporting 30\+ ad platforms/g, "Powered by Zeno AI Operator");
+html = html.replace(/30\+<\/span><span class="stat-label">Platforms/g, '100+</span><span class="stat-label">Signals');
+html = html.replace(/Ad tracking software for campaign management/gi, "A cloud-based AI system for revenue analysis, conversion optimization, and smart decision making.");
 
-  // Add the grid styles to the CSS file
-  if (filePath.endsWith('.css')) {
-    // Replace the old hero::before with the new Synthwave Red Grid
-    content = content.replace(
-      /\.hero::before \{([^}]*)\}/m,
-      `.hero::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 120%;
-  background-image: 
-    linear-gradient(rgba(255, 0, 60, 0.3) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 0, 60, 0.3) 1px, transparent 1px);
-  background-size: 60px 60px;
-  background-position: 0 0, 0 0;
-  transform-origin: 50% 100%;
-  transform: perspective(600px) rotateX(60deg) scale(2);
-  animation: gridMove 5s linear infinite;
-  mask-image: linear-gradient(to top, rgba(0,0,0,1) 10%, transparent 60%);
-  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 10%, transparent 60%);
-  z-index: -1;
-  pointer-events: none;
+// Replace Purples with Nolix Reds
+html = html.replace(/#a855f7/g, '#EF4444'); // bright purple -> primary red
+html = html.replace(/#7c3aed/g, '#ba0027'); // dark purple -> dark red
+html = html.replace(/#c084fc/g, '#ff4d79'); // light purple -> pinkish red
+
+// Specific Replacements for the Body logic
+html = html.replace(/<span class="logo-text">NOLIX<\/span>/g, '<span class="logo-text" style="display:flex;align-items:center;font-weight:900;letter-spacing:1px;font-size:1.1rem;"><span style="color:#fff">NOLI</span><span style="color:#EF4444">X</span></span>');
+
+const nolixLogoSvg = `<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28"><path d="M50 15 L85 35 L85 75 L50 95 L50 63 L65 54 L65 43 L50 34 L35 43 L35 54 L50 63 L50 95 L15 75 L15 35 Z" fill="#EF4444" /></svg>`;
+html = html.replace(/<svg width="20" height="20" viewBox="0 0 20 20".*?<\/svg>/gs, nolixLogoSvg);
+
+// Change Cyan branding to NOLIX Red (optional but looks great). The CSS controls most of it, but inline styles:
+html = html.replace(/#00D2FF/g, "#EF4444");
+
+// Change all CTA links to /waitlist
+html = html.replace(/href="#"/g, 'href="/waitlist"');
+html = html.replace(/href="#pricing"/g, 'href="/waitlist"');
+
+// Extract body contents inside <body> </body>
+const bodyMatch = html.match(/<body>(.*)<\/body>/s);
+if (!bodyMatch) throw new Error("Could not find body tag");
+
+let bodyContent = bodyMatch[1];
+// Strip the script tag from the body since we handle it via next/script
+bodyContent = bodyContent.replace(/<script src="app\.js"><\/script>/, "");
+
+// Convert class to className for JSX, though dangerouslySetInnerHTML takes pure HTML!
+// Since we are using dangerouslySetInnerHTML, we DO NOT need to convert class to className! It takes exact string.
+// We just need to render the string.
+
+const componentCode = `"use client";
+import Script from "next/script";
+
+export default function Home() {
+  return (
+    <>
+      <link rel="stylesheet" href="/iso-style.css" />
+      <link rel="stylesheet" href="/iso-animations.css" />
+      <div dangerouslySetInnerHTML={{ __html: \`${bodyContent.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\` }} />
+      <Script src="/iso-app.js" strategy="lazyOnload" />
+    </>
+  );
 }
-@keyframes gridMove {
-  0% { transform: perspective(600px) rotateX(60deg) scale(2) translateY(0); }
-  100% { transform: perspective(600px) rotateX(60deg) scale(2) translateY(60px); }
-}
+`;
 
-.logoIcon {
-  display: inline-block;
-  width: 20px;
-  height: 24px;
-  background-color: #ff003c;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  margin-right: 8px;
-  position: relative;
-  top: 2px;
-}`
-    );
-  }
-
-  // Update layout and logos in page.tsx
-  if (filePath.endsWith('page.tsx')) {
-    content = content.replace(
-      /<div className={styles\.logo}>🎯 <span>NOLI<\/span>AI<\/div>/g,
-      `<div className={styles.logo}><span className={styles.logoIcon}></span> NOLIX</div>`
-    );
-  }
-
-  // Dashboard logo
-  if (filePath.endsWith('dashboard\\page.tsx') || filePath.endsWith('dashboard/page.tsx')) {
-    content = content.replace(/🎯 <span>Convert<\/span>AI/g, '<span className={styles.dashboardLogoBox}></span> NOLIX');
-  }
-
-  fs.writeFileSync(filePath, content, 'utf8');
-  console.log('Updated', filePath);
-}
-
-const files = [
-  path.join(__dirname, 'app', 'landing.module.css'),
-  path.join(__dirname, 'app', 'page.tsx'),
-  path.join(__dirname, 'app', 'dashboard', 'page.tsx'),
-  path.join(__dirname, 'app', 'dashboard', 'dashboard.module.css')
-];
-
-for (const file of files) {
-  if (fs.existsSync(file)) replaceColors(file);
-}
-
-// Add the dashboardLogoBox style to dashboard.module.css
-let dCss = fs.readFileSync(path.join(__dirname, 'app', 'dashboard', 'dashboard.module.css'), 'utf8');
-if (!dCss.includes('dashboardLogoBox')) {
-  dCss += `\n.dashboardLogoBox {\n  display: inline-block;\n  width: 18px;\n  height: 20px;\n  background-color: #ff003c;\n  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);\n  margin-right: 6px;\n  position: relative;\n  top: 2px;\n}\n`;
-  fs.writeFileSync(path.join(__dirname, 'app', 'dashboard', 'dashboard.module.css'), dCss);
-}
+fs.writeFileSync(path.join(__dirname, "app", "page.tsx"), componentCode);
+console.log("Successfully rebranded and created app/page.tsx");

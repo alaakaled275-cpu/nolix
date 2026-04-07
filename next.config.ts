@@ -5,6 +5,16 @@ const nextConfig: NextConfig = {
   experimental: {
     // Disable Turbopack to fix "Could not find module in React Client Manifest" bug
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/',
+          destination: '/nolix-home.html',
+        },
+      ],
+    }
+  },
 };
 
 export default nextConfig;

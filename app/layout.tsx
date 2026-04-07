@@ -15,6 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={outfitVariable} suppressHydrationWarning>
+      <head>
+        <link rel="stylesheet" href="/landing.css" />
+      </head>
       <body suppressHydrationWarning>{children}</body>
     </html>
   );
