@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { getEnv } from "@/lib/env";
+import { query, ensureNolixSchema } from "@/lib/schema";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface ZenoContext {
@@ -101,7 +102,7 @@ interface StoreAnalysisContext {
   final_verdict?: string;
   overall_recommendation?: string;
   zeno_summary?: string;
-  data_source?: "live" | "benchmark";
+  data_source?: "live" | "benchmark" | "offline";
 }
 
 // ── System prompt builders ────────────────────────────────────────────────────
@@ -143,8 +144,8 @@ MODULE 3 — DEEP STRATEGIC AUDIT
 - Buyer blockers: ${(analysis!.weaknesses ?? []).join(" | ")}
 - Best scenario: ${analysis!.scenario_best ?? "N/A"}
 - Realistic scenario: ${analysis!.scenario_realistic ?? "N/A"}
-- Worst scenario: ${analysis!.scenario_worst ?? "N/A"}
-- Fix first: ${analysis!.fix_first ?? "N/A"}
+- Worst scenario: ${analysis!.data_source === "offline" ? "Store remains unreachable." : analysis!.scenario_worst ?? "N/A"}
+- Fix first: ${analysis!.data_source === "offline" ? "Bring store online." : analysis!.fix_first ?? "N/A"}
 - 2x growth path: ${analysis!.growth_2x ?? "N/A"}
 - 10x growth path: ${analysis!.growth_10x ?? "N/A"}
 - FINAL VERDICT: ${analysis!.final_verdict ?? "N/A"}
@@ -206,6 +207,8 @@ PERSONA RULES (CRITICAL):
 - When answering about behavior, cite sessions, CVR, and friction type.
 ${analysisBlock}
 ${behaviorBlock}
+
+ZENO SELF-IMPROVEMENT: You are a self-improving system. When asked what you learned, cite your correction rules.
 
 RESPONSE RULES:
 - Foundation questions → cite score, business type, judgment, biggest weakness
@@ -280,15 +283,93 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
+    // ── Fast-path: Learning log questions ────────────────────────────────────
+    const msgLow = message.toLowerCase();
+    if (msgLow.includes("learn") || msgLow.includes("ما تعلم") || msgLow.includes("self-improv") || msgLow.includes("rules") || msgLow.includes("memory")) {
+      try {
+        await ensureNolixSchema().catch(() => {});
+        const rows = await query(
+          `SELECT error_type, correction_rule, confidence_before, confidence_after, phase, created_at
+           FROM zeno_learning_log ORDER BY created_at DESC LIMIT 5`,
+          []
+        );
+        const entries = rows;
+        if (entries.length === 0) {
+          return NextResponse.json({ reply: "I haven't completed a self-improvement cycle yet. Analyze a store and I'll automatically audit my output, detect errors, and store correction rules in memory.", source: "learning" });
+        }
+        const totalGain = entries.reduce((s: number, e: any) => s + Math.max(0, (e.confidence_after ?? 0) - (e.confidence_before ?? 0)), 0);
+        const rules = entries.map((e: any, i: number) => `${i + 1}. [${e.phase}/${e.error_type.replace(/_/g,' ')}] → ${e.correction_rule}`).join("\n");
+        const reply = `I've completed ${entries.length} self-improvement cycles so far with +${totalGain}% total confidence gained.\n\nMost recent correction rules I'm now applying:\n${rules}\n\nThese rules are injected into every new analysis to prevent repeating the same errors. View the full log at /zeno/learning-log.`;
+        return NextResponse.json({ reply, source: "learning" });
+      } catch {
+        // Fall through to AI
+      }
+    }
+
     const env = getEnv();
 
+    // ── DOMAIN GATE AWARENESS ────────────────────────────────────────────────
+    // Before producing any revenue/market estimates, check if the store's domain
+    // passed the Domain Gate. If not, Zeno must acknowledge uncertainty and refuse
+    // to invent numbers. This prevents "AI that makes up revenue for template sites."
+    let domainGateStatus: { eligible: boolean; stop_reason?: string; domain_type?: string } | null = null;
+    try {
+      await ensureNolixSchema().catch(() => {});
+      type GateRow = { domain_gate_result: { eligible: boolean; stop_reason?: string; domain_type?: string } | null };
+      const gateRows = await query<GateRow>(
+        `SELECT domain_gate_result FROM users WHERE id = (
+           SELECT id FROM users WHERE store_url IS NOT NULL
+           ORDER BY created_at DESC LIMIT 1
+         ) LIMIT 1`
+      );
+      domainGateStatus = gateRows[0]?.domain_gate_result ?? null;
+    } catch { /* Non-blocking */ }
+
+    // If gate explicitly rejected this domain, override any analysis with a hard boundary
+    if (domainGateStatus && !domainGateStatus.eligible) {
+      const stopReason = domainGateStatus.stop_reason ?? "UNKNOWN";
+      const domainType = domainGateStatus.domain_type ?? "unknown";
+      const gateReply = `I cannot produce revenue estimates or market analysis for this domain.
+
+**Domain Gate Result:** ${stopReason.replace(/_/g, " ")}
+**Detected Type:** ${domainType}
+
+This means the site either:
+- Is not a recognized ecommerce store
+- Contains placeholder/demo data
+- Has no detectable product schema or cart flow
+
+**I will not invent numbers.** Revenue estimates, traffic projections, and CVR figures would be fabricated — and fabricated intelligence is worse than no intelligence.
+
+**What you should do:** Run \`/api/analyze/initialize\` with a live production store URL that has real products and a checkout flow.`;
+
+      return NextResponse.json({ reply: gateReply, source: "domain_gate_blocked" });
+    }
+
     if (env.GROQ_CHAT_KEY ?? env.OPENAI_API_KEY) {
+
       try {
         const client = new OpenAI({ 
           apiKey: env.GROQ_CHAT_KEY ?? env.OPENAI_API_KEY!,
           baseURL: env.AI_BASE_URL ?? "https://api.groq.com/openai/v1"
         });
-        const systemPrompt = buildSystemPrompt(context, storeAnalysis);
+        // ── Fetch Learning Memory for System Prompt ───────────────────────────
+        let learningMemory = "";
+        try {
+          type MemRow = { error_type: string; correction_rule: string };
+          const memRows = await query<MemRow>(
+            `SELECT error_type, correction_rule FROM zeno_learning_log ORDER BY created_at DESC LIMIT 10`,
+            []
+          );
+          if (memRows.length > 0) {
+            learningMemory = "\n\n=== RECENT LESSONS LEARNED (APPLY THESE) ===\n" +
+              memRows.map((r, i) => `${i+1}. [${r.error_type}] \u2192 ${r.correction_rule}`).join("\n");
+          }
+        } catch (e) {
+          console.warn("[zeno/chat] Failed to fetch learning memory for prompt:", e);
+        }
+
+        const systemPrompt = buildSystemPrompt(context, storeAnalysis) + learningMemory;
 
         const response = await client.chat.completions.create({
           model: env.GROQ_CHAT_MODEL ?? "llama-3.1-8b-instant",
@@ -297,7 +378,7 @@ export async function POST(req: NextRequest) {
             { role: "user", content: message },
           ],
           temperature: 0.5,
-          max_tokens: 200,
+          max_tokens: 400,
         }, { timeout: 9000 });
 
         const reply = response.choices[0]?.message?.content?.trim() ?? "";

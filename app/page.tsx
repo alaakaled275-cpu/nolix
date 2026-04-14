@@ -1,14 +1,38 @@
-"use client";
 import Script from "next/script";
+import { getSession } from "@/lib/auth";
 
-export default function Home() {
-  return (
-    <>
-      <link rel="stylesheet" href="/iso-style.css" />
-      <link rel="stylesheet" href="/iso-animations.css" />
-      <div dangerouslySetInnerHTML={{ __html: `
+export default async function Home() {
+  const session = await getSession();
+
+  let htmlContent = `
 
   <!-- ═══════════════════ NAVBAR ═══════════════════ -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="/waitlist" class="nav-logo">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28"><path d="M50 15 L85 35 L85 75 L50 95 L50 63 L65 54 L65 43 L50 34 L35 43 L35 54 L50 63 L50 95 L15 75 L15 35 Z" fill="#EF4444" /></svg>
+        <span class="logo-text" style="display:flex;align-items:center;font-weight:900;letter-spacing:1px;font-size:1.1rem;"><span style="color:#fff">NOLI</span><span style="color:#EF4444">X</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">FEATURES</a></li>
+        <li><a href="${session ? "/dashboard" : "/waitlist"}">PRICING</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#blog">BLOG</a></li>
+      </ul>
+      ${session 
+        ? `<a href="/dashboard" class="btn-login" id="loginBtn" style="background:var(--red);color:#fff;">DASHBOARD</a>` 
+        : `<a href="/signup" class="btn-login" style="margin-right:8px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;">SIGN UP</a>
+           <a href="/login" class="btn-login" id="loginBtn">LOGIN</a>`
+      }
+      <button class="hamburger" id="hamburger">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════ HERO ═══════════════════ -->`;
+
+  const heroHTML = `
   <nav class="navbar" id="navbar">
     <div class="nav-container">
       <a href="/waitlist" class="nav-logo">
@@ -167,15 +191,15 @@ export default function Home() {
               </defs>
               <circle cx="50" cy="50" r="43" fill="rgba(0,20,60,0.5)" stroke="rgba(0,210,255,0.12)" stroke-width="1"/>
               <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(0,210,255,0.1)" stroke-width="10"/>
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#EF4444" stroke-width="10"
+              <circle cx="50" cy="50" r="38" fill="none" stroke="#3fc8ff" stroke-width="10"
                 stroke-dasharray="175 64" stroke-dashoffset="58" stroke-linecap="round"
                 filter="url(#gg)" class="gauge-arc"/>
               <circle cx="50" cy="50" r="25" fill="none" stroke="rgba(0,100,255,0.12)" stroke-width="6"/>
               <circle cx="50" cy="50" r="25" fill="none" stroke="#0066FF" stroke-width="6"
                 stroke-dasharray="110 47" stroke-dashoffset="35" stroke-linecap="round" class="gauge-inner"/>
-              <circle cx="50" cy="50" r="5" fill="#EF4444" filter="url(#gg)"/>
+              <circle cx="50" cy="50" r="5" fill="#3fc8ff" filter="url(#gg)"/>
               <text x="50" y="46" text-anchor="middle" fill="white" font-size="11" font-weight="800" font-family="Inter,sans-serif">87%</text>
-              <text x="50" y="57" text-anchor="middle" fill="#EF4444" font-size="5.5" font-family="Inter,sans-serif" letter-spacing="1">EFFICIENCY</text>
+              <text x="50" y="57" text-anchor="middle" fill="#3fc8ff" font-size="5.5" font-family="Inter,sans-serif" letter-spacing="1">EFFICIENCY</text>
             </svg>
           </div>
 
@@ -595,8 +619,13 @@ export default function Home() {
 
   <button class="back-to-top" id="backToTop" aria-label="Back to top">↑</button>
 
-  
-` }} />
+  `;
+
+  return (
+    <>
+      <link rel="stylesheet" href="/iso-style.css" />
+      <link rel="stylesheet" href="/iso-animations.css" />
+      <div dangerouslySetInnerHTML={{ __html: htmlContent + heroHTML }} />
       <Script src="/iso-app.js" strategy="lazyOnload" />
     </>
   );

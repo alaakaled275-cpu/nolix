@@ -28,6 +28,24 @@ type Stats = {
   }[];
 };
 
+interface LearningEntry {
+  id: string;
+  url: string;
+  error_type: string;
+  correction_rule: string;
+  confidence_before: number;
+  confidence_after: number;
+  phase: string;
+  created_at: string;
+}
+interface LearningLog {
+  entries: LearningEntry[];
+  total: number;
+  total_confidence_gain: number;
+  by_phase: Record<string, number>;
+  by_error_type: Record<string, number>;
+}
+
 // ── Decision cards generated from real data ─────────────────────────────────
 function buildDecisionCards(stats: Stats) {
   const cards = [];
@@ -115,13 +133,30 @@ export default function ZenoPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusIdx, setStatusIdx] = useState(0);
+  const [learningLog, setLearningLog] = useState<LearningLog | null>(null);
 
   useEffect(() => {
-    fetch("/api/convert/stats")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setStats(d); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    const isDemo = new URLSearchParams(window.location.search).get("demo") === "true";
+    
+    const fetchStats = () => {
+      fetch(`/api/convert/stats${isDemo ? "?demo=true" : ""}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d) setStats(d); })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    };
+
+    fetchStats();
+    
+    // Pulse every 8 seconds for the Live Terminal feel
+    const pollInterval = setInterval(fetchStats, 8000);
+
+    fetch("/api/zeno/self-improve?limit=10")
+      .then(r => r.json())
+      .then(d => setLearningLog(d))
+      .catch(() => {});
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   useEffect(() => {
@@ -140,6 +175,7 @@ export default function ZenoPage() {
           <nav className={styles.nav}>
             <a href="/dashboard" className={styles.navLink}>Dashboard</a>
             <a href="/zeno" className={`${styles.navLink} ${styles.navActive}`}>Zeno</a>
+            <a href="/zeno/learning-log" className={styles.navLink}>Learning Log</a>
           </nav>
           <a href="/dashboard" className={styles.btnBack}>← Dashboard</a>
         </div>
@@ -221,31 +257,70 @@ export default function ZenoPage() {
           {/* ── Decision Feed (real sessions) ── */}
           {stats && stats.sessions.length > 0 && (
             <div className={styles.section}>
-              <div className={styles.sectionLabel}>⚡ Recent Decisions — Explained by Zeno</div>
-              <div className={styles.decisionFeed}>
-                {stats.sessions.slice(0, 8).map((s, i) => {
+              <div className={styles.sectionLabel}>⚡ Live Intelligence Terminal</div>
+              <div className={styles.decisionFeed} id="zeno-terminal" style={{ scrollBehavior: 'smooth' }}>
+                <div className={styles.terminalHeader}>
+                  <div className={`${styles.termDot} ${styles.termDotR}`} />
+                  <div className={`${styles.termDot} ${styles.termDotY}`} />
+                  <div className={`${styles.termDot} ${styles.termDotG}`} />
+                  <div className={styles.termTitle}>ZENO_CORE_v3.0_LIVE_FEED</div>
+                </div>
+                {stats.sessions.slice(0, 15).map((s, i) => {
                   const intentColor = s.intent_level === "high" ? "#10b981" : s.intent_level === "medium" ? "#f59e0b" : "#f43f5e";
                   return (
                     <div key={i} className={`${styles.feedCard} ${s.converted ? styles.feedCardConverted : ""}`}>
                       <div className={styles.feedCardTop}>
-                        <span className={styles.feedIntent} style={{ color: intentColor }}>{s.intent_level} intent</span>
-                        <span className={styles.feedAction}>{s.offer_type ?? "no action"}</span>
-                        {s.converted && <span className={styles.feedConverted}>✅ Converted</span>}
+                        <span className={styles.feedTimestamp}>[{new Date().toLocaleTimeString()}]</span>
+                        <span className={styles.feedIntent} style={{ color: intentColor }}>[{s.intent_level}_INTENT]</span>
+                        <span className={styles.feedAction}>{s.offer_type ?? "NIL_ACTION"}</span>
+                        {s.converted && <span className={styles.feedConverted}>SYS_CONVERTED</span>}
                         {s.friction_detected && s.friction_detected !== "none" && (
-                          <span className={styles.feedFriction}>⚠️ {s.friction_detected.replace("_", " ")}</span>
+                          <span className={styles.feedFriction}>FRC_{s.friction_detected.toUpperCase()}</span>
                         )}
                       </div>
                       <div className={styles.feedExplain}>{s.business_explanation}</div>
                       <div className={styles.feedMeta}>
-                        <span>{s.traffic_source.replace("_", " ")}</span>
-                        <span>·</span>
-                        <span>{s.cart_status}</span>
-                        <span>·</span>
-                        <span>{s.device}</span>
+                        <span>SRC:{s.traffic_source}</span>
+                        <span>CART:{s.cart_status}</span>
+                        <span>DEV:{s.device}</span>
                       </div>
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* ── Learning Log Preview ── */}
+          {learningLog && learningLog.total > 0 && (
+            <div className={styles.section}>
+              <div className={styles.sectionLabel}>
+                🧠 Zeno Memory — {learningLog.total} Rules Learned
+                {learningLog.total_confidence_gain > 0 && (
+                  <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 20, padding: '2px 10px' }}>
+                    +{learningLog.total_confidence_gain}% total confidence gained
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {learningLog.entries.slice(0, 4).map((e, i) => (
+                  <div key={e.id || i} style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', textTransform: 'capitalize' }}>
+                        {e.error_type.replace(/_/g, ' ')}
+                      </span>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>{e.phase}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#a5b4fc', background: 'rgba(99,102,241,0.06)', borderLeft: '2px solid #6366f1', padding: '6px 10px', borderRadius: '0 6px 6px 0', lineHeight: 1.5 }}>
+                      {e.correction_rule}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 12, textAlign: 'right' }}>
+                <a href="/zeno/learning-log" style={{ fontSize: 13, color: '#6366f1', textDecoration: 'none', fontWeight: 600 }}>
+                  View Full Learning Log ({learningLog.total} entries) →
+                </a>
               </div>
             </div>
           )}

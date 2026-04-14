@@ -1,0 +1,534 @@
+/* app/zeno/learning-log/styles.module.css */
+
+/* ── Base ── */
+.page {
+  min-height: 100vh;
+  background: #080c14;
+  color: #e2e8f0;
+  font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+/* ── Header ── */
+.header {
+  background: rgba(8, 12, 20, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 0;
+}
+.container {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.header .container {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 64px;
+}
+.logo {
+  font-size: 18px;
+  font-weight: 800;
+  color: #e2e8f0;
+  text-decoration: none;
+  letter-spacing: -0.5px;
+}
+.logoAccent { color: #6366f1; }
+.nav {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  margin-left: 24px;
+}
+.navLink {
+  font-size: 13px;
+  color: #94a3b8;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.navLink:hover { color: #e2e8f0; background: rgba(255,255,255,0.06); }
+.navActive { color: #6366f1 !important; background: rgba(99,102,241,0.12) !important; }
+.btnBack {
+  font-size: 13px;
+  color: #64748b;
+  text-decoration: none;
+  padding: 8px 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btnBack:hover { color: #e2e8f0; border-color: rgba(255,255,255,0.2); }
+
+/* ── Main ── */
+.main {
+  padding: 48px 0 120px;
+}
+
+/* ── Hero ── */
+.heroSection {
+  position: relative;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 20px;
+  padding: 40px;
+  margin-bottom: 32px;
+  overflow: hidden;
+}
+.heroGlow {
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 500px;
+  height: 300px;
+  background: radial-gradient(ellipse, rgba(99,102,241,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+.heroIdentity {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+.zenoAvatar {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  flex-shrink: 0;
+}
+.heroTitle {
+  font-size: 26px;
+  font-weight: 800;
+  color: #e2e8f0;
+  letter-spacing: -0.5px;
+}
+.heroSub {
+  font-size: 14px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* ── Stats strip ── */
+.statsStrip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.stat {
+  flex: 1;
+  padding: 20px 24px;
+  text-align: center;
+}
+.statVal {
+  font-size: 28px;
+  font-weight: 800;
+  color: #e2e8f0;
+  letter-spacing: -1px;
+}
+.statLbl {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+.statDivider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255,255,255,0.07);
+}
+
+/* ── Section labels ── */
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #6366f1;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.filterBadge {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(99,102,241,0.15);
+  color: #818cf8;
+  padding: 2px 10px;
+  border-radius: 20px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.countBadge {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255,255,255,0.08);
+  color: #94a3b8;
+  padding: 2px 10px;
+  border-radius: 20px;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: auto;
+}
+
+/* ── Phase Breakdown ── */
+.breakdownSection {
+  margin-bottom: 28px;
+}
+.breakdownGrid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.breakdownCard {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  min-width: 140px;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+.breakdownCard:hover {
+  border-color: var(--phase-color, #6366f1);
+  background: rgba(99,102,241,0.05);
+}
+.breakdownCardActive {
+  border-color: var(--phase-color, #6366f1) !important;
+  background: rgba(99,102,241,0.1) !important;
+}
+.breakdownCount {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--phase-color, #6366f1);
+  letter-spacing: -1px;
+}
+.breakdownPhase {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+  margin-bottom: 10px;
+}
+.breakdownBar {
+  height: 3px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.breakdownBarFill {
+  height: 100%;
+  background: var(--phase-color, #6366f1);
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+.clearFilter {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #64748b;
+  padding: 8px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.clearFilter:hover { color: #e2e8f0; border-color: rgba(255,255,255,0.2); }
+
+/* ── Error Types ── */
+.typeSection { margin-bottom: 28px; }
+.typeGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.typeChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 12px;
+  color: #94a3b8;
+  text-transform: capitalize;
+}
+.typeCount {
+  background: rgba(99,102,241,0.2);
+  color: #818cf8;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── Loading / Empty ── */
+.loadingBlock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 0;
+  color: #64748b;
+}
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(99,102,241,0.3);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.emptyState {
+  text-align: center;
+  padding: 80px 24px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px;
+}
+.emptyIcon { font-size: 48px; margin-bottom: 16px; }
+.emptyTitle { font-size: 22px; font-weight: 700; color: #e2e8f0; margin-bottom: 8px; }
+.emptySub { font-size: 14px; color: #64748b; max-width: 400px; margin: 0 auto 28px; line-height: 1.6; }
+.emptyBtn {
+  display: inline-block;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+.emptyBtn:hover { opacity: 0.85; }
+
+/* ── Log entries list ── */
+.logsSection { margin-bottom: 40px; }
+.entriesList { display: flex; flex-direction: column; gap: 8px; }
+
+.entryCard {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.entryCard:hover { border-color: rgba(99,102,241,0.3); }
+.entryCardExpanded { border-color: rgba(99,102,241,0.4) !important; }
+
+.entryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  cursor: pointer;
+  gap: 16px;
+}
+.entryLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.entryTypeIcon { font-size: 20px; flex-shrink: 0; }
+.entryType {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+  text-transform: capitalize;
+}
+.entryUrl {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+}
+.entryRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.entryPhase {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.entryGain {
+  font-size: 14px;
+  font-weight: 800;
+  min-width: 36px;
+  text-align: right;
+}
+.entryTime {
+  font-size: 11px;
+  color: #475569;
+  min-width: 52px;
+  text-align: right;
+}
+.entryChevron {
+  font-size: 10px;
+  color: #475569;
+  margin-left: 4px;
+}
+
+/* Expanded detail */
+.entryDetail {
+  padding: 0 20px 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-top: 0;
+  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: slideDown 0.25s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.detailRow {}
+.detailLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+.detailValue {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+.detailRule {
+  color: #a5b4fc;
+  background: rgba(99,102,241,0.08);
+  border-left: 3px solid #6366f1;
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  font-weight: 500;
+}
+.detailMeta {
+  display: flex;
+  gap: 24px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+.detailMetaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.detailMetaItem span { font-size: 11px; color: #64748b; }
+.detailMetaItem strong { font-size: 14px; color: #e2e8f0; }
+
+/* Confidence bar */
+.confBar { }
+.confBarLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+.confBarTrack {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.confBarBefore {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  background: rgba(100,116,139,0.5);
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+.confBarAfter {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 4px;
+  opacity: 0.85;
+  transition: width 0.6s ease;
+}
+
+/* ── How Zeno Learns ── */
+.howSection { margin-top: 40px; }
+.howGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+.howCard {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 24px 20px;
+  transition: border-color 0.2s;
+}
+.howCard:hover { border-color: rgba(99,102,241,0.3); }
+.howNum {
+  font-size: 11px;
+  font-weight: 800;
+  color: #6366f1;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.howIcon { font-size: 24px; margin-bottom: 10px; }
+.howTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 6px;
+}
+.howDesc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .heroSection { padding: 24px 20px; }
+  .statsStrip { flex-wrap: wrap; }
+  .stat { min-width: 100px; }
+  .breakdownGrid { flex-direction: column; }
+  .entryRight { gap: 6px; }
+  .entryUrl { max-width: 180px; }
+  .detailMeta { flex-wrap: wrap; gap: 12px; }
+  .howGrid { grid-template-columns: 1fr; }
+  .nav { display: none; }
+}

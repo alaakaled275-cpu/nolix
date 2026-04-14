@@ -131,3 +131,163 @@
   position: relative;
   top: 5px;
 }
+
+/* Critical Alerts */
+.criticalAlertsWrapper { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.criticalAlert {
+  padding: 16px 20px;
+  border-radius: 12px;
+  border-left: 4px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: slideInDown 0.4s ease-out;
+}
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.alertDanger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.02));
+  border-color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-left-width: 4px;
+}
+.alertWarning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.02));
+  border-color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-left-width: 4px;
+}
+.alertHeader { display: flex; align-items: center; gap: 8px; }
+.alertTitle { font-size: 16px; font-weight: 800; color: #f8fafc; }
+.alertBody { font-size: 14px; color: #cbd5e1; line-height: 1.5; }
+.alertRecommendation {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+/* ─────────────────────────────────────────────────────────────────────────────
+   ZENO INTELLIGENCE FEED (LEARNING LOG)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.learningFeed {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideInDown 0.5s ease;
+}
+
+.learningEntry {
+  background: rgba(15, 15, 26, 0.8);
+  border: 1px solid rgba(168, 85, 247, 0.15);
+  border-left: 4px solid #ff003c;
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.learningEntry:hover {
+  transform: translateX(4px);
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.learningEntryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.learningType {
+  font-size: 11px;
+  font-weight: 800;
+  color: #ff003c;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: rgba(255, 0, 60, 0.08);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.learningTime {
+  font-size: 11px;
+  color: #475569;
+}
+
+.learningUrl {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.learningModel {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.learningRuleWrapper {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.learningError {
+  font-size: 13px;
+  color: #ef4444;
+  text-decoration: line-through;
+  opacity: 0.6;
+  margin-bottom: 4px;
+}
+
+.learningFix {
+  font-size: 14px;
+  color: #10b981;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.confidenceBoost {
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a78bfa;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.boostArrow {
+  font-size: 14px;
+}
+
+.intelligenceTabHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.intelligenceTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.intelligenceCount {
+  font-size: 13px;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 12px;
+  border-radius: 100px;
+}

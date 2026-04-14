@@ -97,12 +97,83 @@ function generateMockResponse() {
     ab_results:            [],
     insights:              ["No data available yet. Start getting traffic to see insights."],
     sessions:              [],
-    _mock:                 true, // flag so frontend can tell it's mock data if needed
+    _mock:                 true,
+  };
+}
+
+// ── Demo Data generator (used for Sales Pitch / Investor Mode) ────────────────
+function generateSalesDemoResponse() {
+  return {
+    total_sessions:        1420,
+    high_intent_sessions:  480,
+    popups_shown:          350,
+    total_conversions:     112,
+    cvr_pct:               7.88,
+    offer_rate_pct:        24.6,
+    revenue_attributed:    8950,
+    revenue_lift_est:      "+18.4%",
+    discount_avoided_count: 51,
+    discount_saved_pct:     45,
+    today: {
+      analyzed:          210,
+      actions_taken:     45,
+      conversions:       18,
+      revenue:           1450,
+      discounts_avoided: 8,
+    },
+    top_action:     "urgency",
+    top_action_cvr: 11.2,
+    intent_distribution:   [
+      { intent_level: "high", count: "480" },
+      { intent_level: "medium", count: "610" },
+      { intent_level: "low", count: "330" },
+    ],
+    friction_distribution: [
+      { friction_detected: "stuck_cart", count: "120" },
+      { friction_detected: "bounce_risk", count: "185" },
+      { friction_detected: "paralysis", count: "45" },
+    ],
+    ab_results:            [
+      { variant: "A", offer_type: "discount_10", impressions: 175, conversions: 21 },
+      { variant: "B", offer_type: "discount_15", impressions: 175, conversions: 28 },
+    ],
+    insights:              [
+      "33% of your visitors show high buying intent — they are ready to purchase.",
+      "Cart abandonment is your biggest friction point — 120 visitors got stuck before checkout.",
+      "45% of conversions happened without any discount — your product sells itself most of the time.",
+      "Variant B (15% discount) is outperforming Variant A by 33% relative lift."
+    ],
+    critical_alerts: [
+      {
+        type: "danger",
+        title: "⚠️ CVR Dropped 12% Today",
+        message: "Your conversion rate from direct traffic has dropped significantly in the last 4 hours. 23 users hesitated at the checkout step.",
+        recommendation: "Reduce checkout steps immediately and enforce exit-intent popups."
+      },
+      {
+        type: "warning",
+        title: "🛡️ Trust Score Dropped",
+        message: "Bounce rate increased by 9% indicating low trust in the hero section.",
+        recommendation: "Add trust badges above the fold and show live review popups."
+      }
+    ],
+    sessions:              [
+      { intent_level: "high", intent_score: 9, friction_detected: "stuck_cart", converted: true, offer_type: "discount_10", business_explanation: "Visitor spent a long time with items in their cart. A 10% discount was offered to rescue the sale.", traffic_source: "Paid", cart_status: "Active", device: "Mobile" },
+      { intent_level: "high", intent_score: 8, friction_detected: null, converted: true, offer_type: "urgency", business_explanation: "Strong buying intent detected at checkout. A gentle urgency message was shown — no discount needed.", traffic_source: "Direct", cart_status: "Active", device: "Desktop" },
+      { intent_level: "low", intent_score: 2, friction_detected: "bounce_risk", converted: false, offer_type: null, business_explanation: "Visitor just arrived — too early to intervene. System waited to gather more data.", traffic_source: "Organic", cart_status: "Empty", device: "Mobile" },
+      { intent_level: "medium", intent_score: 5, friction_detected: "paralysis", converted: true, offer_type: "free_shipping", business_explanation: "Visitor browsed extensively but hadn't committed. Free shipping was offered to remove the last barrier.", traffic_source: "Paid", cart_status: "Started", device: "Desktop" }
+    ],
+    _mock:                 true,
   };
 }
 
 // ── GET handler ──────────────────────────────────────────────────────────────
-export async function GET() {
+export async function GET(req: import("next/server").NextRequest) {
+  // ── 0. Sales Demo Mode Check ────────────────────────────────────────────────
+  if (req.nextUrl.searchParams.get("demo") === "true") {
+    return NextResponse.json(generateSalesDemoResponse());
+  }
+
   // ── 1. Try real database ──────────────────────────────────────────────────
   try {
     // Ensure schema exists (only first call)
@@ -211,6 +282,24 @@ export async function GET() {
 
     const insights = generateInsights({ total, highIntent, shown, convs, discountCount, discountAvoided, frictionCounts });
 
+    const critical_alerts = [];
+    if (cvr < 2.0 && shown > 100) {
+      critical_alerts.push({
+        type: "danger",
+        title: "⚠️ Severe CVR Drop Detected",
+        message: `Your conversion rate has plummeted to ${cvr}%. Over ${shown} offers shown resulted in minimal conversions.`,
+        recommendation: "Review pricing strategy immediately and check checkout funnel for technical errors."
+      });
+    }
+    if ((frictionCounts["stuck_cart"] ?? 0) > 50) {
+      critical_alerts.push({
+        type: "warning",
+        title: "🛒 Alarmingly High Cart Abandonment",
+        message: `Detected ${frictionCounts["stuck_cart"]} users adding to cart but hesitating at checkout.`,
+        recommendation: "Reduce checkout steps and trigger a 15% discount for exit-intent specifically."
+      });
+    }
+
     return NextResponse.json({
       total_sessions:        total,
       high_intent_sessions:  highIntent,
@@ -235,6 +324,7 @@ export async function GET() {
       friction_distribution: frictionRows,
       ab_results: abRows,
       insights,
+      critical_alerts,
       sessions,
     });
 

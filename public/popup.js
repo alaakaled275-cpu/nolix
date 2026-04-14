@@ -1,8 +1,9 @@
 /**
- * ConvertAI – Embeddable Popup Script v2.0
+ * NOLIX – Embeddable Decision Brain Script v2.1
  * Usage: <script src="https://yourapp.com/popup.js" data-key="YOUR_EMBED_KEY"></script>
  *
- * What's new in v2:
+ * What's new in v2.1:
+ * - Master Command Strict Attributions: Appends ?source=nolix to ensure conversions are accurately tracked
  * - Analyzes early (5s after load), but respects delay_ms from the API
  * - Shows exactly one action exactly once per session
  * - Tracks add-to-cart + checkout events in real-time for accurate friction detection
@@ -63,13 +64,46 @@
     var ua = navigator.userAgent;
     var device = /Mobi|Android/i.test(ua) ? "mobile" : /iPad|Tablet/i.test(ua) ? "tablet" : "desktop";
 
+    // ── Causal Enrichment Signals ─────────────────────────────────────────
+    var scrollDepth = 0;
+    try {
+      var scrolled  = window.scrollY + window.innerHeight;
+      var totalH    = document.documentElement.scrollHeight;
+      scrollDepth   = totalH > 0 ? Math.round((scrolled / totalH) * 100) : 0;
+    } catch(e) {}
+
+    // Return visitor detection via cookie (persists across sessions)
+    var returnVisitor = false;
+    try {
+      if (document.cookie.indexOf("_nxv=1") !== -1) {
+        returnVisitor = true;
+      } else {
+        document.cookie = "_nxv=1; max-age=" + (60 * 60 * 24 * 30) + "; path=/; SameSite=Lax";
+      }
+    } catch(e) {}
+
+    // Price bucket — inferred from cart text or URL
+    var priceBucket = null;
+    try {
+      var priceEl = document.querySelector("[itemprop='price'], .price, #price");
+      if (priceEl) {
+        var pval = parseFloat((priceEl.textContent || "").replace(/[^0-9.]/g, ""));
+        if (!isNaN(pval)) {
+          priceBucket = pval < 30 ? "low" : pval < 100 ? "mid" : "high";
+        }
+      }
+    } catch(e) {}
+
     return {
-      session_id:     sd.sessionId,
-      time_on_site:   Math.round((Date.now() - sd.startTime) / 1000),
-      pages_viewed:   sd.pagesViewed.length,
-      traffic_source: src,
-      cart_status:    sd.cartStatus,
-      device:         device
+      session_id:        sd.sessionId,
+      time_on_site:      Math.round((Date.now() - sd.startTime) / 1000),
+      pages_viewed:      sd.pagesViewed.length,
+      traffic_source:    src,
+      cart_status:       sd.cartStatus,
+      device:            device,
+      scroll_depth_pct:  Math.min(100, scrollDepth),
+      return_visitor:    returnVisitor,
+      price_bucket:      priceBucket,
     };
   }
 
@@ -137,23 +171,159 @@
     document.body.appendChild(popup);
     sessionStorage.setItem(SHOWN_KEY, "shown");
 
+    // ── Timing ──
+    var popupShownAt = Date.now();
+
+    // ── HESITATION TRACKER ───────────────────────────────────────────────────
+    // These signals are invisible to the user but critical for the brain.
+    // They answer: "how close was this person to buying?"
+    // A high hesitation_score → system should learn to act differently next time.
+    var hesitation = {
+      cta_hover_count:   0,   // How many times did they hover over the CTA button?
+      mouse_leave_count: 0,   // How many times did their mouse leave the popup?
+      inactivity_start:  Date.now(),
+      max_inactivity_ms: 0,   // Longest pause (frozen = high hesitation)
+      tab_hidden_count:  0,   // Switched tabs while popup was open (distracted)
+      scroll_during_popup: 0, // Scrolled the page while popup was showing
+    };
+
+    // CTA hover tracking
+    var ctaBtn = document.getElementById("ca-cta");
+    if (ctaBtn) {
+      ctaBtn.addEventListener("mouseenter", function() {
+        hesitation.cta_hover_count++;
+        hesitation.inactivity_start = Date.now();
+      });
+    }
+
+    // Mouse leave popup tracking (user moved away from offer)
+    popup.addEventListener("mouseleave", function() {
+      hesitation.mouse_leave_count++;
+      var inactive = Date.now() - hesitation.inactivity_start;
+      if (inactive > hesitation.max_inactivity_ms) {
+        hesitation.max_inactivity_ms = inactive;
+      }
+    });
+    popup.addEventListener("mouseenter", function() {
+      hesitation.inactivity_start = Date.now();
+    });
+
+    // Tab hidden = user opened another tab to compare
+    var tabHiddenHandler = function() {
+      if (document.hidden) hesitation.tab_hidden_count++;
+    };
+    document.addEventListener("visibilitychange", tabHiddenHandler);
+
+    // Scroll during popup = user is distracted / not focused on the offer
+    var scrollHandler = function() { hesitation.scroll_during_popup++; };
+    window.addEventListener("scroll", scrollHandler, { passive: true });
+
+    // ── Hesitation Score Calculator ──────────────────────────────────────────
+    // Score 0-100: higher = more hesitant = system should recalibrate for this cohort
+    // 0 = instant buy (no hesitation)
+    // 100 = highly hesitant (many signals of indecision)
+    function calcHesitationScore(timeToConvertMs) {
+      var score = 0;
+      // Speed of conversion: fast = low hesitation
+      var speedFactor = Math.min(50, (timeToConvertMs / 1000) * 2); // 0-50 based on seconds
+      score += speedFactor;
+      // CTA hovers: more = studied the offer (moderate positive, not always hesitation)
+      score += Math.min(15, hesitation.cta_hover_count * 3);
+      // Mouse leaves: left the popup area = real hesitation signal
+      score += Math.min(20, hesitation.mouse_leave_count * 5);
+      // Tab hidden: switched away = distracted / comparing
+      score += Math.min(10, hesitation.tab_hidden_count * 5);
+      // Inactivity: long pause = thinking hard about it
+      score += Math.min(5, hesitation.max_inactivity_ms / 2000);
+      return Math.min(100, Math.round(score));
+    }
+
+    function cleanup() {
+      document.removeEventListener("visibilitychange", tabHiddenHandler);
+      window.removeEventListener("scroll", scrollHandler);
+    }
+
     function close() {
+      cleanup();
       if (popup.parentNode) popup.parentNode.removeChild(popup);
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
     }
 
-    document.getElementById("ca-close").addEventListener("click", close);
-    overlay.addEventListener("click", close);
-
     document.getElementById("ca-cta").addEventListener("click", function () {
+      var timeToConvertMs = Date.now() - popupShownAt;
+      var hesitationScore = calcHesitationScore(timeToConvertMs);
+
+      // ── CONVERSION: Closes the loop with full behavioral context ──
+      fetch(API_BASE + "/api/convert/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id:         data.session_id,
+          converted:          true,
+          time_to_convert_ms: timeToConvertMs,
+          // Behavioral enrichment: these feed signal_outcomes table
+          hesitation_score:   hesitationScore,
+          cta_hover_count:    hesitation.cta_hover_count,
+          mouse_leave_count:  hesitation.mouse_leave_count,
+          tab_hidden_count:   hesitation.tab_hidden_count,
+          // Causal metadata
+          cohort_key:         data.causal && data.causal.cohort_key,
+          action_type:        data.offer_type,
+          group_assignment:   data.causal && data.causal.group_assignment,
+        })
+      });
       fetch(API_BASE + "/api/convert/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: data.session_id })
       });
       sessionStorage.setItem(SHOWN_KEY, "converted");
-      close();
+
+      var url = new URL(window.location.href);
+      url.searchParams.set("source", "nolix");
+      var discountCode = null;
+      if (data.offer_type === "discount_5")  discountCode = "NOLIX-5";
+      if (data.offer_type === "discount_10") discountCode = "NOLIX-10";
+      if (data.offer_type === "discount_15") discountCode = "NOLIX-15";
+      if (discountCode) {
+        url.searchParams.set("discount", discountCode);
+        var btn = document.getElementById("ca-cta");
+        btn.innerText = "Code Applied: " + discountCode;
+        btn.style.background = "#10b981";
+        setTimeout(close, 2000);
+      } else {
+        close();
+      }
+      window.history.replaceState({}, "", url.toString());
     });
+
+    // ── EXIT: send hesitation data even when user doesn't convert ────────────
+    // This is the most valuable data point: "they saw the offer, hesitated, left."
+    // That pattern tells us: action was wrong for this cohort, or offer wasn't strong enough.
+    function sendExitFeedback() {
+      if (sessionStorage.getItem(SHOWN_KEY) === "converted") return;
+      var timeOnPopupMs = Date.now() - popupShownAt;
+      var hesitationScore = calcHesitationScore(timeOnPopupMs);
+      navigator.sendBeacon(
+        API_BASE + "/api/convert/feedback",
+        JSON.stringify({
+          session_id:         data.session_id,
+          converted:          false,
+          time_to_convert_ms: timeOnPopupMs,
+          hesitation_score:   hesitationScore,
+          cta_hover_count:    hesitation.cta_hover_count,
+          mouse_leave_count:  hesitation.mouse_leave_count,
+          tab_hidden_count:   hesitation.tab_hidden_count,
+          cohort_key:         data.causal && data.causal.cohort_key,
+          action_type:        data.offer_type,
+          group_assignment:   data.causal && data.causal.group_assignment,
+        })
+      );
+    }
+
+    document.getElementById("ca-close").addEventListener("click", function() { sendExitFeedback(); close(); });
+    overlay.addEventListener("click", function() { sendExitFeedback(); close(); });
+    window.addEventListener("beforeunload", sendExitFeedback);
   }
 
   // ── Main ─────────────────────────────────────────────────────────────────

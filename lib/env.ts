@@ -23,6 +23,12 @@ const envSchema = z.object({
 
   N8N_WEBHOOK_BASE_URL: z.string().url().optional(),
   APP_BASE_URL: z.string().url().optional(),
+  
+  // Custom Auth
+  RESEND_API_KEY: z.string().optional(),
+  JWT_SECRET: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional()
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

@@ -30,7 +30,7 @@ interface StoreAnalysisSnapshot {
   growth_2x?: string;
   growth_10x?: string;
   zeno_summary?: string;
-  data_source?: "live" | "benchmark";
+  data_source?: "live" | "benchmark" | "offline";
 }
 
 interface ZenoChatProps {
@@ -76,8 +76,8 @@ const QUICK_CHIPS_DEFAULT = [
   "Why am I losing revenue?",
   "What should I fix first?",
   "What did you detect?",
+  "What did you learn from this analysis?",
   "Which A/B variant is better?",
-  "Should I use discounts?",
 ];
 
 // Build context-aware chip set
@@ -88,18 +88,18 @@ function getChips(analysis?: StoreAnalysisSnapshot): string[] {
   if (analysis.final_verdict) return [
     "What's the final verdict?",
     "What should be fixed first?",
+    "What did you learn from this analysis?",
     "How do we 2x this store?",
-    "What's the foundation score?",
     "How much revenue could this make?",
   ];
   if (analysis.monthly_revenue_high) return [
     "What's the foundation score?",
     "How much revenue could this make?",
-    "What type of business is this?",
+    "What did you learn from this analysis?",
     "Is this market saturated?",
     "Who is the target buyer?",
   ];
-  return all.slice(0, 5);
+  return [...all.slice(0, 4), "What did you learn from this analysis?"];
 }
 
 // ── Status phrases that cycle ─────────────────────────────────────────────────

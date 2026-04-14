@@ -147,32 +147,57 @@
 .cardActionLabel { display: block; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #7c5cfc; margin-bottom: 3px; }
 .cardActionText { font-size: 0.82rem; color: #c4b5fd; font-weight: 600; }
 
-/* ── Decision Feed ───────────────────────────────────────────────────── */
-.decisionFeed { display: flex; flex-direction: column; gap: 10px; }
+/* ── Decision Terminal Feed ────────────────────────────────────────────── */
+.decisionFeed { 
+  display: flex; flex-direction: column; gap: 8px;
+  background: #02040a;
+  border: 1px solid rgba(124,92,252,0.3);
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+  height: 480px;
+  overflow-y: auto;
+}
+
+.terminalHeader {
+  display: flex; gap: 8px; margin-bottom: 12px;
+  border-bottom: 1px solid rgba(124,92,252,0.2);
+  padding-bottom: 8px;
+}
+.termDot { width: 10px; height: 10px; border-radius: 50%; }
+.termDotR { background: #f43f5e; }
+.termDotY { background: #f59e0b; }
+.termDotG { background: #10b981; }
+.termTitle { font-size: 0.75rem; color: #a78bfa; margin-left: auto; text-transform: uppercase; letter-spacing: 0.1em; }
 
 .feedCard {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
-  padding: 14px 16px;
-  transition: border-color 0.2s;
+  background: transparent;
+  border-left: 2px solid rgba(255,255,255,0.1);
+  padding: 8px 12px;
+  transition: all 0.2s;
 }
-.feedCard:hover { border-color: rgba(124,92,252,0.2); }
-.feedCardConverted { border-color: rgba(34,197,94,0.2); background: rgba(34,197,94,0.03); }
+.feedCard:hover { border-left-color: #7c5cfc; background: rgba(124,92,252,0.05); }
+.feedCardConverted { border-left-color: #10b981; }
 
 .feedCardTop {
-  display: flex; align-items: center; gap: 8px;
-  flex-wrap: wrap; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 6px;
 }
-.feedIntent { font-size: 0.75rem; font-weight: 700; text-transform: capitalize; }
+.feedTimestamp { font-size: 0.7rem; color: #6b7280; }
+.feedIntent { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 .feedAction {
-  font-size: 0.72rem; font-weight: 600;
-  background: rgba(124,92,252,0.12);
-  border: 1px solid rgba(124,92,252,0.2);
-  color: #a78bfa; padding: 2px 8px; border-radius: 100px;
+  font-size: 0.7rem; font-weight: 700;
+  background: rgba(124,92,252,0.15);
+  color: #c4b5fd; padding: 2px 6px;
+  border-radius: 4px;
 }
-.feedConverted { font-size: 0.72rem; font-weight: 600; color: #22c55e; }
-.feedFriction { font-size: 0.72rem; color: #f59e0b; }
+.feedConverted { font-size: 0.7rem; font-weight: 800; color: #02040a; background: #10b981; padding: 2px 6px; border-radius: 4px; }
+.feedFriction { font-size: 0.7rem; color: #02040a; background: #f59e0b; padding: 2px 6px; border-radius: 4px; font-weight: 800; }
 
-.feedExplain { font-size: 0.82rem; color: #9ca3af; line-height: 1.5; margin-bottom: 8px; }
-.feedMeta { display: flex; gap: 6px; font-size: 0.7rem; color: #4b5563; }
+.feedExplain { 
+  font-size: 0.8rem; color: #cbd5e1; line-height: 1.4; margin-bottom: 6px;
+}
+.feedExplain::before { content: "> "; color: #3b82f6; }
+
+.feedMeta { display: flex; gap: 10px; font-size: 0.65rem; color: #4b5563; text-transform: uppercase; }

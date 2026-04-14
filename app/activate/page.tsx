@@ -1,441 +1,181 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
-import styles from "./styles.module.css";
 
-// -- Live activity feed entries ------------------------------------------
-const LIVE_EVENTS = [
-  { icon: "🛒", store: "petflow.co", action: "Cart hesitation detected", result: "10% offer shown → Converted", delta: "+$87" },
-  { icon: "⚡", store: "luminestore.com", action: "Checkout abandonment caught", result: "Urgency message triggered", delta: "+$134" },
-  { icon: "💰", store: "modernhome.io", action: "High-intent visitor paused", result: "Free shipping unlocked → Sold", delta: "+$62" },
-  { icon: "🔥", store: "gearcraft.co", action: "Paid-ad visitor stuck in cart", result: "15% flash deal → Purchase", delta: "+$211" },
-  { icon: "🚀", store: "bloombeauty.com", action: "Mobile drop-off intercepted", result: "Bundle offer shown → Converted", delta: "+$93" },
-  { icon: "⚡", store: "nexgear.io", action: "Email click with full cart", result: "Urgency nudge → Order placed", delta: "+$149" },
-];
+import React, { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { ZenoAppShell } from "@/app/components/ZenoAppShell";
+import { 
+  ShieldCheck, Zap, Cpu, Code, Copy, Check, CheckCircle,
+  RefreshCw, AlertTriangle, Fingerprint, Terminal, Database
+} from "lucide-react";
 
-// -- Post-activation state messages --------------------------------------
 const ACTIVATION_STEPS = [
-  { icon: "⚡", text: "NOLIX is now active", delay: 0 },
-  { icon: "👁️", text: "Analyzing your visitors in real-time...", delay: 1800 },
-  { icon: "🧠", text: "Behavior engine initialized", delay: 3200 },
-  { icon: "✅", text: "First revenue insights available within 24 hours", delay: 5000 },
+  { text: "NOLIX engine operational", delay: 0 },
+  { text: "Calibrating traffic interceptors...", delay: 1800 },
+  { text: "Causal Intelligence models online", delay: 3200 },
+  { text: "Revenue protection array active", delay: 5000 },
 ];
 
 export default function ActivatePage() {
   const params = useSearchParams();
-  const store = params.get("store") ?? "";
-  const rawLoss = params.get("loss") ?? "";
+  const router = useRouter();
+  const store = params.get("store") || params.get("url") || "yourstore.com";
 
-  const [tab, setTab] = useState<"shopify" | "script" | "assisted">("shopify");
-  const [copied, setCopied] = useState(false);
   const [activated, setActivated] = useState(false);
   const [activationStep, setActivationStep] = useState(-1);
-  const [liveEvents, setLiveEvents] = useState<typeof LIVE_EVENTS>([]);
-  const [requestSent, setRequestSent] = useState(false);
-  const liveRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const liveIdx = useRef(0);
+  const [loadingVerify, setLoadingVerify] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const revLoss = rawLoss ? `$${Number(rawLoss).toLocaleString()}` : "$3,200";
-  const scriptTag = `<script src="https://cdn.NOLIX.co/v1/engine.js" data-store="${store || "yourstore.com"}"></script>`;
-
-  // Boot live feed
-  useEffect(() => {
-    // Show first event immediately
-    setLiveEvents([LIVE_EVENTS[0]]);
-    liveIdx.current = 1;
-
-    liveRef.current = setInterval(() => {
-      const next = LIVE_EVENTS[liveIdx.current % LIVE_EVENTS.length];
-      setLiveEvents(prev => [next, ...prev].slice(0, 5));
-      liveIdx.current++;
-    }, 3400);
-
-    return () => { if (liveRef.current) clearInterval(liveRef.current); };
-  }, []);
-
-  function handleCopy() {
-    navigator.clipboard.writeText(scriptTag).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  }
+  const scriptTag = `<script src="http://localhost:3000/master.js" data-site="${store}" async></script>`;
 
   function handleActivate() {
     setActivated(true);
     let stepIdx = 0;
-    ACTIVATION_STEPS.forEach((step) => {
+    ACTIVATION_STEPS.forEach((step, i) => {
       setTimeout(() => {
-        setActivationStep(stepIdx);
-        stepIdx++;
+        setActivationStep(i);
       }, step.delay + 400);
     });
   }
 
-  function handleRequestSetup() {
-    setRequestSent(true);
+  function handleCopy() {
+    navigator.clipboard.writeText(scriptTag);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
-  // -- POST-ACTIVATION SCREEN --------------------------------------------
-  if (activated) {
-    return (
-      <div className={styles.page}>
-        <header className={styles.header}>
-          <div className={styles.container}>
-            <a href="/" className={styles.logo}>NOLI<span className={styles.logoAccent}>X</span></a>
-          </div>
-        </header>
-
-        <div className={styles.activationScreen}>
-          <div className={styles.activationGlow} aria-hidden />
-          <div className={styles.activationContent}>
-            <div className={styles.activationPulse} aria-hidden />
-            <div className={styles.activationBrand}>NOLI<span className={styles.logoAccent}>X</span></div>
-
-            <div className={styles.activationStepList}>
-              {ACTIVATION_STEPS.map((step, i) => (
-                <div
-                  key={i}
-                  className={`${styles.activationStep} ${activationStep >= i ? styles.activationStepVisible : ""}`}
-                >
-                  <span className={styles.activationStepIcon}>{step.icon}</span>
-                  <span className={styles.activationStepText}>{step.text}</span>
-                </div>
-              ))}
-            </div>
-
-            {activationStep >= 3 && (
-              <div className={styles.activationDone}>
-                <div className={styles.activationDoneTitle}>You&apos;re live.</div>
-                <p className={styles.activationDoneSub}>
-                  NOLIX is now watching your visitors and protecting every checkout.
-                  Check your dashboard for live conversions.
-                </p>
-                <a href="/dashboard" className={styles.activationDoneBtn} id="post-activation-dashboard-btn">
-                  Go to My Dashboard &rarr;
-                </a>
-              </div>
-            )}
-          </div>
-
-            {/* Live feed in activation screen */}
-          <div className={styles.activationFeed}>
-            <div className={styles.feedHeader}>
-              <span className={styles.liveDot} /> Other stores - right now
-            </div>
-            {liveEvents.slice(0, 3).map((ev, i) => (
-              <div key={i} className={`${styles.feedItem} ${i === 0 ? styles.feedItemNew : ""}`}>
-                <span className={styles.feedIcon}>{ev.icon}</span>
-                <div className={styles.feedBody}>
-                  <div className={styles.feedStore}>{ev.store}</div>
-                  <div className={styles.feedResult}>{ev.result}</div>
-                </div>
-                <div className={styles.feedDelta}>{ev.delta}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+  async function beginVerification() {
+    if (loadingVerify) return;
+    setLoadingVerify(true);
+    setVerifyError(null);
+    try {
+      // Simulate real verification check
+      const res = await fetch("/api/store/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeUrl: store })
+      });
+      if (!res.ok) throw new Error("Synchronization incomplete. Check script injection.");
+      
+      router.push("/dashboard");
+    } catch (err: any) {
+      setVerifyError(err.message);
+      setLoadingVerify(false);
+    }
   }
 
-  // -- MAIN ACTIVATION PAGE ----------------------------------------------
   return (
-    <div className={styles.page}>
+    <ZenoAppShell activeTab="install">
+      <div className="p-10 max-w-6xl mx-auto animate-fade-in relative z-10 space-y-12">
+        
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start gap-10">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 text-[#3fc8ff] text-[10px] font-bold uppercase tracking-[0.3em] mb-4">
+              <Cpu className="w-3 h-3" /> System Integration Protocol
+            </div>
+            <h1 className="text-white text-5xl font-black tracking-tight leading-none mb-6">Integration Portal</h1>
+            <p className="text-white/40 text-[15px] font-medium max-w-lg leading-relaxed">
+              To begin autonomous revenue protection, deploy the Causal Vector Layer into your target's technical foundation.
+            </p>
+          </div>
 
-      {/* -- HEADER -- */}
-      <header className={styles.header}>
-        <div className={styles.container}>
-          <a href="/" className={styles.logo}>
-            NOLI<span className={styles.logoAccent}>X</span>
-          </a>
-          {store && (
-            <div className={styles.headerStore}>
-              <span className={styles.liveDot} />
-              Activating for <strong>{store}</strong>
+          {!activated && (
+            <div className="w-full md:w-[360px] bg-white/[0.03] border border-white/10 p-8 rounded-[40px] backdrop-blur-3xl shadow-2xl relative overflow-hidden group">
+               <div className="absolute top-0 left-0 w-full h-1 bg-red-500/30" />
+               <div className="flex items-center gap-3 text-red-500 mb-4">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_#ef4444]" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Target Status: Unprotected</span>
+               </div>
+               <p className="text-white/40 text-xs leading-relaxed">
+                 The Causal Engine is currently restricted. Injected reality fingerprints cannot be verified until the synchronization vector is live.
+               </p>
             </div>
           )}
-          <a href={store ? `/results?store=${encodeURIComponent(store)}` : "/"} className={styles.btnBack}>
-            ← Back to Analysis
-          </a>
         </div>
-      </header>
 
-      <main className={styles.main}>
-        <div className={styles.container}>
-
-          {/* -- SECTION 1 + 2: HEADLINE + REVENUE REINFORCEMENT -- */}
-          <div className={styles.hero}>
-            <div className={styles.heroGlow} aria-hidden />
-            <div className={styles.heroBadge}>
-              <span className={styles.badgeDot} />
-              Revenue Recovery Engine - Ready
-            </div>
-            <h1 className={styles.heroTitle}>
-              Turn your lost visitors into revenue -{" "}
-              <span className={styles.titleGradient}>starting now</span>
-            </h1>
-            <div className={styles.revenueBanner}>
-              <div className={styles.revenueBannerInner}>
-                <span className={styles.revenueBannerLabel}>You are currently losing</span>
-                <span className={styles.revenueBannerAmount}>{revLoss}/month</span>
-                <span className={styles.revenueBannerSub}>from visitors who were ready to buy and didn&apos;t.</span>
-              </div>
-            </div>
-            <p className={styles.heroSub}>
-              Every minute you wait, that money walks out the door.
-              NOLIX stops it - one click, zero risk.
-            </p>
-            <a href="#install" className={styles.heroCtaBtn} id="hero-cta-btn">
-              Start Recovering This Revenue &rarr;
-            </a>
-            <div className={styles.heroTrust}>
-              <span>✓ 7-day free trial</span>
-              <span>✓ No credit card</span>
-              <span>✓ Remove anytime</span>
-            </div>
-          </div>
-
-          {/* -- LIVE FEED (Section 10: Live Feel) -- */}
-          <div className={styles.liveSection}>
-            <div className={styles.liveSectionHeader}>
-              <span className={styles.liveDot} />
-              <span className={styles.liveSectionTitle}>Happening right now — across NOLIX stores</span>
-            </div>
-            <div className={styles.liveFeed}>
-              {liveEvents.map((ev, i) => (
-                <div key={`${ev.store}-${i}`} className={`${styles.feedItem} ${i === 0 ? styles.feedItemNew : ""}`}>
-                  <span className={styles.feedIcon}>{ev.icon}</span>
-                  <div className={styles.feedBody}>
-                    <div className={styles.feedStore}>{ev.store}</div>
-                    <div className={styles.feedAction}>{ev.action}</div>
-                    <div className={styles.feedResult}>{ev.result}</div>
-                  </div>
-                  <div className={styles.feedDelta}>{ev.delta}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── SECTION 4: ULTRA-SIMPLE ACTIVATION (2 options) ── */}
-          <div className={styles.installSection} id="install">
-            <div className={styles.sectionLabel}>🚀 Choose Your Setup</div>
-            <h2 className={styles.installTitle}>Pick how you want to get started</h2>
-            <p className={styles.installSub}>Both options take under 2 minutes. We handle the rest.</p>
-
-            <div className={styles.tabRow}>
-              <button
-                className={`${styles.tab} ${styles.tabRecommended} ${tab === "shopify" ? styles.tabActive : ""}`}
-                onClick={() => setTab("shopify")}
-                id="tab-shopify-btn"
-              >
-                <span className={styles.tabIcon}>🛍️</span>
-                <span className={styles.tabLabel}>1-Click Shopify Install</span>
-                <span className={styles.tabBadge}>Recommended</span>
-              </button>
-              <button
-                className={`${styles.tab} ${tab === "script" ? styles.tabActive : ""}`}
-                onClick={() => setTab("script")}
-                id="tab-script-btn"
-              >
-                <span className={styles.tabIcon}>📋</span>
-                <span className={styles.tabLabel}>Quick Setup (2 min)</span>
-              </button>
-              <button
-                className={`${styles.tab} ${tab === "assisted" ? styles.tabActive : ""}`}
-                onClick={() => setTab("assisted")}
-                id="tab-assisted-btn"
-              >
-                <span className={styles.tabIcon}>🤝</span>
-                <span className={styles.tabLabel}>We Install For You</span>
-              </button>
-            </div>
-
-            {/* Option A: Shopify */}
-            {tab === "shopify" && (
-              <div className={styles.panelBox}>
-                <div className={styles.panelGlow} aria-hidden />
-                <div className={styles.optionTag}>Option A — Recommended</div>
-                <h3 className={styles.optionTitle}>1-Click Shopify Install</h3>
-                <div className={styles.optionFeatures}>
-                  <div className={styles.optionFeature}><span>✓</span> No setup required</div>
-                  <div className={styles.optionFeature}><span>✓</span> No coding needed</div>
-                  <div className={styles.optionFeature}><span>✓</span> Works instantly after install</div>
-                </div>
-                <div className={styles.shopifySteps}>
-                  {[
-                    { n: "1", text: "Go to Shopify Admin → Online Store → Themes" },
-                    { n: "2", text: "Click \"Edit code\" on your active theme" },
-                    { n: "3", text: "Open theme.liquid and find </body>" },
-                    { n: "4", text: "Paste the script tag below and click Save" },
-                  ].map((s) => (
-                    <div key={s.n} className={styles.shopifyStep}>
-                      <div className={styles.shopifyNum}>{s.n}</div>
-                      <div className={styles.shopifyText}>{s.text}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className={styles.codeBlock}>
-                  <code className={styles.codeText}>{scriptTag}</code>
-                  <button
-                    className={`${styles.copyBtn} ${copied ? styles.copyBtnDone : ""}`}
+        {!activated ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+            
+            {/* Step 1: Delivery */}
+            <div className="bg-white/[0.02] border border-white/5 p-10 rounded-[50px] space-y-8">
+               <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-2xl bg-[#3fc8ff]/10 border border-[#3fc8ff]/20 flex items-center justify-center text-[#3fc8ff] font-bold text-sm">01</div>
+                  <h3 className="text-white text-lg font-bold">Deploy Master Vector</h3>
+               </div>
+               <div className="bg-black/40 border border-white/5 rounded-2xl p-6 relative group overflow-hidden">
+                  <div className="text-white/20 text-[10px] font-mono mb-4 uppercase tracking-widest">Script Injection Code</div>
+                  <code className="text-[#3fc8ff] text-xs font-mono break-all leading-relaxed block pr-12">
+                    {scriptTag}
+                  </code>
+                  <button 
                     onClick={handleCopy}
-                    id="copy-shopify-script-btn"
+                    className="absolute right-4 bottom-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all border border-white/5"
                   >
-                    {copied ? "✓ Copied!" : "Copy"}
+                    {copied ? <Check className="w-4 h-4 text-[#3fc8ff]" /> : <Copy className="w-4 h-4" />}
                   </button>
-                </div>
-                <button
-                  className={styles.activateMainBtn}
-                  onClick={handleActivate}
-                  id="shopify-activate-btn"
-                >
-                  ✅ Start Recovering This Revenue
-                </button>
-              </div>
-            )}
+               </div>
+               <p className="text-white/30 text-xs leading-relaxed italic">
+                 "Inject this vector into the global &lt;head&gt; section. Zeno will automatically inherit authorization variables from the site identity."
+               </p>
+            </div>
 
-            {/* Option B: Script */}
-            {tab === "script" && (
-              <div className={styles.panelBox}>
-                <div className={styles.optionTag}>Option B</div>
-                <h3 className={styles.optionTitle}>Add One Tracking Snippet</h3>
-                <p className={styles.optionDesc}>
-                  Paste this line before the <code>&lt;/body&gt;</code> tag of any page on your store.
-                  Works on WooCommerce, Wix, Webflow, or any custom HTML store.
-                </p>
-                <div className={styles.codeBlock}>
-                  <code className={styles.codeText}>{scriptTag}</code>
-                  <button
-                    className={`${styles.copyBtn} ${copied ? styles.copyBtnDone : ""}`}
-                    onClick={handleCopy}
-                    id="copy-script-btn"
-                  >
-                    {copied ? "✓ Copied!" : "Copy"}
-                  </button>
-                </div>
-                <button
-                  className={styles.activateMainBtn}
+            {/* Step 2: Kickoff */}
+            <div className="space-y-8 pt-10">
+               <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/30 font-bold text-sm">02</div>
+                  <h3 className="text-white text-lg font-bold">Initialize Synchronization</h3>
+               </div>
+               <button 
                   onClick={handleActivate}
-                  id="script-activate-btn"
-                >
-                  ✅ Start Recovering This Revenue
-                </button>
-              </div>
-            )}
+                  className="w-full bg-[#3fc8ff] hover:bg-[#32b0e6] text-black font-black py-6 rounded-[30px] flex items-center justify-center gap-4 transition-all shadow-[0_15px_40px_rgba(63,200,255,0.25)] hover:-translate-y-1"
+               >
+                  BEGIN INITIALIZATION SEQUENCE <Zap className="w-5 h-5 fill-current" />
+               </button>
+               <div className="flex items-center gap-4 px-6 text-white/30 text-[10px] font-bold uppercase tracking-widest">
+                  <ShieldCheck className="w-4 h-4" /> SECURE HANDSHAKE PENDING
+               </div>
+            </div>
 
-            {/* Option C: Assisted — Section 5 */}
-            {tab === "assisted" && (
-              <div className={styles.panelBox}>
-                <div className={styles.panelGlow} aria-hidden />
-                <div className={styles.optionTag}>🤝 We Do Everything For You</div>
-                <h3 className={styles.optionTitle}>We&apos;ll install everything for you — free</h3>
-                <p className={styles.optionDesc}>
-                  Tell us your store. Our team will have NOLIX running within 2 hours.
-                  You don&apos;t need to touch a single line of code.
-                </p>
-                <div className={styles.assistedFeatures}>
-                  <div className={styles.assistedFeature}><span>✓</span> We set up and verify the install</div>
-                  <div className={styles.assistedFeature}><span>✓</span> We test the live behavior engine</div>
-                  <div className={styles.assistedFeature}><span>✓</span> We confirm your first session is tracked</div>
-                  <div className={styles.assistedFeature}><span>✓</span> Completely free, no obligations</div>
-                </div>
-                {!requestSent ? (
-                  <button
-                    className={styles.activateMainBtn}
-                    onClick={handleRequestSetup}
-                    id="request-setup-btn"
+          </div>
+        ) : (
+          /* ACTIVE INITIALIZATION VIEW */
+          <div className="bg-white/[0.02] border border-white/5 p-12 rounded-[50px] w-full max-w-2xl mx-auto space-y-10 text-center animate-fade-in">
+             <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="w-2 h-2 rounded-full bg-[#3fc8ff] animate-ping" />
+                <h2 className="text-white text-2xl font-black tracking-widest uppercase">Synchronization <span className="text-[#3fc8ff]">In Progress</span></h2>
+             </div>
+             
+             <div className="space-y-4 max-w-sm mx-auto">
+               {ACTIVATION_STEPS.map((step, i) => (
+                 <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-700 ${activationStep >= i ? 'bg-[#3fc8ff]/10 border-[#3fc8ff]/30 opacity-100 translate-x-0' : 'border-transparent opacity-0 -translate-x-4'}`}>
+                   <CheckCircle className={`w-4 h-4 ${activationStep >= i ? 'text-[#3fc8ff]' : 'text-white/10'}`} />
+                   <span className={`text-[13px] font-medium ${activationStep >= i ? 'text-white' : 'text-white/20'}`}>{step.text}</span>
+                 </div>
+               ))}
+             </div>
+
+             {activationStep >= 3 && (
+               <div className="pt-10 animate-slide-up">
+                  <button 
+                    onClick={beginVerification}
+                    disabled={loadingVerify}
+                    className={`w-full max-w-sm mx-auto py-5 bg-white/5 border border-white/10 hover:border-[#3fc8ff]/50 rounded-[25px] flex items-center justify-center gap-4 text-white font-bold transition-all ${loadingVerify ? 'opacity-50 cursor-wait' : ''}`}
                   >
-                    🤝 Request Free Setup
+                    {loadingVerify ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Database className="w-5 h-5 text-[#3fc8ff]" />}
+                    {loadingVerify ? "ESTABLISHING causal LINK..." : "ENTER MASTER CONSOLE"}
                   </button>
-                ) : (
-                  <div className={styles.requestSentBox}>
-                    <div className={styles.requestSentIcon}>✅</div>
-                    <div className={styles.requestSentTitle}>Request received!</div>
-                    <div className={styles.requestSentSub}>
-                      Our team will reach out within 1 hour to get you set up.
+                  {verifyError && (
+                    <div className="mt-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold flex items-center justify-center gap-3 animate-head-shake">
+                       <AlertTriangle className="w-4 h-4" /> {verifyError}
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+               </div>
+             )}
           </div>
+        )}
 
-          {/* ── SECTION 6: TRUST & SAFETY ── */}
-          <div className={styles.trustSection}>
-            <div className={styles.sectionLabel}>🔒 Your Data Is Safe</div>
-            <div className={styles.trustGrid}>
-              {[
-                { icon: "🔒", title: "No access to your store data", desc: "We never read your products, orders, or customer info." },
-                { icon: "👁️", title: "Behavior analysis only", desc: "We only analyze behavior — like Google Analytics. Nothing personal is ever stored." },
-                { icon: "⚡", title: "Zero performance impact", desc: "The script is async and loads after your page. Your store speed is not affected." },
-                { icon: "🗑️", title: "Removable anytime", desc: "Delete one line of code and NOLIX is gone. No traces, no lock-in." },
-              ].map((t) => (
-                <div key={t.title} className={styles.trustCard}>
-                  <div className={styles.trustIcon}>{t.icon}</div>
-                  <div className={styles.trustTitle}>{t.title}</div>
-                  <div className={styles.trustDesc}>{t.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── SECTION 7: RISK REVERSAL ── */}
-          <div className={styles.riskBox}>
-            <div className={styles.riskGlow} aria-hidden />
-            <div className={styles.riskMark}>💎</div>
-            <div className={styles.riskTitle}>Try NOLIX for 7 days — completely free</div>
-            <p className={styles.riskText}>
-              If NOLIX doesn&apos;t generate additional revenue within 7 days,
-              remove the script instantly. One line of code. No questions asked.
-              No billing. No obligations.
-            </p>
-            <div className={styles.riskPills}>
-              <span className={styles.riskPill}>✓ No credit card</span>
-              <span className={styles.riskPill}>✓ Cancel in 10 seconds</span>
-              <span className={styles.riskPill}>✓ GDPR compliant</span>
-            </div>
-          </div>
-
-          {/* ── SECTION 8: WHAT HAPPENS AFTER ACTIVATION ── */}
-          <div className={styles.afterSection}>
-            <div className={styles.sectionLabel}>📍 What Happens After You Activate</div>
-            <div className={styles.afterSteps}>
-              {[
-                { n: "1", icon: "📊", title: "We track visitor behavior", desc: "The engine silently watches page views, time spent, and cart events. Like Google Analytics, but smarter." },
-                { n: "2", icon: "🧠", title: "We detect hesitation", desc: "The moment a buyer pauses at checkout, the system scores their intent in milliseconds." },
-                { n: "3", icon: "⚡", title: "We apply the right action", desc: "Urgency message, small discount, free shipping — picked for this exact visitor, in real-time." },
-                { n: "4", icon: "💰", title: "You see more conversions", desc: "More carts complete. More revenue recovered. Your dashboard shows every action and result." },
-              ].map((s) => (
-                <div key={s.n} className={styles.afterStep}>
-                  <div className={styles.afterStepNum}>{s.n}</div>
-                  <div className={styles.afterStepIcon}>{s.icon}</div>
-                  <div>
-                    <div className={styles.afterStepTitle}>{s.title}</div>
-                    <div className={styles.afterStepDesc}>{s.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-      </main>
-
-      {/* ── STICKY BAR ── */}
-      <div className={styles.stickyBar}>
-        <div className={styles.stickyLeft}>
-          <span className={styles.stickyPulse} />
-          <span>
-            {store
-              ? <>NOLIX is ready to activate for <strong>{store}</strong> — every minute costs you money.</>
-              : <>NOLIX is ready to activate — start recovering revenue now.</>
-            }
-          </span>
-        </div>
-        <a href="#install" className={styles.stickyBtn} id="sticky-activate-btn">
-          Start Recovering This Revenue →
-        </a>
       </div>
-    </div>
+    </ZenoAppShell>
   );
 }

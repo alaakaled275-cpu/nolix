@@ -1,37 +1,34 @@
 /**
  * lib/scraper.ts
- * Server-side URL validation, fetching, and HTML signal extraction
- * for Zeno Store Analysis. All functions run server-side only.
+ * Real Server-side Puppeteer JS rendering, Schema.org parsing, and Signal Extraction.
+ * Bypasses JS Blindness and accurately identifies prices & currencies.
  */
 
+import puppeteer from 'puppeteer';
+import * as cheerio from 'cheerio';
+
+export interface ExtractedData<T> {
+  value: T;
+  confidence: number;
+  source: string;
+}
+
 export interface StoreSignals {
-  /** Normalized store URL */
   url: string;
-  /** HTTP status from fetch (0 = unreachable) */
   status: number;
-  /** Whether we got real page data */
   reachable: boolean;
-  /** Page <title> content */
-  title: string | null;
-  /** <meta name="description"> content */
-  metaDescription: string | null;
-  /** First <h1> text */
-  h1: string | null;
-  /** All detected price strings (e.g. "$29.99") */
-  prices: string[];
-  /** Lowest detected price as number, or null */
-  lowestPrice: number | null;
-  /** Highest detected price as number, or null */
-  highestPrice: number | null;
-  /** Trust-signal keywords found on page */
-  trustKeywords: string[];
-  /** Top-level nav link texts */
-  navItems: string[];
-  /** Detected platform signals (shopify, woocommerce, etc.) */
-  platform: string | null;
-  /** Raw category/niche inference from page text */
-  nicheHints: string[];
-  /** Page word count (rough content depth signal) */
+  businessModel: ExtractedData<string>; // "E-Commerce", "SaaS", "Content", "Unknown"
+  title: ExtractedData<string | null>;
+  metaDescription: ExtractedData<string | null>;
+  h1: ExtractedData<string | null>;
+  prices: ExtractedData<string[]>;     // Keep string[] for compatibility with Results UI
+  currency: ExtractedData<string | null>;
+  lowestPrice: ExtractedData<number | null>;
+  highestPrice: ExtractedData<number | null>;
+  trustKeywords: ExtractedData<string[]>;
+  navItems: ExtractedData<string[]>;
+  platform: ExtractedData<string | null>;
+  nicheHints: ExtractedData<string[]>;
   wordCount: number;
 }
 
@@ -43,192 +40,242 @@ export function normalizeUrl(raw: string): string {
   return u;
 }
 
-// ── Page Fetcher ───────────────────────────────────────────────────────────────
-async function tryFetch(url: string, timeoutMs: number): Promise<{ html: string; status: number; ok: boolean }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9,ar;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
-        "Upgrade-Insecure-Requests": "1",
-        "DNT": "1",
-      },
-      redirect: "follow",
-    });
-    clearTimeout(timer);
-    const html = await res.text();
-    return { html, status: res.status, ok: res.ok };
-  } catch {
-    clearTimeout(timer);
-    return { html: "", status: 0, ok: false };
-  }
-}
-
-export async function fetchStorePage(
-  url: string,
-  timeoutMs = 12000
-): Promise<{ html: string; status: number; ok: boolean }> {
-  // Try the exact URL first
-  const first = await tryFetch(url, timeoutMs);
-  if (first.ok && first.html.length > 500) return first;
-
-  // If that fails, try just the homepage (root domain)
-  try {
-    const parsed = new URL(url);
-    const homepage = `${parsed.protocol}//${parsed.hostname}`;
-    if (homepage !== url) {
-      const fallback = await tryFetch(homepage, timeoutMs);
-      if (fallback.ok && fallback.html.length > 500) return fallback;
-    }
-  } catch { /* ignore */ }
-
-  return first; // Return whatever we got (even if empty)
-}
-
-
-// ── HTML Signal Extractor ──────────────────────────────────────────────────────
+// ── HTML Signal Extractor (Schema + DOM) ───────────────────────────────────────
 export function parseStoreSignals(html: string, url: string): StoreSignals {
+  const $ = cheerio.load(html);
+  
   const base: StoreSignals = {
     url,
     status: 200,
     reachable: true,
-    title: null,
-    metaDescription: null,
-    h1: null,
-    prices: [],
-    lowestPrice: null,
-    highestPrice: null,
-    trustKeywords: [],
-    navItems: [],
-    platform: null,
-    nicheHints: [],
+    businessModel: { value: "Unknown", confidence: 0, source: "fallback" },
+    title: { value: null, confidence: 0, source: "fallback" },
+    metaDescription: { value: null, confidence: 0, source: "fallback" },
+    h1: { value: null, confidence: 0, source: "fallback" },
+    prices: { value: [], confidence: 0, source: "fallback" },
+    currency: { value: null, confidence: 0, source: "fallback" },
+    lowestPrice: { value: null, confidence: 0, source: "fallback" },
+    highestPrice: { value: null, confidence: 0, source: "fallback" },
+    trustKeywords: { value: [], confidence: 0, source: "fallback" },
+    navItems: { value: [], confidence: 0, source: "fallback" },
+    platform: { value: null, confidence: 0, source: "fallback" },
+    nicheHints: { value: [], confidence: 0, source: "fallback" },
     wordCount: 0,
   };
 
-  if (!html) return { ...base, reachable: true, status: 0 };
+  if (!html) {
+    base.reachable = false;
+    base.status = 0;
+    return base;
+  }
 
-  // ── Title ────────────────────────────────────────────────────────────────────
-  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-  if (titleMatch) base.title = titleMatch[1].trim().slice(0, 200);
+  // 1. Meta / Head Parsing
+  const title = $("title").text().trim().slice(0, 200);
+  if (title) base.title = { value: title, confidence: 100, source: "DOM <title>" };
 
-  // ── Meta Description ─────────────────────────────────────────────────────────
-  const metaMatch = html.match(
-    /<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i
-  ) || html.match(
-    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']description["']/i
-  );
-  if (metaMatch) base.metaDescription = metaMatch[1].trim().slice(0, 400);
+  const metaDesc = $("meta[name='description'], meta[property='og:description']").attr("content");
+  if (metaDesc) base.metaDescription = { value: metaDesc.slice(0, 400), confidence: 95, source: "meta description" };
 
-  // ── H1 ───────────────────────────────────────────────────────────────────────
-  const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
-  if (h1Match) base.h1 = h1Match[1].replace(/<[^>]+>/g, "").trim().slice(0, 200);
+  const h1 = $("h1").first().text().trim().slice(0, 200);
+  if (h1) base.h1 = { value: h1, confidence: 90, source: "DOM <h1>" };
 
-  // ── Prices ───────────────────────────────────────────────────────────────────
-  const priceRegex = /\$\s*(\d{1,4}(?:[.,]\d{2})?)/g;
-  const priceMatches = [...html.matchAll(priceRegex)];
-  const prices: string[] = [];
-  const priceNums: number[] = [];
-  for (const m of priceMatches.slice(0, 30)) {
-    const raw = m[0].trim();
-    const num = parseFloat(m[1].replace(",", ""));
-    if (!prices.includes(raw) && num > 0 && num < 10000) {
-      prices.push(raw);
-      priceNums.push(num);
+  // 2. Schema.org (JSON-LD) Parsing - The Holy Grail
+  let schemaPrices: number[] = [];
+  let schemaCurrency: string | null = null;
+  let schemaType: string | null = null;
+
+  $("script[type='application/ld+json']").each((_, el) => {
+    try {
+      const content = $(el).html();
+      if (!content) return;
+      const data = JSON.parse(content);
+      
+      // Handle arrays of schemas
+      const schemas = Array.isArray(data) ? data : [data];
+      
+      for (const s of schemas) {
+        if (!s) continue;
+        const type = s["@type"];
+        if (type) schemaType = type;
+        
+        // Extract Price & Currency from Product/Offer
+        if (type === "Product" || s.offers) {
+          const offers = Array.isArray(s.offers) ? s.offers : [s.offers];
+          for (const offer of offers) {
+            if (offer && offer.price) {
+              const p = parseFloat(offer.price);
+              if (!isNaN(p)) schemaPrices.push(p);
+            }
+            if (offer && offer.priceCurrency && !schemaCurrency) {
+              schemaCurrency = offer.priceCurrency;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Quiet fail on invalid JSON
     }
-  }
-  base.prices = prices.slice(0, 10);
-  if (priceNums.length > 0) {
-    base.lowestPrice = Math.min(...priceNums);
-    base.highestPrice = Math.max(...priceNums);
+  });
+
+  if (schemaPrices.length > 0) {
+    const rawPrices = schemaPrices.map(p => p.toString());
+    base.prices = { value: rawPrices, confidence: 100, source: "application/ld+json" };
+    base.lowestPrice = { value: Math.min(...schemaPrices), confidence: 100, source: "application/ld+json" };
+    base.highestPrice = { value: Math.max(...schemaPrices), confidence: 100, source: "application/ld+json" };
+    if (schemaCurrency) {
+      base.currency = { value: schemaCurrency, confidence: 100, source: "application/ld+json" };
+    }
+  } else {
+    // DOM Price Fallback (Better regex supporting global currencies)
+    const priceText = $("body").text();
+    // Match $, €, £, AED, SAR, and numbers
+    const priceRegex = /(?:[\$€£]|AED|SAR|Rs\.?)\s*(\d{1,5}(?:[.,]\d{2})?)/gi;
+    const matches = [...priceText.matchAll(priceRegex)];
+    const fallbackPrices: number[] = [];
+    const rawStrs: string[] = [];
+    
+    for (const m of matches.slice(0, 20)) {
+      rawStrs.push(m[0].trim());
+      const num = parseFloat(m[1].replace(/,/g, ""));
+      if (!isNaN(num) && num > 0) fallbackPrices.push(num);
+    }
+
+    if (fallbackPrices.length > 0) {
+      base.prices = { value: [...new Set(rawStrs)].slice(0, 10), confidence: 60, source: "DOM Text Regex" };
+      base.lowestPrice = { value: Math.min(...fallbackPrices), confidence: 60, source: "DOM Text Regex" };
+      base.highestPrice = { value: Math.max(...fallbackPrices), confidence: 60, source: "DOM Text Regex" };
+    }
+    
+    // Currency Fallback
+    if (priceText.includes("$") || priceText.includes("USD")) base.currency = { value: "USD", confidence: 50, source: "DOM Inference" };
+    else if (priceText.includes("€") || priceText.includes("EUR")) base.currency = { value: "EUR", confidence: 50, source: "DOM Inference" };
+    else if (priceText.includes("SAR") || priceText.includes("ريال")) base.currency = { value: "SAR", confidence: 50, source: "DOM Inference" };
   }
 
-  // ── Trust Keywords ───────────────────────────────────────────────────────────
-  const TRUST_TERMS = [
-    "money-back", "guarantee", "refund", "free shipping", "free returns",
-    "reviews", "stars", "trustpilot", "verified", "secure checkout",
-    "ssl", "satisfaction", "no risk", "warranty", "privacy",
-  ];
+  // 3. Platform Detection
   const lowerHtml = html.toLowerCase();
-  base.trustKeywords = TRUST_TERMS.filter((t) => lowerHtml.includes(t));
+  let platform = null;
+  if (lowerHtml.includes('cdn.shopify.com') || lowerHtml.includes('shopify.theme')) platform = "Shopify";
+  else if (lowerHtml.includes('wp-content') || lowerHtml.includes('woocommerce')) platform = "WooCommerce";
+  else if (lowerHtml.includes('_next/static')) platform = "Next.js Custom";
+  else if (lowerHtml.includes('webflow')) platform = "Webflow";
+  if (platform) base.platform = { value: platform, confidence: 90, source: "HTML Signatures" };
 
-  // ── Nav Items ────────────────────────────────────────────────────────────────
-  const navMatch = html.match(/<nav[^>]*>([\s\S]*?)<\/nav>/i);
-  if (navMatch) {
-    const linkMatches = [...navMatch[1].matchAll(/<a[^>]*>([^<]+)<\/a>/gi)];
-    base.navItems = linkMatches
-      .map((m) => m[1].trim())
-      .filter((t) => t.length > 0 && t.length < 50)
-      .slice(0, 10);
+  // 4. Business Model Detection
+  let model = "Unknown";
+  let modelConf = 0;
+  let modelSource = "";
+
+  if (schemaType === "Product" || base.prices.value.length > 2 || platform === "Shopify" || platform === "WooCommerce") {
+    model = "E-Commerce";
+    modelConf = schemaType === "Product" ? 95 : 80;
+    modelSource = schemaType === "Product" ? "Schema.org" : "Pricing/Platform Inference";
+  } else if (lowerHtml.includes("pricing") && (lowerHtml.includes("monthly") || lowerHtml.includes("annual") || lowerHtml.includes("start free trial"))) {
+    model = "SaaS";
+    modelConf = 85;
+    modelSource = "DOM Terminology";
+  } else if (schemaType === "Article" || schemaType === "NewsArticle" || lowerHtml.includes("read more")) {
+    model = "Content/Media";
+    modelConf = 75;
+    modelSource = schemaType ? "Schema.org" : "DOM Terminology";
+  }
+  
+  if (model !== "Unknown") {
+    base.businessModel = { value: model, confidence: modelConf, source: modelSource };
   }
 
-  // ── Platform Detection ───────────────────────────────────────────────────────
-  if (html.includes("cdn.shopify.com") || html.includes("Shopify.theme")) base.platform = "Shopify";
-  else if (html.includes("wp-content") || html.includes("woocommerce")) base.platform = "WooCommerce";
-  else if (html.includes("bigcommerce")) base.platform = "BigCommerce";
-  else if (html.includes("squarespace")) base.platform = "Squarespace";
-  else if (html.includes("wixsite") || html.includes("wix.com")) base.platform = "Wix";
-  else if (html.includes("webflow")) base.platform = "Webflow";
+  // 5. Trust Keywords
+  const TRUST_TERMS = ["money-back", "guarantee", "refund", "free shipping", "reviews", "verified", "secure checkout", "ssl"];
+  const bodyText = $("body").text().toLowerCase();
+  const trustMatches = TRUST_TERMS.filter(t => bodyText.includes(t));
+  base.trustKeywords = { value: trustMatches, confidence: 100, source: "DOM Text" };
 
-  // ── Niche Hints ──────────────────────────────────────────────────────────────
-  const NICHE_TERMS: Record<string, string[]> = {
-    fashion: ["clothing", "apparel", "dress", "shirt", "fashion", "outfit", "wear"],
-    beauty: ["skincare", "makeup", "beauty", "serum", "moisturizer", "cosmetics", "glow"],
-    fitness: ["workout", "gym", "protein", "supplement", "fitness", "exercise", "training"],
-    home: ["home decor", "furniture", "kitchen", "living room", "bedroom", "interior"],
-    pets: ["dog", "cat", "pet", "paw", "puppy", "kitten", "animal"],
-    tech: ["gadget", "electronics", "tech", "wireless", "smart", "device", "charger"],
-    wellness: ["wellness", "health", "organic", "natural", "cbd", "sleep", "stress"],
-    kids: ["baby", "kids", "children", "toy", "nursery", "toddler"],
-  };
-  const hints: string[] = [];
-  for (const [niche, terms] of Object.entries(NICHE_TERMS)) {
-    if (terms.some((t) => lowerHtml.includes(t))) hints.push(niche);
-  }
-  base.nicheHints = hints.slice(0, 3);
-
-  // ── Word Count ───────────────────────────────────────────────────────────────
-  const textContent = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-  base.wordCount = textContent.split(" ").filter((w) => w.length > 2).length;
+  // 6. Word Count (Cleaned)
+  base.wordCount = bodyText.replace(/\s+/g, " ").trim().split(" ").length;
 
   return base;
 }
 
-// ── Full Scrape Pipeline ───────────────────────────────────────────────────────
+// ── Headless Fetch Engine ──────────────────────────────────────────────────────
 export async function scrapeStore(rawUrl: string): Promise<StoreSignals> {
   const url = normalizeUrl(rawUrl);
-  const { html, status, ok } = await fetchStorePage(url);
+  let browser = null;
+  let html = "";
+  
+  try {
+    // Launch headless Chromium via Puppeteer.
+    // Handles React/Next.js/Shopify Headless stores by waiting for network idle.
+    browser = await puppeteer.launch({ 
+      headless: true, // Opt in to new Headless
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-features=IsolateOrigins,site-per-process'
+      ] 
+    });
+    
+    const page = await browser.newPage();
+    
+    // Scraper Stealth: Spoff headers to look like a real consumer browser
+    const userAgents = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+    ];
+    await page.setUserAgent(userAgents[Math.floor(Math.random() * userAgents.length)]);
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'Upgrade-Insecure-Requests': '1'
+    });
+    
+    // Set fake viewport
+    await page.setViewport({ width: 1366 + Math.floor(Math.random() * 100), height: 768 + Math.floor(Math.random() * 100) });
 
-  if (!ok || !html) {
-    return {
-      url,
-      status,
-      reachable: true, // Force true so Zeno analyzes the URL anyway
-      title: null,
-      metaDescription: null,
-      h1: null,
-      prices: [],
-      lowestPrice: null,
-      highestPrice: null,
-      trustKeywords: [],
-      navItems: [],
-      platform: null,
-      nicheHints: [],
-      wordCount: 0,
-    };
+    // Evaluate overriding webdriver properties
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    });
+    
+    // Navigate and wait for DOM, JS excution, and primary network requests
+    const response = await page.goto(url, { waitUntil: 'networkidle2', timeout: 15000 });
+    
+    // Scroll down to trigger lazy loaded images or JSON-LD
+    await page.evaluate(() => window.scrollTo(0, 1000));
+    // Wait slightly
+    await new Promise(r => setTimeout(r, 500));
+    
+    html = await page.content();
+    
+    const signals = parseStoreSignals(html, url);
+    signals.status = response?.status() ?? 200;
+    signals.reachable = signals.status < 400;
+    
+    return signals;
+  } catch (err: any) {
+    console.error("[Scraper] Puppeteer block/timeout:", err.message);
+    
+    // Fallback: If Puppeteer fails (bot protection), try standard fetch
+    try {
+      const fb = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        signal: AbortSignal.timeout(8000)
+      });
+      html = await fb.text();
+      const signals = parseStoreSignals(html, url);
+      signals.status = fb.status;
+      signals.reachable = fb.ok;
+      return signals;
+    } catch {
+      return parseStoreSignals("", url); // Returns unreachable structured base
+    }
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
   }
-
-  const signals = parseStoreSignals(html, url);
-  signals.status = status;
-  return signals;
 }

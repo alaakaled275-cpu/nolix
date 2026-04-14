@@ -3,243 +3,118 @@ import { z } from "zod";
 import OpenAI from "openai";
 import { query, ensureNolixSchema } from "@/lib/schema";
 import { getEnv } from "@/lib/env";
+import {
+  causalDecide,
+  getCohortUplift,
+  type SessionSignals,
+  type ActionType,
+} from "@/lib/causal-engine";
+import { buildDecisionTrace, persistDecisionTrace } from "@/lib/decision-explainer";
 
 // ─────────────────────────────────────────────
-// Input schema
+// Input schema (enriched for causal signals)
 // ─────────────────────────────────────────────
 const sessionSchema = z.object({
-  time_on_site:   z.number().min(0).max(7200),
-  pages_viewed:   z.number().min(1).max(100),
-  traffic_source: z.enum(["organic","paid_ads","direct","email","social","referral"]),
-  cart_status:    z.enum(["empty","added","checkout"]),
-  device:         z.enum(["desktop","mobile","tablet","smart_tv"]),
-  session_id:     z.string().optional(),
+  time_on_site:      z.number().min(0).max(7200),
+  pages_viewed:      z.number().min(1).max(100),
+  traffic_source:    z.enum(["organic","paid_ads","direct","email","social","referral"]),
+  cart_status:       z.enum(["empty","added","checkout"]),
+  device:            z.enum(["desktop","mobile","tablet","smart_tv"]),
+  session_id:        z.string().optional(),
+  scroll_depth_pct:  z.number().min(0).max(100).optional(),
+  return_visitor:    z.boolean().optional(),
+  price_bucket:      z.enum(["low","mid","high"]).optional(),
 });
 
 type SessionInput = z.infer<typeof sessionSchema>;
+type IntentLevel  = "low" | "medium" | "high";
+type FrictionType = "none" | "hesitant" | "stuck_cart" | "bounce_risk";
 
 // ─────────────────────────────────────────────
-// TYPE DEFINITIONS
-// ─────────────────────────────────────────────
-type IntentLevel   = "low" | "medium" | "high";
-type FrictionType  = "none" | "paralysis" | "stuck_cart" | "bounce_risk";
-type ActionType    = "do_nothing" | "urgency" | "popup_info" | "discount_5" | "discount_10" | "discount_15" | "free_shipping" | "bundle";
-
-interface DecisionContext {
-  intent_score:     number;
-  intent_level:     IntentLevel;
-  friction:         FrictionType;
-  needs_incentive:  boolean;
-  action:           ActionType;
-  delay_ms:         number;   // How many ms before showing popup
-}
-
-// ─────────────────────────────────────────────
-// LAYER 1 – Intent Check
-// "Is the user interested? Are they browsing or buying?"
+// Signal Processing (Perception Layer Only)
+// These layers classify signals — they do NOT make decisions.
 // ─────────────────────────────────────────────
 function layer1_intent(s: SessionInput): { score: number; level: IntentLevel } {
   let score = 0;
-
-  // Time on site
   if      (s.time_on_site >= 300) score += 25;
   else if (s.time_on_site >= 120) score += 16;
   else if (s.time_on_site >=  60) score +=  8;
   else if (s.time_on_site >=  30) score +=  3;
-
-  // Pages viewed
   if      (s.pages_viewed >= 10) score += 20;
   else if (s.pages_viewed >=  6) score += 14;
   else if (s.pages_viewed >=  3) score +=  8;
   else                           score +=  2;
-
-  // Cart state (strongest signal)
   if      (s.cart_status === "checkout") score += 35;
   else if (s.cart_status === "added")    score += 20;
-
-  // Traffic source
   const srcScore: Record<string, number> = {
     paid_ads: 15, email: 14, direct: 12, referral: 10, social: 8, organic: 6,
   };
   score += srcScore[s.traffic_source] ?? 5;
-
-  // Device
   if      (s.device === "desktop") score += 5;
   else if (s.device === "tablet")  score += 3;
   else                             score += 1;
-
+  if ((s.scroll_depth_pct ?? 0) >= 70) score += 8;
+  else if ((s.scroll_depth_pct ?? 0) >= 40) score += 4;
+  if (s.return_visitor) score += 10;
   const capped = Math.min(100, score);
-
   let level: IntentLevel = "low";
   if (capped >= 65) level = "high";
   else if (capped >= 30) level = "medium";
-
   return { score: capped, level };
 }
 
-// ─────────────────────────────────────────────
-// LAYER 2 – Friction Check
-// "Is the user hesitating? Where are they stuck?"
-// ─────────────────────────────────────────────
 function layer2_friction(s: SessionInput, intent: IntentLevel): FrictionType {
-  // Bounce risk: too early to interrupt
   if (s.time_on_site < 20 || s.pages_viewed <= 1) return "bounce_risk";
-
-  // Stuck in cart: has item but hasn't checked out, spent long time
   if ((s.cart_status === "added" || s.cart_status === "checkout") &&
-      s.time_on_site >= 180 &&
-      s.pages_viewed >= 3) {
+      s.time_on_site >= 120 && s.pages_viewed >= 2) {
     return "stuck_cart";
   }
-
-  // Choice paralysis: browsed a lot but cart is empty
-  if (s.pages_viewed >= 7 && s.cart_status === "empty" && intent !== "low") {
-    return "paralysis";
+  if (s.pages_viewed >= 4 && s.cart_status === "empty" && intent !== "low") {
+    return "hesitant";
   }
-
   return "none";
 }
 
 // ─────────────────────────────────────────────
-// LAYER 3 – Incentive Check
-// "Does this user NEED a discount, or will they buy anyway?"
+// Copy Generator — AI writes words, NOT decisions
 // ─────────────────────────────────────────────
-function layer3_incentive(s: SessionInput, intent: IntentLevel, friction: FrictionType): boolean {
-  // Already at checkout with high intent → urgency is enough (no discount = margin saved)
-  if (s.cart_status === "checkout" && intent === "high") return false;
-
-  // At checkout but medium intent → small nudge may help
-  if (s.cart_status === "checkout" && intent === "medium") return true;
-
-  // Stuck in cart from expensive ad → don't waste the lead
-  if (friction === "stuck_cart" && s.traffic_source === "paid_ads") return true;
-
-  // Choice paralysis → free shipping / bundle is better than discount
-  if (friction === "paralysis") return false; // bundle/shipping logic, not pure discount
-
-  // Low intent → no incentive, don't cheapen the brand
-  if (intent === "low") return false;
-
-  // Medium intent with high-value source
-  if (intent === "medium" && ["email","paid_ads"].includes(s.traffic_source)) return true;
-
-  return false;
-}
-
-// ─────────────────────────────────────────────
-// LAYER 4 – Best Action Selection
-// "One smart action. No noise."
-// ─────────────────────────────────────────────
-function layer4_action(
+async function generateCopy(
   s: SessionInput,
-  intent: IntentLevel,
+  action: ActionType,
+  intentLevel: IntentLevel,
   friction: FrictionType,
-  needsIncentive: boolean
-): { action: ActionType; delay_ms: number } {
-  // Do nothing if it's too early or intent is too low
-  if (friction === "bounce_risk" || intent === "low") {
-    return { action: "do_nothing", delay_ms: 0 };
-  }
-
-  // High intent at checkout → urgency message (no discount needed)
-  if (s.cart_status === "checkout" && intent === "high" && !needsIncentive) {
-    return { action: "urgency", delay_ms: 8_000 };
-  }
-
-  // Stuck in cart + needs incentive → offer a discount to rescue the conversion
-  if (friction === "stuck_cart" && needsIncentive) {
-    const offer: ActionType = s.traffic_source === "paid_ads" ? "discount_15" : "discount_10";
-    return { action: offer, delay_ms: 5_000 };
-  }
-
-  // Choice paralysis → bundle or free shipping to break the stalemate
-  if (friction === "paralysis") {
-    const offer: ActionType = s.device === "mobile" ? "free_shipping" : "bundle";
-    return { action: offer, delay_ms: 12_000 };
-  }
-
-  // Medium intent, needs incentive, normal flow
-  if (intent === "medium" && needsIncentive) {
-    return { action: "free_shipping", delay_ms: 15_000 };
-  }
-
-  // High intent cart added, not at checkout yet
-  if (intent === "high" && s.cart_status === "added") {
-    return { action: "discount_10", delay_ms: 8_000 };
-  }
-
-  // Default: show a gentle popup
-  if (intent === "medium") {
-    return { action: "free_shipping", delay_ms: 20_000 };
-  }
-
-  return { action: "do_nothing", delay_ms: 0 };
-}
-
-// ─────────────────────────────────────────────
-// LAYER 5 – Smart Execution
-// OpenAI generates the MESSAGE for the decided action.
-// OpenAI does NOT decide the action—it just writes the copy.
-// ─────────────────────────────────────────────
-async function layer5_message(
-  s: SessionInput,
-  ctx: DecisionContext,
   variant: "A" | "B"
 ): Promise<{ headline: string; sub_message: string; cta_text: string; urgency_line: string | null }> {
   const env = getEnv();
-
   const ACTION_BRIEF: Record<ActionType, string> = {
-    do_nothing:   "no message needed",
-    urgency:      "create urgency — item is selling fast or limited stock",
-    popup_info:   "help them choose — friendly product guide message",
-    discount_5:   "offer a 5% discount to tip them over",
-    discount_10:  "offer a 10% discount — they need a clear saving",
-    discount_15:  "offer a 15% flash discount — rescue this purchase",
+    do_nothing:    "no message needed",
+    urgency:       "create urgency — item is selling fast or limited stock",
+    popup_info:    "help them choose — friendly product guide message",
+    discount_5:    "offer a 5% discount to tip them over",
+    discount_10:   "offer a 10% discount — they need a clear saving",
+    discount_15:   "offer a 15% flash discount — rescue this purchase",
     free_shipping: "offer free shipping — remove the last barrier",
-    bundle:       "suggest a value bundle — give them more for the same price",
+    bundle:        "suggest a value bundle — give them more for the same price",
   };
-
-  const brief = ACTION_BRIEF[ctx.action];
-
-  const systemPrompt = `You are a world-class e-commerce copywriter.
-The conversion system already decided the action. Your ONLY job is to write compelling copy for it.
-Reply ONLY with valid JSON, no markdown.
-Schema: { "headline": string, "sub_message": string, "cta_text": string, "urgency_line": string | null }
-Rules:
-- Keep headline under 9 words, punchy and direct
-- sub_message should feel personal and conversational, 1-2 sentences
-- cta_text: action verb phrase under 5 words
-- urgency_line: one short line to add urgency (or null if not relevant)
-- Variant B: more emotional and urgent copy than Variant A`;
-
-  const userMsg = `Action: ${ctx.action} — ${brief}
-Visitor context: ${s.time_on_site}s on site, ${s.pages_viewed} pages, source: ${s.traffic_source}, cart: ${s.cart_status}, device: ${s.device}
-Friction: ${ctx.friction}, Intent level: ${ctx.intent_level}
-A/B Variant: ${variant}`;
-
   if (!env.GROQ_OPS_KEY && !env.OPENAI_API_KEY) throw new Error("No Ops API key");
-
-  const client = new OpenAI({ 
+  const client = new OpenAI({
     apiKey: env.GROQ_OPS_KEY ?? env.OPENAI_API_KEY!,
-    baseURL: env.AI_BASE_URL ?? "https://api.groq.com/openai/v1"
+    baseURL: env.AI_BASE_URL ?? "https://api.groq.com/openai/v1",
   });
   const response = await client.chat.completions.create({
     model: env.GROQ_OPS_MODEL ?? "llama-3.1-8b-instant",
     messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user",   content: userMsg },
+      { role: "system", content: `You are a world-class e-commerce copywriter. The conversion system already decided the action. Your ONLY job is to write compelling copy for it. Reply ONLY with valid JSON. Schema: { "headline": string, "sub_message": string, "cta_text": string, "urgency_line": string | null }. Keep headline under 9 words. sub_message: 1-2 sentences. cta_text: action verb under 5 words. Variant B: more emotional and urgent than Variant A.` },
+      { role: "user", content: `Action: ${action} — ${ACTION_BRIEF[action]}\nVisitor: ${s.time_on_site}s on site, ${s.pages_viewed} pages, source: ${s.traffic_source}, cart: ${s.cart_status}, device: ${s.device}\nFriction: ${friction}, Intent: ${intentLevel}, Variant: ${variant}` },
     ],
     temperature: variant === "B" ? 0.85 : 0.65,
     max_tokens: 120,
     response_format: { type: "json_object" },
   }, { timeout: 8000 });
-
-  const raw = response.choices[0]?.message?.content ?? "{}";
-  return JSON.parse(raw);
+  return JSON.parse(response.choices[0]?.message?.content ?? "{}");
 }
 
-// Rule-based fallback copy (if OpenAI fails)
-function fallbackCopy(action: ActionType): { headline: string; sub_message: string; cta_text: string; urgency_line: string | null } {
+function fallbackCopy(action: ActionType) {
   const COPIES: Record<ActionType, { headline: string; sub_message: string; cta_text: string; urgency_line: string | null }> = {
     do_nothing:    { headline: "", sub_message: "", cta_text: "", urgency_line: null },
     urgency:       { headline: "Almost Gone!", sub_message: "Items in your cart are selling fast. Secure yours now.", cta_text: "Complete My Order", urgency_line: "⌛ Order in the next 15 min to guarantee delivery" },
@@ -256,12 +131,10 @@ function fallbackCopy(action: ActionType): { headline: string; sub_message: stri
 // ─────────────────────────────────────────────
 // API Handler
 // ─────────────────────────────────────────────
-
 export async function POST(req: NextRequest) {
   try {
     await ensureNolixSchema();
-
-    const body  = await req.json();
+    const body   = await req.json();
     const parsed = sessionSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid input", details: parsed.error.issues }, { status: 400 });
@@ -271,79 +144,102 @@ export async function POST(req: NextRequest) {
     const sessionId = s.session_id ?? `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const variant   = (Math.random() < 0.5 ? "A" : "B") as "A" | "B";
 
-    // ── Run decision pipeline ──
-    const { score, level }  = layer1_intent(s);
-    const friction          = layer2_friction(s, level);
-    const needsIncentive    = layer3_incentive(s, level, friction);
-    const { action, delay_ms } = layer4_action(s, level, friction, needsIncentive);
+    // ── LAYER 1 & 2: Signal Perception ──
+    const { score, level } = layer1_intent(s);
+    const friction         = layer2_friction(s, level);
 
-    const ctx: DecisionContext = {
-      intent_score: score,
-      intent_level: level,
+    const signals: SessionSignals = {
+      intent_level:     level,
       friction,
-      needs_incentive: needsIncentive,
-      action,
-      delay_ms,
+      cart_status:      s.cart_status,
+      device:           s.device,
+      traffic_source:   s.traffic_source,
+      scroll_depth_pct: s.scroll_depth_pct,
+      return_visitor:   s.return_visitor,
+      price_bucket:     s.price_bucket,
     };
 
-    const showPopup = action !== "do_nothing";
+    // ── CAUSAL DECISION: argmax over A { Expected_Uplift(A | context) } ──
+    const decision   = await causalDecide(signals);
+    const showPopup  = decision.action !== "do_nothing" && decision.group_assignment === "treatment";
 
-    // ── Generate message copy ──
+    // ── Fetch cohort data (needed for explainability trace) ──
+    const cohortData = await getCohortUplift(decision.cohort_key);
+
+    // ── Copy Generation ──
     let copy: ReturnType<typeof fallbackCopy>;
-    const reasoning = `L1:intent=${level}(${score}) | L2:friction=${friction} | L3:incentive=${needsIncentive} | L4:action=${action}`;
     try {
-      if (showPopup) {
-        copy = await layer5_message(s, ctx, variant);
-      } else {
-        copy = fallbackCopy("do_nothing");
-      }
+      copy = showPopup
+        ? await generateCopy(s, decision.action, level, friction, variant)
+        : fallbackCopy("do_nothing");
     } catch (e) {
-      console.warn("[OpenAI Fallback Triggered]", e);
-      copy = fallbackCopy(action);
+      copy = fallbackCopy(decision.action);
     }
 
-    // ── Persist session ──
-    const message = copy.headline && copy.sub_message ? `${copy.headline} — ${copy.sub_message}` : null;
+    const message = copy.headline && copy.sub_message
+      ? `${copy.headline} — ${copy.sub_message}` : null;
+
+    // ── Persist Session with Full Causal Metadata ──
     await query(
       `INSERT INTO popup_sessions
         (session_id, ab_variant, time_on_site, pages_viewed, traffic_source,
          cart_status, device, intent_score, intent_level, show_popup,
-         offer_type, message, reasoning)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+         offer_type, message, reasoning, friction_detected,
+         group_assignment, cohort_key, expected_uplift, uplift_confidence,
+         scroll_depth_pct, return_visitor, price_bucket)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+       ON CONFLICT DO NOTHING`,
       [
         sessionId, variant, s.time_on_site, s.pages_viewed, s.traffic_source,
         s.cart_status, s.device, score, level, showPopup,
-        showPopup ? action : null, message, reasoning,
+        showPopup ? decision.action : null, message, decision.reasoning,
+        friction, decision.group_assignment, decision.cohort_key,
+        decision.expected_uplift, decision.uplift_confidence,
+        s.scroll_depth_pct ?? null, s.return_visitor ?? false, s.price_bucket ?? null,
       ]
     );
 
-    // ── Update A/B impression counters ──
+    // ── A/B Impressions ──
     if (showPopup) {
       await query(
         `INSERT INTO ab_test_results (variant, offer_type, impressions)
          VALUES ($1, $2, 1)
          ON CONFLICT (variant, offer_type)
          DO UPDATE SET impressions = ab_test_results.impressions + 1, updated_at = now()`,
-        [variant, action]
+        [variant, decision.action]
       );
     }
 
-    return NextResponse.json({
-      session_id:   sessionId,
-      ab_variant:   variant,
-      intent_score: score,
-      intent_level: level,
+    const response = NextResponse.json({
+      session_id:    sessionId,
+      ab_variant:    variant,
+      intent_score:  score,
+      intent_level:  level,
       friction,
-      needs_incentive: needsIncentive,
-      show_popup:   showPopup,
-      offer_type:   showPopup ? action : null,
-      headline:     copy.headline || null,
-      sub_message:  copy.sub_message || null,
-      cta_text:     copy.cta_text || null,
-      urgency_line: copy.urgency_line || null,
-      delay_ms,
-      reasoning,
+      show_popup:    showPopup,
+      offer_type:    showPopup ? decision.action : null,
+      headline:      copy.headline || null,
+      sub_message:   copy.sub_message || null,
+      cta_text:      copy.cta_text || null,
+      urgency_line:  copy.urgency_line || null,
+      delay_ms:      showPopup ? 5000 : 0,
+      causal: {
+        group_assignment:  decision.group_assignment,
+        cohort_key:        decision.cohort_key,
+        decision_mode:     decision.decision_mode,
+        expected_uplift:   decision.expected_uplift,
+        uplift_confidence: decision.uplift_confidence,
+        stability_score:   decision.stability_score,
+        reasoning:         decision.reasoning,
+      },
     });
+
+    // ── Decision Trace: fire-and-forget (does NOT block response) ──
+    void buildDecisionTrace({ sessionId, signals, decision, cohortData })
+      .then(trace => persistDecisionTrace(sessionId, trace))
+      .catch(e => console.warn("[analyze] DecisionTrace failed:", e));
+
+    return response;
 
   } catch (err) {
     console.error("[analyze] error:", err);

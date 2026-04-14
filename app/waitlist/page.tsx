@@ -78,6 +78,7 @@ export default function WaitlistPage() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 1=Email, 2=Name, 3=Questions, 4=URL
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
 
@@ -96,6 +97,12 @@ export default function WaitlistPage() {
   const handleSubmitStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+    
+    if (password !== confirmPassword) {
+      setStatus("error");
+      setMessage("Passwords do not match. Please try again.");
+      return;
+    }
 
     setStatus("loading");
     setMessage("");
@@ -307,7 +314,19 @@ export default function WaitlistPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={status === "loading"}
                     required
-                    minLength={4}
+                    minLength={8}
+                  />
+                </div>
+                <div className="inputWrap" style={{ marginTop: '1rem' }}>
+                  <input
+                    type="password"
+                    className="inputField"
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={status === "loading"}
+                    required
+                    minLength={8}
                   />
                 </div>
                 <button type="submit" className="submitBtn" disabled={status === "loading"} style={{ marginTop: '2rem' }}>
