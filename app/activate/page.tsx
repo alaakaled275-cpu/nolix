@@ -26,7 +26,10 @@ export default function ActivatePage() {
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const scriptTag = `<script src="http://localhost:3000/master.js" data-site="${store}" async></script>`;
+  // ALWAYS FORCE VERCEL in the UI so the user can copy the real production script to Shopify
+  const SCRIPT_SRC = "https://nolix-koe6.vercel.app/master.js";
+
+  const scriptTag = `<script src="${SCRIPT_SRC}" data-site="${store}" async></script>`;
 
   function handleActivate() {
     setActivated(true);

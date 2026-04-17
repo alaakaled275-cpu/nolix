@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check for the script
-    const hasScript = htmlText.includes("cdn.nolix.app/v1/master.js") || htmlText.includes("localhost:3000/master.js") || htmlText.includes("localhost:5173/master.js");
+    const hasScript = htmlText.includes("nolix-koe6.vercel.app") || htmlText.includes("localhost:3000/master.js") || htmlText.includes("localhost:5173/master.js");
 
     if (!hasScript) {
       return NextResponse.json({ 
