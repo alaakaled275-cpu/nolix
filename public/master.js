@@ -1,12 +1,14 @@
 /**
- * NOLIX MASTER SCRIPT v1.4 — DECISION ENGINE + EVENT PIPELINE
- * Step 2: Session System (Hardened)
+ * NOLIX MASTER SCRIPT v1.6 — AI DECISION FEEDBACK LOOP
+ * Step 2: Session System
  * Step 3: Behavioral Tracking Engine
- * Step 4: Decision Engine + Popup Action + Event Log
+ * Step 4: Decision Engine + Popup + Event Log
+ * Step 5: API Layer + Coupon Engine + Attribution
+ * Step 6: AI Learning Engine + Per-Visitor Identity + Feedback Loop
  */
 
 // ============================================================
-// PHASE 1 — GLOBAL LOCK (Prevents double execution)
+// PHASE 1 — GLOBAL LOCK
 // ============================================================
 if (window.__NOLIX_LOADED__) {
   console.warn("⚠ NOLIX: Already loaded. Duplicate execution blocked.");
@@ -15,7 +17,6 @@ if (window.__NOLIX_LOADED__) {
 
   console.log("🔥 NOLIX BOOT START");
 
-  // Read store domain from script tag attribute
   var _scriptTag = document.currentScript ||
     (function() {
       var tags = document.querySelectorAll('script[data-site]');
@@ -25,15 +26,15 @@ if (window.__NOLIX_LOADED__) {
 
   // ============================================================
   // PHASE 2 — GUARANTEED GLOBAL ATTACH
-  // window.NOLIX exists ALWAYS from this point forward
   // ============================================================
   window.NOLIX = {
-    version: "1.4",
+    version: "1.6",
     status: "booting",
     debug: true,
     initialized: false,
     store: _storeDomain,
-    session: null,
+    visitor: null,   // STEP 6: Persistent visitor identity (survives 30min timeout)
+    session: null,   // Session (resets after 30min inactivity)
     tracking: null,
     decision: null,
     events: [],
@@ -45,7 +46,7 @@ if (window.__NOLIX_LOADED__) {
   }
 
   // ============================================================
-  // PHASE 3 — SAFE STORAGE LAYER (zero crash guarantee)
+  // PHASE 3 — SAFE STORAGE LAYER
   // ============================================================
   var _storage = {
     get: function(key) {
@@ -60,18 +61,297 @@ if (window.__NOLIX_LOADED__) {
 
   // ============================================================
   // PHASE 4 — EVENT PIPELINE
-  // All important actions are logged to window.NOLIX.events
   // ============================================================
   function pushEvent(type, data) {
     var event = Object.assign({ type: type, timestamp: Date.now() }, data || {});
     window.NOLIX.events.push(event);
-    if (window.NOLIX.debug) {
-      console.log("📡 NOLIX EVENT:", event);
-    }
+    if (window.NOLIX.debug) { console.log("📡 NOLIX EVENT:", event); }
   }
 
   // ============================================================
-  // PHASE 5 — SESSION ENGINE (Hardened)
+  // PHASE 5 — API LAYER
+  // ============================================================
+  window.NOLIX.api = {
+    endpoint: "https://nolix-koe6.vercel.app/api/track",
+
+    send: async function(eventType, payload) {
+      try {
+        await fetch(this.endpoint, {
+          method: "POST",
+          mode: "cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event:    eventType,
+            visitor:  window.NOLIX.visitor,
+            session:  window.NOLIX.session,
+            tracking: window.NOLIX.tracking,
+            decision: window.NOLIX.decision,
+            payload:  payload || {},
+            timestamp: Date.now()
+          })
+        });
+        console.log("✅ NOLIX API SENT:", eventType);
+      } catch(e) {
+        console.warn("⚠ NOLIX API FAIL (offline fallback):", e);
+      }
+    }
+  };
+
+  // ============================================================
+  // PHASE 6 — STEP 6: VISITOR IDENTITY ENGINE
+  // Persists FOREVER (not reset after 30min like session)
+  // Tracks: all visits, all conversions, coupon abuse patterns
+  // ============================================================
+  function initVisitor() {
+    var VISITOR_KEY = "nolix_visitor_id";
+    var VISITOR_DATA_KEY = "nolix_visitor_data";
+
+    function generateUUID() {
+      try {
+        if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+          return crypto.randomUUID();
+        }
+      } catch(e) {}
+      return Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 10);
+    }
+
+    // Get or create permanent visitor_id
+    var visitorId = _storage.get(VISITOR_KEY);
+    if (!visitorId) {
+      visitorId = generateUUID();
+      _storage.set(VISITOR_KEY, visitorId);
+    }
+
+    // Load or init visitor persistent data
+    var visitorData = null;
+    var raw = _storage.get(VISITOR_DATA_KEY + "_" + visitorId);
+    if (raw) {
+      try { visitorData = JSON.parse(raw); }
+      catch(e) { visitorData = null; }
+    }
+
+    var now = Date.now();
+    var today = new Date().toISOString().split("T")[0];
+
+    if (!visitorData) {
+      visitorData = {
+        id:                  visitorId,
+        store:               _storeDomain,
+        first_seen:          now,
+        visit_count:         1,
+        visits_today:        1,
+        last_visit:          now,
+        last_visit_date:     today,
+        total_sessions:      1,
+        coupons_issued:      [],
+        conversion_attempts: 0,
+        rejections:          0,
+        coupon_abuse_flag:   false,
+        discount_history:    []
+      };
+    } else {
+      // Update visit stats
+      visitorData.visit_count++;
+      visitorData.total_sessions++;
+
+      if (visitorData.last_visit_date === today) {
+        visitorData.visits_today++;
+      } else {
+        visitorData.visits_today = 1;
+        visitorData.last_visit_date = today;
+      }
+
+      visitorData.last_visit = now;
+
+      // 🧠 DETECT COUPON ABUSE: Visitor came back after taking a discount
+      if (visitorData.coupons_issued.length > 0) {
+        var lastCoupon = visitorData.coupons_issued[visitorData.coupons_issued.length - 1];
+        var timeSinceCoupon = now - lastCoupon.issued_at;
+        var thirtyMinutes = 30 * 60 * 1000;
+
+        if (timeSinceCoupon < thirtyMinutes) {
+          visitorData.coupon_abuse_flag = true;
+          console.warn("⚠ NOLIX: COUPON ABUSE DETECTED. Visitor returned within 30min of discount.", {
+            visitor_id: visitorId,
+            last_coupon: lastCoupon.code,
+            time_since_coupon_ms: timeSinceCoupon
+          });
+        } else {
+          // Reset abuse flag if enough time has passed
+          visitorData.coupon_abuse_flag = false;
+        }
+      }
+    }
+
+    _storage.set(VISITOR_DATA_KEY + "_" + visitorId, JSON.stringify(visitorData));
+    window.NOLIX.visitor = visitorData;
+
+    console.log("👤 NOLIX VISITOR:", {
+      id:            visitorData.id,
+      visit_count:   visitorData.visit_count,
+      visits_today:  visitorData.visits_today,
+      coupon_abuse:  visitorData.coupon_abuse_flag,
+      coupons_issued: visitorData.coupons_issued.length
+    });
+  }
+
+  // Helper to save updated visitor data
+  function saveVisitor() {
+    if (!window.NOLIX.visitor) return;
+    var VISITOR_DATA_KEY = "nolix_visitor_data";
+    _storage.set(VISITOR_DATA_KEY + "_" + window.NOLIX.visitor.id, JSON.stringify(window.NOLIX.visitor));
+  }
+
+  // ============================================================
+  // PHASE 7 — STEP 6: FEEDBACK STORAGE ENGINE
+  // Per-visitor, never mixed with other visitors' data
+  // ============================================================
+  window.NOLIX.feedback = {
+    _key: function() {
+      return "nolix_feedback_" + (window.NOLIX.visitor ? window.NOLIX.visitor.id : "unknown");
+    },
+
+    save: function(data) {
+      var key      = this._key();
+      var existing = [];
+      var raw      = _storage.get(key);
+      if (raw) { try { existing = JSON.parse(raw); } catch(e) {} }
+      existing.push(data);
+      _storage.set(key, JSON.stringify(existing));
+    },
+
+    getAll: function() {
+      var key = this._key();
+      var raw = _storage.get(key);
+      if (!raw) return [];
+      try { return JSON.parse(raw); } catch(e) { return []; }
+    }
+  };
+
+  // ============================================================
+  // PHASE 8 — STEP 6: AI LEARNING ENGINE
+  // Learns from per-visitor conversion history
+  // ============================================================
+  window.NOLIX.learning = {
+    // Weights are per-visitor, loaded/saved from visitor data
+    weights: {
+      hesitation_threshold: 0.5,
+      engagement_threshold: 0.6
+    },
+
+    load: function() {
+      if (window.NOLIX.visitor && window.NOLIX.visitor.learning_weights) {
+        this.weights = window.NOLIX.visitor.learning_weights;
+        console.log("🧠 NOLIX: Loaded visitor learning weights:", this.weights);
+      }
+    },
+
+    save: function() {
+      if (window.NOLIX.visitor) {
+        window.NOLIX.visitor.learning_weights = this.weights;
+        saveVisitor();
+      }
+    },
+
+    adjust: function() {
+      var data        = window.NOLIX.feedback.getAll();
+      var conversions = data.filter(function(d) { return d.event === "conversion_attempt"; }).length;
+      var rejections  = data.filter(function(d) { return d.event === "conversion_rejected"; }).length;
+      var total       = conversions + rejections;
+
+      if (total < 5) {
+        console.log("🧠 NOLIX LEARNING: Not enough data yet (" + total + "/5)");
+        return;
+      }
+
+      var conversionRate = conversions / total;
+
+      console.log("📊 NOLIX LEARNING:", {
+        conversions:    conversions,
+        rejections:     rejections,
+        conversionRate: Math.round(conversionRate * 100) + "%",
+        visitor_id:     window.NOLIX.visitor ? window.NOLIX.visitor.id : "unknown"
+      });
+
+      // Too many irrelevant popups → become less aggressive
+      if (conversionRate < 0.3) {
+        this.weights.hesitation_threshold += 0.05;
+        this.weights.engagement_threshold += 0.05;
+        console.log("⬆ NOLIX: Increasing thresholds (less aggressive):", this.weights);
+      }
+
+      // Strong conversions → become more aggressive
+      if (conversionRate > 0.6) {
+        this.weights.hesitation_threshold -= 0.05;
+        this.weights.engagement_threshold -= 0.05;
+        console.log("⬇ NOLIX: Decreasing thresholds (more aggressive):", this.weights);
+      }
+
+      // Clamp to safe bounds
+      this.weights.hesitation_threshold = Math.max(0.2, Math.min(0.9, this.weights.hesitation_threshold));
+      this.weights.engagement_threshold = Math.max(0.2, Math.min(0.9, this.weights.engagement_threshold));
+
+      // Save updated weights to visitor profile
+      this.save();
+    }
+  };
+
+  // ============================================================
+  // PHASE 9 — COUPON ENGINE
+  // ============================================================
+  window.NOLIX.coupon = {
+    generate: function(type) {
+      // Block coupon abuse (visitor returned too soon for another discount)
+      if (window.NOLIX.visitor && window.NOLIX.visitor.coupon_abuse_flag) {
+        console.warn("🚫 NOLIX: Coupon blocked — abuse pattern detected for visitor:", window.NOLIX.visitor.id);
+        return null;
+      }
+
+      var visitorSegment = window.NOLIX.visitor
+        ? window.NOLIX.visitor.id.substring(0, 6).toUpperCase()
+        : window.NOLIX.session.id.substring(0, 6).toUpperCase();
+
+      var discountCode = "NOLIX-" + visitorSegment;
+      var expiry       = Date.now() + (5 * 60 * 1000);
+
+      var coupon = {
+        code:       discountCode,
+        type:       type || "discount_10",
+        expires_at: expiry,
+        used:       false,
+        store:      _storeDomain,
+        session_id: window.NOLIX.session ? window.NOLIX.session.id : null,
+        visitor_id: window.NOLIX.visitor ? window.NOLIX.visitor.id : null,
+        issued_at:  Date.now()
+      };
+
+      // Save in session storage
+      _storage.set("nolix_coupon_" + window.NOLIX.session.id, JSON.stringify(coupon));
+
+      // Record in visitor profile history
+      if (window.NOLIX.visitor) {
+        window.NOLIX.visitor.coupons_issued.push({
+          code:      coupon.code,
+          issued_at: coupon.issued_at,
+          expires_at: coupon.expires_at
+        });
+        saveVisitor();
+      }
+
+      console.log("🎟 NOLIX COUPON GENERATED:", coupon);
+      return coupon;
+    },
+
+    get: function() {
+      try {
+        var raw = _storage.get("nolix_coupon_" + (window.NOLIX.session ? window.NOLIX.session.id : ""));
+        return raw ? JSON.parse(raw) : null;
+      } catch(e) { return null; }
+    }
+  };
+
+  // ============================================================
+  // PHASE 10 — SESSION ENGINE (Hardened)
   // ============================================================
   function initSession() {
     var SESSION_TIMEOUT_MS = 30 * 60 * 1000;
@@ -91,7 +371,7 @@ if (window.__NOLIX_LOADED__) {
     var raw = _storage.get(STORAGE_KEY);
     if (raw) {
       try { sessionData = JSON.parse(raw); }
-      catch(e) { console.warn("⚠ NOLIX: Corrupted session. Resetting."); sessionData = null; }
+      catch(e) { sessionData = null; }
     }
 
     var isNewSession = false;
@@ -99,6 +379,7 @@ if (window.__NOLIX_LOADED__) {
         (now - sessionData.last_activity > SESSION_TIMEOUT_MS)) {
       sessionData = {
         id:            generateUUID(),
+        visitor_id:    window.NOLIX.visitor ? window.NOLIX.visitor.id : null,
         started_at:    now,
         last_activity: now,
         page_views:    1,
@@ -110,19 +391,13 @@ if (window.__NOLIX_LOADED__) {
       sessionData.page_views    = (sessionData.page_views || 0) + 1;
     }
 
-    // Memory fallback if localStorage fails
     var saved = _storage.set(STORAGE_KEY, JSON.stringify(sessionData));
-    if (!saved) {
-      console.warn("⚠ NOLIX: localStorage unavailable. Using memory-only session.");
-      window.NOLIX.session = sessionData; // memory fallback
-    } else {
-      window.NOLIX.session = sessionData;
-    }
+    if (!saved) { console.warn("⚠ NOLIX: localStorage unavailable. Memory-only session."); }
+    window.NOLIX.session = sessionData;
 
     if (isNewSession) { console.log("SESSION CREATED", sessionData); }
     else              { console.log("SESSION UPDATED", sessionData); }
 
-    // Activity update (click + scroll ONLY — no mousemove spam)
     var _debounceTimer = null;
     function updateActivity() {
       if (_debounceTimer) return;
@@ -137,15 +412,13 @@ if (window.__NOLIX_LOADED__) {
     try {
       document.addEventListener("click",  updateActivity, { passive: true });
       document.addEventListener("scroll", updateActivity, { passive: true });
-    } catch(e) { console.warn("⚠ NOLIX: Could not attach activity listeners:", e); }
+    } catch(e) {}
   }
 
   // ============================================================
-  // PHASE 6 — BEHAVIORAL TRACKING ENGINE
+  // PHASE 11 — BEHAVIORAL TRACKING ENGINE
   // ============================================================
   function initTracking() {
-
-    // SESSION INTEGRITY GUARD — ABORT if session is missing
     if (!window.NOLIX.session || !window.NOLIX.session.id) {
       console.error("❌ NOLIX: SESSION NOT INITIALIZED. Tracking aborted.");
       return;
@@ -161,9 +434,7 @@ if (window.__NOLIX_LOADED__) {
     var _exitIntentFired = false;
     var _activeTimeMs    = 0;
 
-    // Tracking started timestamp (mandatory fix)
     window.NOLIX.tracking_started_at = Date.now();
-
     window.NOLIX.tracking = {
       time_on_page:          0,
       active_time:           0,
@@ -175,13 +446,9 @@ if (window.__NOLIX_LOADED__) {
       exit_intent_triggered: false
     };
 
-    // ---- Scroll Depth ----
     function onScroll() {
       try {
-        var docH      = Math.max(
-          document.documentElement.scrollHeight,
-          document.body ? document.body.scrollHeight : 0
-        );
+        var docH      = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0);
         var viewH     = window.innerHeight;
         var scrollTop = window.scrollY || document.documentElement.scrollTop;
         var depth     = docH > viewH ? Math.round(((scrollTop + viewH) / docH) * 100) : 100;
@@ -189,12 +456,11 @@ if (window.__NOLIX_LOADED__) {
           _maxScrollDepth = depth;
           window.NOLIX.tracking.scroll_depth = _maxScrollDepth;
         }
-      } catch(e) { /* silent */ }
+      } catch(e) {}
       _lastActiveTime = Date.now();
       if (_isIdle) { _isIdle = false; window.NOLIX.tracking.idle = false; }
     }
 
-    // ---- Click Tracking ----
     function onClick() {
       _clickCount++;
       var ts = Date.now();
@@ -205,53 +471,45 @@ if (window.__NOLIX_LOADED__) {
       if (_isIdle) { _isIdle = false; window.NOLIX.tracking.idle = false; }
     }
 
-    // ---- Throttled MouseMove (200ms) for exit intent only ----
     var _lastMove = 0;
     function onMouseMove(e) {
       var now = Date.now();
-      if (now - _lastMove < 200) return; // throttle: max 5x per second
+      if (now - _lastMove < 200) return;
       _lastMove = now;
       if (_exitIntentFired) return;
-      if (e.clientY < 20) {
-        triggerExitIntent();
-      }
+      if (e.clientY < 20) { triggerExitIntent(); }
     }
 
-    // ---- Exit Intent ----
     function triggerExitIntent() {
       if (_exitIntentFired) return;
       _exitIntentFired = true;
       window.NOLIX.tracking.exit_intent_triggered = true;
       console.log("🚨 NOLIX: EXIT INTENT DETECTED", {
+        visitor_id: window.NOLIX.visitor ? window.NOLIX.visitor.id : null,
         session_id: window.NOLIX.session.id,
-        hesitation: window.NOLIX.tracking.hesitation_score,
-        scroll:     window.NOLIX.tracking.scroll_depth
+        hesitation: window.NOLIX.tracking.hesitation_score
       });
-      pushEvent("exit_intent", {
-        hesitation_score: window.NOLIX.tracking.hesitation_score,
-        scroll_depth:     window.NOLIX.tracking.scroll_depth
-      });
-      // Trigger decision engine immediately on exit intent
+      pushEvent("exit_intent", { hesitation_score: window.NOLIX.tracking.hesitation_score });
+      window.NOLIX.api.send("exit_intent", { hesitation_score: window.NOLIX.tracking.hesitation_score });
       runDecisionEngine();
     }
 
-    // ---- Score Computation (deterministic) ----
     function computeScores() {
       var timeOnPage  = window.NOLIX.tracking.time_on_page;
       var activeTime  = window.NOLIX.tracking.active_time;
       var scrollDepth = window.NOLIX.tracking.scroll_depth;
       var clicks      = _clickCount;
 
-      // --- Hesitation Score (0 → 1) ---
-      // Tuned: triggers faster (20s instead of 30s)
-      var hesitation = 0;
-      if (timeOnPage > 20)  { hesitation += 0.3; }  // Fixed: was 30, now 20
-      if (timeOnPage > 60)  { hesitation += 0.2; }
-      if (clicks < 2 && timeOnPage > 20) { hesitation += 0.3; }
-      if (scrollDepth < 30 && timeOnPage > 20) { hesitation += 0.2; }
+      // UPGRADED HESITATION SCORING (STEP 5 formula)
+      var scrollFactor = scrollDepth < 20 ? 0.3 : 0;
+      var intentBoost  = (scrollDepth > 60 && clicks === 0) ? 0.2 : 0;
+      var hesitation   =
+        (timeOnPage > 25 ? 0.3 : 0) +
+        scrollFactor +
+        (clicks === 0 && timeOnPage > 25 ? 0.3 : 0) +
+        intentBoost;
       hesitation = Math.min(1, Math.round(hesitation * 100) / 100);
 
-      // --- Engagement Score (0 → 1) ---
       var engagement = 0;
       if (scrollDepth >= 25) { engagement += 0.2; }
       if (scrollDepth >= 50) { engagement += 0.2; }
@@ -265,10 +523,9 @@ if (window.__NOLIX_LOADED__) {
       window.NOLIX.tracking.engagement_score = engagement;
     }
 
-    // ---- 1-Second Update Loop ----
     var _loopInterval = setInterval(function() {
-      var now        = Date.now();
-      var elapsedSec = Math.round((now - _startTime) / 1000);
+      var now         = Date.now();
+      var elapsedSec  = Math.round((now - _startTime) / 1000);
       var idleElapsed = now - _lastActiveTime;
 
       window.NOLIX.tracking.time_on_page = elapsedSec;
@@ -285,42 +542,39 @@ if (window.__NOLIX_LOADED__) {
       }
 
       computeScores();
-
-      // Run decision engine every second (it self-guards against double firing)
       runDecisionEngine();
-
     }, 1000);
 
-    window.addEventListener("beforeunload", function() {
-      clearInterval(_loopInterval);
-    });
+    window.addEventListener("beforeunload", function() { clearInterval(_loopInterval); });
 
-    // Attach listeners — click + scroll + throttled mousemove
     try {
       document.addEventListener("scroll",    onScroll,    { passive: true });
       document.addEventListener("click",     onClick,     { passive: true });
       document.addEventListener("mousemove", onMouseMove, { passive: true });
-      // visibilitychange + pagehide as fallback exit intent
       document.addEventListener("visibilitychange", function() {
-        if (document.visibilityState === "hidden") { triggerExitIntent(); }
+        if (document.visibilityState === "hidden" && window.scrollY < 50) { triggerExitIntent(); }
       });
-      window.addEventListener("pagehide", triggerExitIntent, { passive: true });
+      window.addEventListener("pagehide", function() {
+        if (window.scrollY < 50) { triggerExitIntent(); }
+      }, { passive: true });
     } catch(e) { console.warn("⚠ NOLIX: Could not attach tracking listeners:", e); }
 
     console.log("👁 NOLIX TRACKING ACTIVE", window.NOLIX.tracking);
   }
 
   // ============================================================
-  // PHASE 7 — DECISION ENGINE
+  // PHASE 12 — DECISION ENGINE (AI-Linked Thresholds)
   // ============================================================
   function runDecisionEngine() {
-
-    // SAFETY GUARD: session must exist
     if (!window.NOLIX.session || !window.NOLIX.session.id) return;
-    // SAFETY GUARD: tracking must exist
     if (!window.NOLIX.tracking) return;
-    // ONE decision per session — never override after firing
     if (window.NOLIX.decision && window.NOLIX.decision.fired) return;
+
+    // Block discounts for coupon abusers
+    if (window.NOLIX.visitor && window.NOLIX.visitor.coupon_abuse_flag) {
+      console.warn("🚫 NOLIX: Decision suppressed — coupon abuse detected.");
+      return;
+    }
 
     var t  = window.NOLIX.tracking;
     var hs = t.hesitation_score;
@@ -329,42 +583,41 @@ if (window.__NOLIX_LOADED__) {
     var cl = t.clicks.length;
     var ex = t.exit_intent_triggered;
 
+    // Use AI-adjusted thresholds from learning engine
+    var hesThreshold = window.NOLIX.learning.weights.hesitation_threshold;
+    var engThreshold = window.NOLIX.learning.weights.engagement_threshold;
+
     var userType = "cold";
     var action   = "none";
     var reason   = "insufficient_signals";
 
-    // ---- Decision Logic (Strict Priority) ----
-
-    // Priority 1: Exit intent with hesitation → immediate discount
     if (ex && hs >= 0.4) {
       userType = "hesitant";
       action   = "discount";
       reason   = "exit_intent_with_hesitation";
-    }
-    // Priority 2: High hesitation + time on page
-    else if (hs >= 0.6 && tp > 25) {
+    } else if (hs >= hesThreshold && tp > 25) {
       userType = "hesitant";
       action   = "discount";
       reason   = "high_hesitation_long_session";
-    }
-    // Priority 3: Ready to buy — do NOT interrupt
-    else if (es >= 0.6 && cl >= 2) {
+    } else if (es >= engThreshold && cl >= 2) {
       userType = "ready";
       action   = "none";
       reason   = "high_engagement_active_user";
-    }
-    // Default: cold
-    else {
-      return; // Not enough signal yet — wait
+    } else {
+      return;
     }
 
-    // Lock decision — ONLY ONE per session
     window.NOLIX.decision = {
-      user_type: userType,
-      action:    action,
-      reason:    reason,
-      fired:     true,
-      fired_at:  Date.now()
+      user_type:         userType,
+      action:            action,
+      reason:            reason,
+      fired:             true,
+      fired_at:          Date.now(),
+      visitor_id:        window.NOLIX.visitor ? window.NOLIX.visitor.id : null,
+      thresholds_used: {
+        hesitation: hesThreshold,
+        engagement: engThreshold
+      }
     };
 
     console.log("⚡ NOLIX DECISION:", window.NOLIX.decision);
@@ -375,14 +628,15 @@ if (window.__NOLIX_LOADED__) {
       reason:           reason,
       hesitation_score: hs,
       engagement_score: es,
-      time_on_page:     tp
+      time_on_page:     tp,
+      visitor_visit_count: window.NOLIX.visitor ? window.NOLIX.visitor.visit_count : 1
     });
 
-    // Execute the action
+    window.NOLIX.api.send("decision_fired", window.NOLIX.decision);
+
     if (action === "discount") {
-      // Anti-spam: only show if user is not actively clicking
       if (cl >= 5 && !ex) {
-        console.log("⚠ NOLIX: Skipping popup. User is actively engaged (anti-spam).");
+        console.log("⚠ NOLIX: Skipping popup. User actively engaged (anti-spam).");
         return;
       }
       showDiscountPopup();
@@ -390,53 +644,42 @@ if (window.__NOLIX_LOADED__) {
   }
 
   // ============================================================
-  // PHASE 8 — ACTION ENGINE (Real Popup UI)
+  // PHASE 13 — ACTION ENGINE (Popup UI + Coupon + Feedback)
   // ============================================================
   function showDiscountPopup() {
-
     var POPUP_KEY = "nolix_popup_shown_" + window.NOLIX.session.id;
 
-    // Anti-spam: only show once per session
     if (_storage.get(POPUP_KEY)) {
-      console.log("⚠ NOLIX: Popup already shown this session. Skipping.");
+      console.log("⚠ NOLIX: Popup already shown this session.");
       return;
     }
 
     _storage.set(POPUP_KEY, "1");
     pushEvent("popup_shown", { session_id: window.NOLIX.session.id });
+    window.NOLIX.api.send("popup_shown", {
+      session_id:  window.NOLIX.session.id,
+      visitor_id:  window.NOLIX.visitor ? window.NOLIX.visitor.id : null,
+      visit_count: window.NOLIX.visitor ? window.NOLIX.visitor.visit_count : 1
+    });
 
-    // ---- Build Popup DOM ----
+    // Build popup
     var overlay = document.createElement("div");
     overlay.id = "nolix-popup-overlay";
     overlay.style.cssText = [
-      "position:fixed",
-      "inset:0",
-      "background:rgba(0,0,0,0.55)",
-      "z-index:2147483647",
-      "display:flex",
-      "align-items:center",
-      "justify-content:center",
-      "padding:16px",
-      "box-sizing:border-box",
-      "opacity:0",
-      "transition:opacity 0.3s ease"
+      "position:fixed","inset:0","background:rgba(0,0,0,0.55)",
+      "z-index:2147483647","display:flex","align-items:center",
+      "justify-content:center","padding:16px","box-sizing:border-box",
+      "opacity:0","transition:opacity 0.3s ease"
     ].join(";");
 
     var popup = document.createElement("div");
     popup.id = "nolix-popup";
     popup.style.cssText = [
-      "background:#fff",
-      "border-radius:16px",
-      "padding:32px 28px 28px",
-      "max-width:420px",
-      "width:100%",
-      "box-shadow:0 20px 60px rgba(0,0,0,0.3)",
-      "position:relative",
-      "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
-      "text-align:center",
-      "transform:translateY(20px)",
-      "transition:transform 0.3s ease",
-      "box-sizing:border-box"
+      "background:#fff","border-radius:16px","padding:32px 28px 28px",
+      "max-width:420px","width:100%","box-shadow:0 20px 60px rgba(0,0,0,0.3)",
+      "position:relative","font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+      "text-align:center","transform:translateY(20px)",
+      "transition:transform 0.3s ease","box-sizing:border-box"
     ].join(";");
 
     popup.innerHTML = [
@@ -452,7 +695,6 @@ if (window.__NOLIX_LOADED__) {
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
-    // Animate in
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
         overlay.style.opacity = "1";
@@ -460,16 +702,11 @@ if (window.__NOLIX_LOADED__) {
       });
     });
 
-    // ---- Countdown Timer ----
     var _seconds = 5 * 60;
     var _timerEl = document.getElementById("nolix-timer");
     var _timerInterval = setInterval(function() {
       _seconds--;
-      if (_seconds <= 0) {
-        clearInterval(_timerInterval);
-        closePopup();
-        return;
-      }
+      if (_seconds <= 0) { clearInterval(_timerInterval); closePopup(); return; }
       var m = Math.floor(_seconds / 60);
       var s = _seconds % 60;
       if (_timerEl) {
@@ -477,57 +714,102 @@ if (window.__NOLIX_LOADED__) {
       }
     }, 1000);
 
-    // ---- Close Logic ----
-    function closePopup() {
+    var _popupClosed = false;
+    function closePopup(fromCTA) {
+      if (_popupClosed) return;
+      _popupClosed = true;
       clearInterval(_timerInterval);
       overlay.style.opacity = "0";
       popup.style.transform = "translateY(20px)";
       setTimeout(function() {
         if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
       }, 300);
-      pushEvent("popup_closed", { session_id: window.NOLIX.session.id });
+
+      if (!fromCTA) {
+        // STEP 6: Save negative feedback signal
+        window.NOLIX.feedback.save({
+          event:            "conversion_rejected",
+          visitor_id:       window.NOLIX.visitor ? window.NOLIX.visitor.id : null,
+          session_id:       window.NOLIX.session.id,
+          hesitation_score: window.NOLIX.tracking.hesitation_score,
+          engagement_score: window.NOLIX.tracking.engagement_score,
+          action:           "dismissed_discount",
+          timestamp:        Date.now()
+        });
+        if (window.NOLIX.visitor) {
+          window.NOLIX.visitor.rejections++;
+          saveVisitor();
+        }
+        window.NOLIX.api.send("conversion_rejected", { session: window.NOLIX.session });
+        pushEvent("popup_dismissed", { session_id: window.NOLIX.session.id });
+      }
     }
 
-    // ---- Event Bindings ----
     var closeBtn = document.getElementById("nolix-close");
     var ctaBtn   = document.getElementById("nolix-cta");
 
     if (closeBtn) {
-      closeBtn.addEventListener("click", function() {
-        closePopup();
-        pushEvent("popup_dismissed", { session_id: window.NOLIX.session.id });
-      });
+      closeBtn.addEventListener("click", function() { closePopup(false); });
     }
 
     if (ctaBtn) {
       ctaBtn.addEventListener("click", function() {
+        var coupon = window.NOLIX.coupon.generate("discount_10");
+
+        if (!coupon) {
+          // Abuse blocked
+          alert("عذراً، هذا العرض غير متاح حالياً.");
+          closePopup(false);
+          return;
+        }
+
+        // STEP 6: Save positive feedback signal
+        window.NOLIX.feedback.save({
+          event:            "conversion_attempt",
+          visitor_id:       window.NOLIX.visitor ? window.NOLIX.visitor.id : null,
+          session_id:       window.NOLIX.session.id,
+          hesitation_score: window.NOLIX.tracking.hesitation_score,
+          engagement_score: window.NOLIX.tracking.engagement_score,
+          action:           "accepted_discount",
+          coupon:           coupon.code,
+          timestamp:        Date.now()
+        });
+        if (window.NOLIX.visitor) {
+          window.NOLIX.visitor.conversion_attempts++;
+          saveVisitor();
+        }
+
         pushEvent("popup_clicked", {
           session_id: window.NOLIX.session.id,
-          action:     "cta_discount"
+          action:     "cta_discount",
+          coupon:     coupon.code
         });
-        console.log("💰 NOLIX: CTA CLICKED — Discount accepted");
-        closePopup();
-        // Future: trigger attribution / API call here
+
+        window.NOLIX.api.send("conversion_attempt", {
+          coupon:  coupon,
+          session: window.NOLIX.session,
+          visitor: window.NOLIX.visitor
+        });
+
+        console.log("💰 NOLIX: COUPON ISSUED —", coupon.code);
+        alert("🎉 كود الخصم بتاعك: " + coupon.code + "\n\nالكود صالح لـ 5 دقائق فقط!");
+
+        closePopup(true);
       });
     }
 
-    // Close on overlay click (outside popup)
     overlay.addEventListener("click", function(e) {
-      if (e.target === overlay) {
-        closePopup();
-        pushEvent("popup_dismissed", { session_id: window.NOLIX.session.id });
-      }
+      if (e.target === overlay) { closePopup(false); }
     });
 
     console.log("🎯 NOLIX POPUP SHOWN", { session: window.NOLIX.session.id });
   }
 
   // ============================================================
-  // PHASE 9 — CORE BOOT
+  // PHASE 14 — CORE BOOT
   // ============================================================
   function initNolix() {
     if (window.NOLIX.initialized) return;
-
     console.log("✅ NOLIX INIT");
 
     window.NOLIX.status      = "initialized";
@@ -536,14 +818,25 @@ if (window.__NOLIX_LOADED__) {
     window.NOLIX.url         = window.location.href;
     window.NOLIX.decision    = { user_type: null, action: null, reason: null, fired: false };
 
+    // Order matters: visitor → session → learning → tracking
+    initVisitor();
     initSession();
+
+    // Load per-visitor AI weights
+    window.NOLIX.learning.load();
+
+    // Auto learning loop: runs every 15 seconds
+    setInterval(function() {
+      window.NOLIX.learning.adjust();
+    }, 15000);
+
     initTracking();
 
     console.log("🧠 NOLIX READY:", window.NOLIX);
   }
 
   // ============================================================
-  // PHASE 10 — FORCE SELF-BOOTSTRAP RETRY LOOP
+  // PHASE 15 — FORCE SELF-BOOTSTRAP RETRY LOOP
   // ============================================================
   var _retryCount = 0;
   var _maxRetries = 100;
@@ -560,10 +853,7 @@ if (window.__NOLIX_LOADED__) {
       }
     } catch(e) {
       console.error("❌ NOLIX CRASH during boot:", e);
-      if (_retryCount < _maxRetries) {
-        _retryCount++;
-        setTimeout(attemptBoot, 50);
-      }
+      if (_retryCount < _maxRetries) { _retryCount++; setTimeout(attemptBoot, 50); }
     }
   }
 
