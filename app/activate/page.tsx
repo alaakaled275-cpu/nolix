@@ -29,7 +29,12 @@ export default function ActivatePage() {
   // ALWAYS FORCE VERCEL in the UI so the user can copy the real production script to Shopify
   const SCRIPT_SRC = "https://nolix-koe6.vercel.app/master.js";
 
-  const scriptTag = `<script src="${SCRIPT_SRC}" data-site="${store}" async></script>`;
+  // Script tag for Shopify stores (use liquid variable for the real domain)
+  // For non-Shopify sites: replace {{ shop.domain }} with your actual domain
+  const scriptTag = `<script src="${SCRIPT_SRC}" data-site="{{ shop.domain }}" async></script>`;
+
+  // For display to non-Shopify sites (fallback):
+  const scriptTagGeneric = `<script src="${SCRIPT_SRC}" data-site="${store}" async></script>`;
 
   function handleActivate() {
     setActivated(true);
