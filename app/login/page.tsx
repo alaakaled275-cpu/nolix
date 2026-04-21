@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ZenoAppShell, ZenoOperatorCard } from "@/app/components/ZenoAppShell";
+import { BrainCircuit, Fingerprint, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,18 +14,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Auto-fill email if passed via URL (e.g. from a verification link or gate)
     const emailParam = searchParams.get("email");
     if (emailParam) {
       setEmail(emailParam);
     } else {
-      // Or read from localStorage if previously saved
       const saved = localStorage.getItem("zeno_saved_email");
       if (saved) setEmail(saved);
     }
-
-    // The Next.js middleware automatically redirects authenticated users to /dashboard.
-    // There is no need to manually fetch /api/convert/stats here, which was causing the infinite loop.
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,9 +38,7 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to log in");
 
-      // Save email for next time
       localStorage.setItem("zeno_saved_email", email);
-
       window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.message);
@@ -63,87 +56,131 @@ export default function LoginPage() {
     </svg>
   );
 
-  const rightPanel = (
-    <ZenoOperatorCard 
-      actionFeed="Awaiting Authorization..."
-      statsRow={[
-        { value: "-", label: "Recovered", colorClass: "bg-slate-600" },
-        { value: "-", label: "Causal Lift", colorClass: "bg-slate-600" }
-      ]}
-    />
-  );
-
   return (
-    <ZenoAppShell activeTab="none" rightPanel={rightPanel}>
-      <div className="flex justify-center w-full max-w-xl mx-auto xl:mx-0 xl:justify-start">
-        <div className="w-full bg-[#0A0A0C] border border-white/[0.08] p-8 md:p-10 rounded-[2rem] shadow-2xl animate-slide-up relative overflow-hidden">
-          
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#10b981]/10 rounded-full blur-[80px]" />
+    <div className="flex w-full min-h-screen bg-[#050505] text-white font-sans overflow-hidden">
+      
+      {/* 1. Left Sidebar (Enterprise Grade) */}
+      <div className="hidden lg:flex w-[480px] bg-[#0A0A0C] border-r border-white/5 flex-col justify-between p-12 relative overflow-hidden shrink-0">
+         {/* Background ambient glow */}
+         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
 
-          <div className="mb-10 relative z-10">
-            <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-            <p className="text-slate-400">Re-enter the intelligence portal to manage revenue.</p>
-          </div>
+         {/* Logo */}
+         <div className="relative z-10 flex items-center gap-3 mb-16">
+           <div className="flex gap-1" style={{ width: '28px', height: '22px' }}>
+              <div className="w-2 h-full bg-emerald-500 rounded-sm skew-x-12"></div>
+              <div className="w-2 h-full bg-emerald-500/70 rounded-sm skew-x-12 translate-y-1"></div>
+              <div className="w-2 h-full bg-emerald-500/40 rounded-sm skew-x-12 translate-y-2"></div>
+           </div>
+           <span className="font-bold text-white text-2xl tracking-tight shadow-[0_0_15px_rgba(16,185,129,0.3)]">NOLIX</span>
+         </div>
 
-          <div className="relative z-10">
-            <a href="/api/auth/google/login" className="flex items-center justify-center w-full bg-white text-black font-bold py-3.5 rounded-xl hover:bg-gray-100 transition-colors shadow-lg mb-6">
-              <GoogleIcon />
-              Sign in with Google
-            </a>
+         {/* Value Prop Banner */}
+         <div className="relative z-10 mb-12">
+            <h2 className="text-3xl font-black text-white leading-tight mb-4 tracking-tight">
+              Reclaim lost revenue.<br />
+              With zero friction.
+            </h2>
+            <p className="text-zinc-400 text-lg leading-relaxed">
+              Authenticate into the Intelligence Operator to command your store's neural pricing matrix.
+            </p>
+         </div>
 
-            <div className="flex items-center gap-4 mb-6">
-              <div className="h-px bg-white/10 flex-1" />
-              <span className="text-slate-500 text-sm font-medium">or continue with email</span>
-              <div className="h-px bg-white/10 flex-1" />
+         {/* High-end Abstract UI Elements */}
+         <div className="relative z-10 space-y-4">
+            <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-5 rounded-2xl backdrop-blur-md animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+               <BrainCircuit className="w-6 h-6 text-emerald-400" />
+               <div>
+                  <div className="text-white font-bold text-sm">Causal Intelligence</div>
+                  <div className="text-zinc-500 text-xs mt-0.5">Automated pricing optimization</div>
+               </div>
+            </div>
+            <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-5 rounded-2xl backdrop-blur-md animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+               <ShieldCheck className="w-6 h-6 text-emerald-400" />
+               <div>
+                  <div className="text-white font-bold text-sm">Protected State</div>
+                  <div className="text-zinc-500 text-xs mt-0.5">Enterprise-grade security isolation</div>
+               </div>
+            </div>
+         </div>
+      </div>
+
+      {/* 2. Right Side: Login Form */}
+      <div className="flex-1 flex items-center justify-center p-8 sm:p-12 relative">
+         <div className="w-full max-w-[440px] animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+            <div className="mb-10 text-center lg:text-left">
+              <Fingerprint className="w-10 h-10 text-emerald-400 mb-6 mx-auto lg:mx-0" />
+              <h1 className="text-4xl font-black text-white mb-3 tracking-tight">Sign In</h1>
+              <p className="text-zinc-400 text-lg">Enter your access credentials to proceed.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm mb-4">{error}</div>}
-              
-              <div className="space-y-1.5">
-                <label className="text-slate-400 text-sm font-medium">Email Address</label>
-                <input 
-                  type="email" 
-                  placeholder="you@company.com" 
-                  required 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#10b981] transition-colors"
-                />
-              </div>
-              
-              <div className="space-y-1.5">
-                <div className="flex justify-between">
-                  <label className="text-slate-400 text-sm font-medium">Password</label>
-                  <Link href="/forgot-password" className="text-slate-500 hover:text-white text-xs font-semibold transition-colors">Forgot Password?</Link>
-                </div>
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  required 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#10b981] transition-colors"
-                />
-              </div>
+            <a href="/api/auth/google/login" className="flex items-center justify-center w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-gray-200 transition-all shadow-[0_0_20px_-5px_rgba(255,255,255,0.4)] mb-8 max-w-[440px] mx-auto lg:mx-0">
+               <GoogleIcon />
+               Sign in with Google
+            </a>
 
-              <div className="pt-4">
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="w-full bg-[#10b981] hover:bg-[#059669] text-black font-bold py-4 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all"
-                >
-                  {loading ? "Authenticating..." : "Sign In →"}
-                </button>
-              </div>
+            <div className="flex items-center gap-4 mb-8 w-full max-w-[440px] mx-auto lg:mx-0">
+               <div className="h-px bg-white/10 flex-1" />
+               <span className="text-zinc-500 text-sm font-medium uppercase tracking-widest">Or Secure Login</span>
+               <div className="h-px bg-white/10 flex-1" />
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5 w-full max-w-[440px] mx-auto lg:mx-0">
+               {error && <div className="p-4 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl text-sm mb-4 flex items-center gap-3"><ShieldAlert className="w-4 h-4"/>{error}</div>}
+               
+               <div className="space-y-2">
+                 <label className="text-zinc-400 text-sm font-bold tracking-wide">Work Email</label>
+                 <input 
+                   type="email" 
+                   required 
+                   value={email}
+                   onChange={(e) => setEmail(e.target.value)}
+                   className="w-full bg-[#0a0a0c] border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
+                   placeholder="operator@company.com"
+                 />
+               </div>
+               
+               <div className="space-y-2">
+                 <div className="flex justify-between items-center">
+                   <label className="text-zinc-400 text-sm font-bold tracking-wide">Passcode</label>
+                   <Link href="/forgot-password" className="text-emerald-500 hover:text-emerald-400 text-xs font-bold transition-colors">Forgot Passcode?</Link>
+                 </div>
+                 <input 
+                   type="password" 
+                   required 
+                   value={password}
+                   onChange={(e) => setPassword(e.target.value)}
+                   className="w-full bg-[#0a0a0c] border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
+                   placeholder="••••••••"
+                   autoComplete="current-password"
+                 />
+               </div>
+
+               <button 
+                 type="submit" 
+                 disabled={loading}
+                 className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black text-lg py-4 rounded-xl shadow-[0_0_30px_-5px_rgba(16,185,129,0.5)] transition-all mt-4 relative overflow-hidden group"
+               >
+                 <span className="relative z-10">{loading ? "Verifying..." : "Access Dashboard"}</span>
+                 {/* Shine effect */}
+                 <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover:animate-shimmer" />
+               </button>
             </form>
 
-            <p className="mt-8 text-center text-slate-500 text-sm">
-              Don't have operational access? <Link href="/signup" className="text-white hover:text-[#10b981] font-semibold transition-colors">Create account</Link>
+            <p className="mt-10 text-center lg:text-left text-zinc-500 text-sm">
+              New to Operator Core? <Link href="/signup" className="text-white hover:text-emerald-400 font-bold transition-colors border-b border-white/20 hover:border-emerald-400">Request Access</Link>
             </p>
-          </div>
-        </div>
+         </div>
       </div>
-    </ZenoAppShell>
+    </div>
+  );
+}
+
+function ShieldAlert({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+      <path d="M12 8v4"></path>
+      <path d="M12 16h.01"></path>
+    </svg>
   );
 }

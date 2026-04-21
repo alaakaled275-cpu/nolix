@@ -3,39 +3,33 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ZenoAppShell, ZenoOperatorCard } from "@/app/components/ZenoAppShell";
+import { BrainCircuit, Server, ShieldCheck, Zap } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, confirm_password: confirmPassword }),
+        body: JSON.stringify({ email, password, name }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to sign up");
 
-      window.location.href = "/dashboard";
+      localStorage.setItem("zeno_saved_email", email);
+      window.location.href = "/activate";
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -52,110 +46,130 @@ export default function SignupPage() {
     </svg>
   );
 
-  const rightPanel = (
-    <ZenoOperatorCard 
-      actionFeed="Awaiting Authorization..."
-      statsRow={[
-        { value: "-", label: "Recovered", colorClass: "bg-slate-600" },
-        { value: "-", label: "Causal Lift", colorClass: "bg-slate-600" }
-      ]}
-    />
-  );
-
   return (
-    <ZenoAppShell activeTab="none" rightPanel={rightPanel}>
-      <div className="flex justify-center w-full max-w-xl mx-auto xl:mx-0 xl:justify-start">
-        <div className="w-full bg-[#0A0A0C] border border-white/[0.08] p-8 md:p-10 rounded-[2rem] shadow-2xl animate-slide-up relative overflow-hidden">
-          
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#10b981]/10 rounded-full blur-[80px]" />
+    <div className="flex w-full min-h-screen bg-[#050505] text-white font-sans overflow-hidden">
+      
+      {/* 1. Left Sidebar (Enterprise Grade) */}
+      <div className="hidden lg:flex w-[480px] bg-[#0A0A0C] border-r border-white/5 flex-col justify-between p-12 relative overflow-hidden shrink-0">
+         {/* Background ambient glow */}
+         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
 
-          <div className="mb-10 relative z-10">
-            <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
-            <p className="text-slate-400">Initialize your operation portal to start recovering revenue.</p>
-          </div>
+         {/* Logo */}
+         <div className="relative z-10 flex items-center gap-3 mb-16">
+           <div className="flex gap-1" style={{ width: '28px', height: '22px' }}>
+              <div className="w-2 h-full bg-emerald-500 rounded-sm skew-x-12"></div>
+              <div className="w-2 h-full bg-emerald-500/70 rounded-sm skew-x-12 translate-y-1"></div>
+              <div className="w-2 h-full bg-emerald-500/40 rounded-sm skew-x-12 translate-y-2"></div>
+           </div>
+           <span className="font-bold text-white text-2xl tracking-tight shadow-[0_0_15px_rgba(16,185,129,0.3)]">NOLIX</span>
+         </div>
 
-          <div className="relative z-10">
-            <a href="/api/auth/google/login" className="flex items-center justify-center w-full bg-white text-black font-bold py-3.5 rounded-xl hover:bg-gray-100 transition-colors shadow-lg mb-6">
-              <GoogleIcon />
-              Sign up with Google
-            </a>
+         {/* Value Prop Banner */}
+         <div className="relative z-10 mb-12">
+            <h2 className="text-3xl font-black text-white leading-tight mb-4 tracking-tight">
+              A neural approach<br />
+              to revenue retention.
+            </h2>
+            <p className="text-zinc-400 text-lg leading-relaxed">
+              Create your workspace to deploy ZENO directly into your data flow.
+            </p>
+         </div>
 
-            <div className="flex items-center gap-4 mb-6">
-              <div className="h-px bg-white/10 flex-1" />
-              <span className="text-slate-500 text-sm font-medium">or continue with email</span>
-              <div className="h-px bg-white/10 flex-1" />
+         {/* High-end Abstract UI Elements */}
+         <div className="relative z-10 space-y-4">
+            <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-5 rounded-2xl backdrop-blur-md animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+               <Server className="w-6 h-6 text-emerald-400" />
+               <div>
+                  <div className="text-white font-bold text-sm">Multi-Tenant Isolation</div>
+                  <div className="text-zinc-500 text-xs mt-0.5">Your instance is physically sandboxed</div>
+               </div>
+            </div>
+            <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-5 rounded-2xl backdrop-blur-md animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+               <Zap className="w-6 h-6 text-emerald-400" />
+               <div>
+                  <div className="text-white font-bold text-sm">Under 60s Deployment</div>
+                  <div className="text-zinc-500 text-xs mt-0.5">Inject script, track instantly</div>
+               </div>
+            </div>
+         </div>
+      </div>
+
+      {/* 2. Right Side: Signup Form */}
+      <div className="flex-1 flex items-center justify-center p-8 sm:p-12 relative overflow-y-auto">
+         <div className="w-full max-w-[440px] animate-fade-in-up my-auto" style={{ animationDelay: '300ms' }}>
+            <div className="mb-10 text-center lg:text-left">
+              <BrainCircuit className="w-10 h-10 text-emerald-400 mb-6 mx-auto lg:mx-0" />
+              <h1 className="text-4xl font-black text-white mb-3 tracking-tight">Setup Workspace</h1>
+              <p className="text-zinc-400 text-lg">Initialize your dedicated instance.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm mb-4">{error}</div>}
-              
-              <div className="space-y-1.5">
-                <label className="text-slate-400 text-sm font-medium">Full Name</label>
-                <input 
-                  type="text" 
-                  placeholder="John Doe" 
-                  required 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#10b981] transition-colors"
-                />
-              </div>
+            <a href="/api/auth/google/login" className="flex items-center justify-center w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-gray-200 transition-all shadow-[0_0_20px_-5px_rgba(255,255,255,0.4)] mb-8 max-w-[440px] mx-auto lg:mx-0">
+               <GoogleIcon />
+               Sign up with Google
+            </a>
 
-              <div className="space-y-1.5">
-                <label className="text-slate-400 text-sm font-medium">Email Address</label>
-                <input 
-                  type="email" 
-                  placeholder="you@company.com" 
-                  required 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#10b981] transition-colors"
-                />
-              </div>
-              
-              <div className="space-y-1.5">
-                <label className="text-slate-400 text-sm font-medium">Password</label>
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  required 
-                  minLength={8}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#10b981] transition-colors"
-                />
-              </div>
+            <div className="flex items-center gap-4 mb-8 w-full max-w-[440px] mx-auto lg:mx-0">
+               <div className="h-px bg-white/10 flex-1" />
+               <span className="text-zinc-500 text-sm font-medium uppercase tracking-widest">Or create with email</span>
+               <div className="h-px bg-white/10 flex-1" />
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="text-slate-400 text-sm font-medium">Confirm Password</label>
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  required 
-                  minLength={8}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#10b981] transition-colors"
-                />
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-[440px] mx-auto lg:mx-0 relative z-10">
+               {error && <div className="p-4 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl text-sm mb-4">{error}</div>}
+               
+               <div className="grid grid-cols-1 gap-4">
+                 <div className="space-y-2">
+                   <label className="text-zinc-400 text-sm font-bold tracking-wide">Full Name</label>
+                   <input 
+                     type="text" 
+                     required 
+                     value={name}
+                     onChange={(e) => setName(e.target.value)}
+                     className="w-full bg-[#0a0a0c] border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
+                     placeholder="Alex Rivera"
+                   />
+                 </div>
+               </div>
 
-              <div className="pt-4">
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="w-full bg-[#10b981] hover:bg-[#059669] text-black font-bold py-4 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all"
-                >
-                  {loading ? "Creating..." : "Create Account →"}
-                </button>
-              </div>
+               <div className="space-y-2">
+                 <label className="text-zinc-400 text-sm font-bold tracking-wide">Work Email</label>
+                 <input 
+                   type="email" 
+                   required 
+                   value={email}
+                   onChange={(e) => setEmail(e.target.value)}
+                   className="w-full bg-[#0a0a0c] border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
+                   placeholder="operator@company.com"
+                 />
+               </div>
+               
+               <div className="space-y-2">
+                 <label className="text-zinc-400 text-sm font-bold tracking-wide">Passcode</label>
+                 <input 
+                   type="password" 
+                   required 
+                   value={password}
+                   onChange={(e) => setPassword(e.target.value)}
+                   className="w-full bg-[#0a0a0c] border border-white/10 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
+                   placeholder="Create strong passcode"
+                 />
+               </div>
+
+               <button 
+                 type="submit" 
+                 disabled={loading}
+                 className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black text-lg py-4 rounded-xl shadow-[0_0_30px_-5px_rgba(16,185,129,0.5)] transition-all mt-6 relative overflow-hidden group"
+               >
+                 <span className="relative z-10">{loading ? "Provisioning..." : "Initialize Workspace"}</span>
+                 <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover:animate-shimmer" />
+               </button>
             </form>
 
-            <p className="mt-8 text-center text-slate-500 text-sm">
-              Already have an account? <Link href="/login" className="text-white hover:text-[#10b981] font-semibold transition-colors">Sign in</Link>
+            <p className="mt-10 text-center lg:text-left text-zinc-500 text-sm">
+              Already initialized? <Link href="/login" className="text-white hover:text-emerald-400 font-bold transition-colors border-b border-white/20 hover:border-emerald-400">Sign in instead</Link>
             </p>
-          </div>
-        </div>
+         </div>
       </div>
-    </ZenoAppShell>
+    </div>
   );
 }

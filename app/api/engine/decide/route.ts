@@ -20,6 +20,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, ensureNolixSchema } from "@/lib/schema";
 import { logPrediction } from "@/lib/calibration";
+import { getRuntimeFlag } from "@/lib/nolix-runtime";
+import { findSimilarUsers, similarityBoost } from "@/lib/nolix-vector-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -164,6 +166,19 @@ export async function POST(req: NextRequest) {
     await ensureNolixSchema();
     const body = await req.json();
 
+    // ── STEP 13 PART 6: RUNTIME FLAGS KILL-SWITCH ───────────────────────────
+    // Read LIVE from DB — not in-memory. Distributed-safe.
+    const aiEnabled       = await getRuntimeFlag("ai_enabled");
+    const maintenanceMode = await getRuntimeFlag("maintenance_mode" as any).catch(() => false);
+
+    if (!aiEnabled || maintenanceMode) {
+      return NextResponse.json({
+        action: "do_nothing",
+        economic_decision: "wait",
+        reason: !aiEnabled ? "AI_DISABLED_BY_RUNTIME_FLAG" : "MAINTENANCE_MODE",
+      });
+    }
+
     // ── KILL SWITCH ─────────────────────────────────────────────────────────
     if (process.env.GLOBAL_KILL_SWITCH === "true") {
       return NextResponse.json({
@@ -304,20 +319,45 @@ export async function POST(req: NextRequest) {
       store_domain, cohortKey, base_p_convert, eligibleActions, analysisMultipliers
     );
 
+    // ── STEP 5B: SIMILARITY BOOST (STEP 13 PART 6) ──────────────────────────
+    // Build visitor embedding from session signals for cross-user similarity.
+    // Boost = 0–0.15 added to base_p_convert if similar users converted.
+    let simBoost = 0;
+    try {
+      const visitorVector = [
+        Math.min(1, (time_on_site || 0)  / 120),
+        Math.min(1, (pages_viewed || 0)  / 10),
+        Math.min(1, (scroll_depth || 0)  / 100),
+        cart_status === "checkout" ? 1 : cart_status === "added" ? 0.6 : 0,
+        Math.min(1, (hesitations || 0)   / 5),
+        return_visitor ? 1 : 0,
+        trigger === "exit_intent" ? 1 : 0,
+        Math.min(1, (cta_hover_count || 0) / 5)
+      ];
+      const simResult = await findSimilarUsers(visitorVector, store_domain, 20, 0.60);
+      simBoost = similarityBoost(simResult.high_similarity);
+      if (simBoost > 0) {
+        console.log("⚡ SIMILARITY BOOST:", simBoost, "from", simResult.cluster_size, "similar users via", simResult.mode);
+      }
+    } catch { /* non-blocking — never fail the decision for this */ }
+
+    // Apply similarity boost to base conversion probability
+    const boosted_p_convert = Math.min(0.98, base_p_convert + simBoost);
+
     // ── STEP 6: PER-VISITOR ECONOMIC DECISION ────────────────────────────────
-    // shouldIntervene = argmax( (P(convert|action) - P(convert|no_action)) * AOV - cost )
+    // final_score = (boosted_p_convert | action) vs base
+    // similarity_boost already baked into boosted_p_convert
     let bestAction = "do_nothing";
-    let bestEconomicValue = 0; // threshold: must be > 0 to intervene
+    let bestEconomicValue = 0;
     let bestUplift = 0;
-    let bestPConvertAction = base_p_convert;
+    let bestPConvertAction = boosted_p_convert;
     const alternativesRejected: string[] = [];
 
     for (const action of eligibleActions) {
-      const p_treatment = treatmentProbabilities[action] ?? base_p_convert;
-      const uplift = p_treatment - base_p_convert;
+      const p_treatment = treatmentProbabilities[action] ?? boosted_p_convert;
+      const uplift = Math.max(0, p_treatment - base_p_convert + simBoost); // include sim boost
       const cost = ACTION_CATALOG[action]?.cost ?? 0.5;
 
-      // Economic value = uplift in revenue - cost of intervention
       const economicValue = (uplift * aov_estimate) - (cost * aov_estimate * 0.1);
 
       if (economicValue > bestEconomicValue) {
@@ -419,12 +459,13 @@ export async function POST(req: NextRequest) {
       headline: p.headline,
       sub_message: p.sub,
       cta_text: p.cta,
-      // Intelligence payload (for Zeno panel on dashboard)
       economic_decision: "intervene",
       reason: `${ACTION_CATALOG[bestAction]?.label}: uplift=${(bestUplift * 100).toFixed(1)}%, economic_value=$${bestEconomicValue.toFixed(2)}`,
       one_line_reason: `Visitor shows ${intentLevel} intent (${(base_p_convert * 100).toFixed(0)}% organic CVR). Action adds ${(bestUplift * 100).toFixed(1)}% lift.`,
       p_convert_no_action: base_p_convert,
-      p_convert_action: bestPConvertAction,
+      p_convert_action:    bestPConvertAction,
+      similarity_boost:    simBoost,
+      boosted_p_convert:   boosted_p_convert,
       uplift: bestUplift,
       confidence: Math.min(0.99, 0.5 + Math.abs(bestUplift) * 3),
       alternatives_rejected: alternativesRejected,
