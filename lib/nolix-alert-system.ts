@@ -60,7 +60,7 @@ export async function runHealthChecks() {
 
   // 2. ML Drift Warning
   try {
-    const mlPerfStr = await redis.get("nolix:learning:ml_success_rate");
+    const mlPerfStr = redis ? await redis.get("nolix:learning:ml_success_rate") : null;
     if (mlPerfStr && parseFloat(mlPerfStr) < 0.2) {
        await triggerAlert({
          severity: "warning",

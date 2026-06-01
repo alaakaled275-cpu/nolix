@@ -32,6 +32,7 @@ export async function ensureNolixSchema(): Promise<void> {
         message text,
         reasoning text,
         converted boolean not null default false,
+        store_domain text,
         created_at timestamptz not null default now()
       );
 
@@ -89,36 +90,118 @@ export async function ensureNolixSchema(): Promise<void> {
         updated_at timestamptz not null default now(),
         unique (store_domain, intent_category, friction_type, action_name)
       );
+    `); 
+
+    // ── PHASE 1: STORE AUTH SYSTEM ──────────────────────────────────────────────
+    await pool.query(`
+      create table if not exists stores (
+        id         uuid primary key default gen_random_uuid(),
+        user_id    uuid references users(id) on delete cascade,
+        domain     text unique not null,
+        public_key text unique not null default encode(gen_random_bytes(32), 'hex'),
+        secret_key text        not null default encode(gen_random_bytes(32), 'hex'),
+        plan       text not null default 'trial',
+        active     boolean not null default true,
+        created_at timestamptz not null default now(),
+        last_seen  timestamptz
+      );
+      create index if not exists stores_public_key_idx on stores(public_key);
+      create index if not exists stores_user_id_idx    on stores(user_id);
+      create index if not exists stores_domain_idx     on stores(domain);
+
+      create table if not exists nolix_logs (
+        id         bigserial primary key,
+        level      text not null,
+        service    text not null default 'system',
+        message    text not null,
+        meta       jsonb,
+        trace_id   text,
+        created_at timestamptz not null default now()
+      );
+      create index if not exists nolix_logs_level_idx   on nolix_logs(level, created_at desc);
+      create index if not exists nolix_logs_service_idx on nolix_logs(service, created_at desc);
+      create index if not exists nolix_logs_trace_idx   on nolix_logs(trace_id) where trace_id is not null;
     `);
+
+    // \u2500\u2500 PHASE 2: TRUE LEARNING AI \u2014 Data Pipeline Tables \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    await pool.query(`
+      create table if not exists user_events (
+        id         bigserial primary key,
+        session_id text not null,
+        visitor_id text,
+        store_domain text,
+        event_type text not null default 'heartbeat',
+        features   jsonb not null default '{}',
+        context    jsonb not null default '{}',
+        created_at timestamptz not null default now()
+      );
+      create index if not exists user_events_session_idx on user_events(session_id);
+      create index if not exists user_events_created_idx on user_events(created_at desc);
+      create index if not exists user_events_store_idx   on user_events(store_domain, created_at desc);
+
+      create table if not exists conversions (
+        id          bigserial primary key,
+        session_id  text not null unique,
+        visitor_id  text,
+        store_domain text,
+        converted   boolean not null default false,
+        revenue     float   not null default 0,
+        action_taken text,
+        discount_pct int    not null default 0,
+        prob_at_decision float,
+        group_type  text   not null default 'treatment',
+        created_at  timestamptz not null default now()
+      );
+      create index if not exists conversions_session_idx on conversions(session_id);
+      create index if not exists conversions_store_idx   on conversions(store_domain, created_at desc);
+      create index if not exists conversions_converted_idx on conversions(converted, created_at desc);
+
+      create table if not exists ai_decisions (
+        id           bigserial primary key,
+        session_id   text not null,
+        store_domain text,
+        action       text not null,
+        value        int,
+        prob         float,
+        model_v      int  not null default 0,
+        model_auc    float,
+        brain        text not null default 'inline',
+        created_at   timestamptz not null default now()
+      );
+      create index if not exists ai_decisions_session_idx on ai_decisions(session_id);
+      create index if not exists ai_decisions_created_idx on ai_decisions(created_at desc);
+    `);
+
 
     // Add new columns if they don't exist (one by one to avoid total failure)
     const columns = [
-      ["popup_sessions", "friction_detected", "text"],
-      ["popup_sessions", "action_taken", "text"],
-      ["popup_sessions", "incentive_needed", "boolean"],
-      ["popup_sessions", "delay_ms", "int"],
-      ["popup_sessions", "order_value", "numeric(10,2)"],
-      ["popup_sessions", "influenced_by_system", "boolean not null default false"],
-      ["popup_sessions", "discount_avoided", "boolean not null default false"],
-      ["store_configs", "mode", "text not null default 'balanced'"],
-      ["store_configs", "max_discount_pct", "int not null default 15"],
-      ["waitlist", "name", "text"],
-      ["waitlist", "password", "text"],
-      ["waitlist", "store_url", "text"],
-      ["waitlist", "quiz_answers", "jsonb"],
-      // Zeno verification schema for strict access 
+      ["popup_sessions", "friction_detected",        "text"],
+      ["popup_sessions", "action_taken",              "text"],
+      ["popup_sessions", "incentive_needed",          "boolean"],
+      ["popup_sessions", "delay_ms",                  "int"],
+      ["popup_sessions", "order_value",               "numeric(10,2)"],
+      ["popup_sessions", "influenced_by_system",      "boolean not null default false"],
+      ["popup_sessions", "discount_avoided",          "boolean not null default false"],
+      // â”€â”€ MULTI-TENANCY: store_domain is required for RLS isolation â”€â”€â”€â”€â”€â”€
+      ["popup_sessions", "store_domain",              "text"],
+      ["store_configs",  "mode",                      "text not null default 'balanced'"],
+      ["store_configs",  "max_discount_pct",          "int not null default 15"],
+      ["waitlist",       "name",                      "text"],
+      ["waitlist",       "password",                  "text"],
+      ["waitlist",       "store_url",                 "text"],
+      ["waitlist",       "quiz_answers",               "jsonb"],
+      // Zeno verification schema for strict access
       ["users", "store_url",              "text"],
       ["users", "store_verified",         "boolean not null default false"],
       ["users", "store_analysis",         "jsonb"],
       ["users", "quiz_answers",           "jsonb"],
-      // Domain Gate — classification result stored at connection time
-      // Prevents analysis from running on non-ecommerce / template / unknown sites
+      // Domain Gate â€” classification result stored at connection time
       ["users", "domain_gate_result",     "jsonb"],
       ["users", "domain_gate_checked_at", "timestamptz"],
-      // ── ADVANCED AUTH SCHEMA ──
+      // â”€â”€ ADVANCED AUTH SCHEMA â”€â”€
       ["users", "reset_token",            "text"],
       ["users", "reset_token_expiry",     "timestamptz"],
-      // ── STRIPE HYBRID BILLING MODEL SCHEMA ──
+      // â”€â”€ STRIPE HYBRID BILLING MODEL SCHEMA â”€â”€
       ["users", "stripe_customer_id",     "text unique"],
       ["users", "stripe_subscription_id", "text unique"],
       ["users", "subscription_status",    "text not null default 'trialing'"],
@@ -139,7 +222,7 @@ export async function ensureNolixSchema(): Promise<void> {
       }
     }
 
-    // Zeno Learning Log — persistent self-improvement memory
+    // Zeno Learning Log â€” persistent self-improvement memory
     await pool.query(`
       create table if not exists zeno_learning_log (
         id uuid primary key default gen_random_uuid(),
@@ -157,11 +240,11 @@ export async function ensureNolixSchema(): Promise<void> {
       create index if not exists zeno_learning_log_created_idx on zeno_learning_log(created_at desc);
     `);
 
-    // ── CALIBRATED REALITY LEARNING SYSTEM (CRLS) ────────────────────────────
+    // â”€â”€ CALIBRATED REALITY LEARNING SYSTEM (CRLS) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // These 3 tables form the ground truth validation layer.
     // Without them: probabilities are claims. With them: probabilities are measured.
 
-    // 1. Prediction Log — what the model predicted for each URL
+    // 1. Prediction Log â€” what the model predicted for each URL
     await pool.query(`
       create table if not exists prediction_log (
         id                      text primary key,
@@ -181,7 +264,7 @@ export async function ensureNolixSchema(): Promise<void> {
       create index if not exists prediction_log_model_idx on prediction_log(model_version, created_at desc);
     `);
 
-    // 2. Outcome Log — what actually happened (ground truth)
+    // 2. Outcome Log â€” what actually happened (ground truth)
     // verified_by priority: checkout_data > backend_event > analytics > human > inferred
     await pool.query(`
       create table if not exists outcome_log (
@@ -197,7 +280,7 @@ export async function ensureNolixSchema(): Promise<void> {
       create index if not exists outcome_log_type_idx on outcome_log(actual_type, verified_by);
     `);
 
-    // 3. Calibration Metrics — model performance history
+    // 3. Calibration Metrics â€” model performance history
     // Every calibration run is stored. Allows tracking improvement over time.
     await pool.query(`
       create table if not exists calibration_metrics (
@@ -215,7 +298,7 @@ export async function ensureNolixSchema(): Promise<void> {
       create index if not exists calibration_metrics_version_idx on calibration_metrics(model_version, created_at desc);
     `);
 
-    // ── REVENUE INFRASTRUCTURE — STRICT IDEMPOTENCY & DURABILITY ─────────────
+    // â”€â”€ REVENUE INFRASTRUCTURE â€” STRICT IDEMPOTENCY & DURABILITY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     
     // Prevents "Double Billing" disaster scenario
     await pool.query(`
@@ -245,9 +328,9 @@ export async function ensureNolixSchema(): Promise<void> {
       );
     `);
 
-    // ── CAUSAL INTELLIGENCE CORE ────────────────────────────────────────────────
-    // nolix_uplift_model: stores REAL causal effect per (cohort × action)
-    // uplift_rate = treatment_cvr - control_cvr  ← this IS causation, not correlation
+    // â”€â”€ CAUSAL INTELLIGENCE CORE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // nolix_uplift_model: stores REAL causal effect per (cohort Ã— action)
+    // uplift_rate = treatment_cvr - control_cvr  â† this IS causation, not correlation
     await pool.query(`
       create table if not exists nolix_uplift_model (
         id             uuid primary key default gen_random_uuid(),
@@ -288,7 +371,7 @@ export async function ensureNolixSchema(): Promise<void> {
       }
     }
 
-    // ── CAUSAL STABILITY: 7-day rolling window table ───────────────────────────
+    // â”€â”€ CAUSAL STABILITY: 7-day rolling window table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Stores ONLY recent 7-day data for stability + drift detection.
     // Separate from the all-time model to avoid conflating historical vs current behavior.
     await pool.query(`
@@ -315,19 +398,19 @@ export async function ensureNolixSchema(): Promise<void> {
       await pool.query(`ALTER TABLE nolix_uplift_model ADD COLUMN stability_score float not null default 0`);
     }
 
-    // ── OUTCOME BINDING: Add missing columns to popup_sessions ─────────────────
+    // â”€â”€ OUTCOME BINDING: Add missing columns to popup_sessions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const outcomeCols = [
       ["popup_sessions", "causal_revenue_credit", "float default 0"],
       ["popup_sessions", "time_to_convert_ms",    "bigint"],
       ["popup_sessions", "discount_avoided",       "boolean not null default false"],
-      // Hesitation signals — the pre-decision psychology layer
+      // Hesitation signals â€” the pre-decision psychology layer
       ["popup_sessions", "hesitation_score",       "int default 0"],
       ["popup_sessions", "cta_hover_count",        "int default 0"],
       ["popup_sessions", "mouse_leave_count",      "int default 0"],
       ["popup_sessions", "tab_hidden_count",       "int default 0"],
-      // Hesitation-adjusted causal weight: 0.0–1.5
-      // High hesitation + converted → weight > 1.0 (action was CRITICAL)
-      // Low hesitation + converted  → weight < 1.0 (would have bought anyway)
+      // Hesitation-adjusted causal weight: 0.0â€“1.5
+      // High hesitation + converted â†’ weight > 1.0 (action was CRITICAL)
+      // Low hesitation + converted  â†’ weight < 1.0 (would have bought anyway)
       ["popup_sessions", "causal_weight",          "float default 1.0"],
     ];
     for (const [table, col, type] of outcomeCols) {
@@ -340,7 +423,7 @@ export async function ensureNolixSchema(): Promise<void> {
       }
     }
 
-    // ── ZENO REALITY LOGS — Per-visit prediction calibration ─────────────────
+    // â”€â”€ ZENO REALITY LOGS â€” Per-visit prediction calibration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Every decision Zeno makes is logged here with its predicted probability.
     // When feedback arrives (convert/exit), actual_class is filled.
     // This is the ONLY way to know if the system is honest or just confident.
@@ -368,7 +451,7 @@ export async function ensureNolixSchema(): Promise<void> {
       create index if not exists zeno_reality_logs_calibration_idx on zeno_reality_logs(actual_class, timestamp desc);
     `);
 
-    // ── SIGNAL IMPORTANCE LEARNING TABLE (with hesitation) ──────────────────
+    // â”€â”€ SIGNAL IMPORTANCE LEARNING TABLE (with hesitation) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     await pool.query(`
       create table if not exists nolix_signal_outcomes (
         id                    uuid primary key default gen_random_uuid(),
@@ -399,6 +482,29 @@ export async function ensureNolixSchema(): Promise<void> {
       create index if not exists signal_outcomes_hesitation_idx
         on nolix_signal_outcomes(hesitation_score, converted);
     `);
+
+    // â”€â”€ Apply PostgreSQL Row-Level Security to all protected tables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // This is the DB-level backstop. Even if application code has bugs,
+    // cross-tenant data leakage is structurally impossible.
+    try {
+      const { applyRLSPolicies, backfillNullStoreDomains, applyUsersRLSPolicy } = await import("./nolix-rls");
+      const rlsResult = await applyRLSPolicies();
+      if (rlsResult.errors.length > 0) {
+        console.warn("[Schema] RLS applied with errors:", rlsResult.errors);
+      } else {
+        console.log(`[Schema] âœ… RLS active on ${rlsResult.applied.length} store-domain tables`);
+      }
+      // Apply email-based RLS to the users table
+      const usersRLS = await applyUsersRLSPolicy();
+      if (usersRLS.applied) {
+        console.log("[Schema] âœ… Email-based RLS active on: users");
+      }
+      // Backfill any legacy NULL store_domain rows (idempotent)
+      await backfillNullStoreDomains();
+    } catch (rlsErr: any) {
+      // RLS failure must NOT crash the app â€” log and continue
+      console.error("[Schema] RLS setup failed (non-fatal):", rlsErr.message);
+    }
   })();
 
   globalAny._convertAISchemaPromise = migrationPromise;
@@ -418,3 +524,5 @@ export async function ensureSchema(): Promise<void> {
     -- ... (rest of the CRM schema)
   `);
 }
+
+

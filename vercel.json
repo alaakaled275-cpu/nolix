@@ -4,5 +4,94 @@
     { "path": "/api/cron/train",   "schedule": "0 * * * *"    },
     { "path": "/api/cron/monitor", "schedule": "0 */6 * * *"  },
     { "path": "/api/cron/segment", "schedule": "0 */6 * * *"  }
+  ],
+  "headers": [
+    {
+      "source": "/master.js",
+      "headers": [
+        { "key": "Cache-Control",    "value": "public, max-age=300, stale-while-revalidate=3600, stale-if-error=86400" },
+        { "key": "Surrogate-Control","value": "public, max-age=300" },
+        { "key": "Vary",             "value": "Accept-Encoding" },
+        { "key": "Cache-Tag",        "value": "nolix-client-scripts" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "X-Nolix-Asset",    "value": "master-script" }
+      ]
+    },
+    {
+      "source": "/engine.js",
+      "headers": [
+        { "key": "Cache-Control",    "value": "public, max-age=300, stale-while-revalidate=3600, stale-if-error=86400" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Tag",        "value": "nolix-client-scripts" }
+      ]
+    },
+    {
+      "source": "/popup.js",
+      "headers": [
+        { "key": "Cache-Control",    "value": "public, max-age=300, stale-while-revalidate=3600, stale-if-error=86400" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Tag",        "value": "nolix-client-scripts" }
+      ]
+    },
+    {
+      "source": "/nolix.js",
+      "headers": [
+        { "key": "Cache-Control",    "value": "public, max-age=300, stale-while-revalidate=3600, stale-if-error=86400" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Tag",        "value": "nolix-client-scripts" }
+      ]
+    },
+    {
+      "source": "/zeno.js",
+      "headers": [
+        { "key": "Cache-Control",    "value": "public, max-age=300, stale-while-revalidate=3600, stale-if-error=86400" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Tag",        "value": "nolix-client-scripts" }
+      ]
+    },
+    {
+      "source": "/iso-app.js",
+      "headers": [
+        { "key": "Cache-Control",    "value": "public, max-age=3600, stale-while-revalidate=86400" },
+        { "key": "Cache-Tag",        "value": "nolix-client-scripts" }
+      ]
+    },
+    {
+      "source": "/iso-style.css",
+      "headers": [
+        { "key": "Cache-Control",    "value": "public, max-age=3600, stale-while-revalidate=86400" },
+        { "key": "Cache-Tag",        "value": "nolix-client-scripts" }
+      ]
+    },
+    {
+      "source": "/iso-animations.css",
+      "headers": [
+        { "key": "Cache-Control",    "value": "public, max-age=3600, stale-while-revalidate=86400" },
+        { "key": "Cache-Tag",        "value": "nolix-client-scripts" }
+      ]
+    },
+    {
+      "source": "/landing.css",
+      "headers": [
+        { "key": "Cache-Control",    "value": "public, max-age=3600, stale-while-revalidate=86400" },
+        { "key": "Cache-Tag",        "value": "nolix-client-scripts" }
+      ]
+    },
+    {
+      "source": "/api/stream",
+      "headers": [
+        { "key": "Cache-Control",        "value": "no-cache, no-store, must-revalidate" },
+        { "key": "X-Accel-Buffering",    "value": "no" },
+        { "key": "Content-Type",         "value": "text/event-stream" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control",    "value": "no-store, no-cache, must-revalidate" },
+        { "key": "X-Nolix-Version",  "value": "3.0" }
+      ]
+    }
   ]
 }

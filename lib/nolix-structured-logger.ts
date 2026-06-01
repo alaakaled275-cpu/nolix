@@ -24,7 +24,7 @@ import { emitSystemEvent } from "./nolix-event-system";
 export type LogLevel   = "DEBUG" | "INFO" | "WARN" | "ERROR" | "FATAL";
 export type LogService =
   | "zeno" | "ml" | "engine" | "db" | "queue"
-  | "auth" | "system" | "webhook" | "replay" | "event";
+  | "auth" | "system" | "webhook" | "replay" | "event" | "bridge" | "bic";
 
 export interface StructuredLog {
   id?:        string;

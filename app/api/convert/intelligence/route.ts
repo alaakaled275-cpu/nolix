@@ -18,11 +18,36 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { query, ensureNolixSchema } from "@/lib/schema";
+import { queryForTenant } from "@/lib/nolix-rls";
+import { getSession } from "@/lib/auth";
 import { getPolicySummary } from "@/lib/causal-engine";
 
 export async function GET(_req: NextRequest) {
   try {
     await ensureNolixSchema();
+
+    // ── AUTH (previously missing) ─────────────────────────────────────
+    const session = await getSession();
+    if (!session?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // ── RESOLVE TENANT ─────────────────────────────────────────
+    const userRows = await query<{ store_url: string | null }>(
+      `SELECT store_url FROM users WHERE email = $1 LIMIT 1`,
+      [session.email]
+    );
+    const storeUrl = userRows[0]?.store_url ?? null;
+    let storeDomain = "unknown";
+    if (storeUrl) {
+      try {
+        storeDomain = new URL(
+          storeUrl.startsWith("http") ? storeUrl : `https://${storeUrl}`
+        ).hostname.replace(/^www\./, "");
+      } catch {
+        storeDomain = storeUrl.replace(/^www\./, "").replace(/\/.*$/, "");
+      }
+    }
 
     // ── 1. LOOP INTEGRITY CHECK ──────────────────────────────────────────────
     // Is the feedback loop actually closing? Check that sessions have outcomes.
@@ -35,7 +60,8 @@ export async function GET(_req: NextRequest) {
       sessions_with_hesitation: string;
       loop_closure_rate: string;
     };
-    const loopRows = await query<LoopRow>(
+    // RLS-scoped: only this store's sessions
+    const loopRows = await queryForTenant<LoopRow>(
       `SELECT
          COUNT(*)            AS total_sessions,
          COUNT(*) FILTER (WHERE converted IS NOT NULL)  AS resolved_sessions,
@@ -47,7 +73,9 @@ export async function GET(_req: NextRequest) {
            COUNT(*) FILTER (WHERE converted IS NOT NULL)::numeric
            / NULLIF(COUNT(*), 0) * 100, 1
          )                    AS loop_closure_rate
-       FROM popup_sessions`
+       FROM popup_sessions`,
+      [],
+      storeDomain
     );
     const loop = loopRows[0];
 
@@ -105,7 +133,8 @@ export async function GET(_req: NextRequest) {
       avg_time_to_convert_s: string | null;
       interpretation: string;
     };
-    const hesitationRows = await query<HesitationRow>(
+    // RLS-scoped: only this store's hesitation data
+    const hesitationRows = await queryForTenant<HesitationRow>(
       `SELECT
          offer_type AS action_type,
          ROUND(AVG(hesitation_score)::numeric, 1)  AS avg_hesitation_score,
@@ -127,7 +156,9 @@ export async function GET(_req: NextRequest) {
        WHERE offer_type IS NOT NULL
          AND show_popup = true
        GROUP BY offer_type
-       ORDER BY AVG(causal_weight) DESC`
+       ORDER BY AVG(causal_weight) DESC`,
+      [],
+      storeDomain
     );
 
     // ── 4. SIGNAL IMPORTANCE RANKING ─────────────────────────────────────────
@@ -141,7 +172,8 @@ export async function GET(_req: NextRequest) {
       avg_hesitation: string;
       predictive_strength: string;
     };
-    const signalRows = await query<SignalRow>(
+    // RLS-scoped: only this store's signal data
+    const signalRows = await queryForTenant<SignalRow>(
       `WITH base AS (
          SELECT AVG(converted::int) AS overall_cvr FROM nolix_signal_outcomes
        )
@@ -179,7 +211,9 @@ export async function GET(_req: NextRequest) {
          GROUP BY price_bucket
        ) ranked
        ORDER BY predictive_strength DESC, sample_count DESC
-       LIMIT 20`
+       LIMIT 20`,
+      [],
+      storeDomain
     );
 
     // ── 5. DISCOUNT WASTE ANALYSIS ────────────────────────────────────────────
@@ -192,7 +226,8 @@ export async function GET(_req: NextRequest) {
       avg_causal_weight_discount: string;
       revenue_wasted_estimate: string;
     };
-    const discountRows = await query<DiscountRow>(
+    // RLS-scoped: only this store's discount sessions
+    const discountRows = await queryForTenant<DiscountRow>(
       `SELECT
          COUNT(*) FILTER (WHERE offer_type LIKE 'discount_%')   AS total_discount_sessions,
          COUNT(*) FILTER (
@@ -212,15 +247,16 @@ export async function GET(_req: NextRequest) {
            1
          )                                                      AS wasted_pct,
          ROUND(AVG(causal_weight) FILTER (WHERE offer_type LIKE 'discount_%' AND converted = true)::numeric, 2) AS avg_causal_weight_discount,
-         -- Wasted revenue = sessions where we gave discount but user didn't need it
          ROUND(
            COUNT(*) FILTER (
              WHERE offer_type LIKE 'discount_%'
                AND converted = true
                AND hesitation_score < 30
-           )::numeric * 35, 0  -- avg discount value ~$35
+           )::numeric * 35, 0
          )                                                      AS revenue_wasted_estimate
-       FROM popup_sessions`
+       FROM popup_sessions`,
+      [],
+      storeDomain
     );
 
     // ── 6. DRIFT ALERTS ────────────────────────────────────────────────────────

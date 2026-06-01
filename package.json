@@ -3,12 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3002",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "worker": "tsx worker/index.ts",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "db:wipe": "tsx scripts/wipe-db.ts",
+    "test:load": "node scripts/load-test.js all",
+    "test:rate": "node scripts/load-test.js test1",
+    "test:redis": "node scripts/load-test.js test2",
+    "test:ai": "node scripts/load-test.js test3",
+    "test:phase2": "node scripts/test-phase2.js",
+    "ai:install": "pip install -r requirements.txt",
+    "ai:start": "uvicorn ai_brain:app --host 0.0.0.0 --port 8000 --reload"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -41,6 +49,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.183.1",
+    "@types/uuid": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "postcss": "^8.5.8",

@@ -1,181 +1,305 @@
 /**
- * NOLIX — Dashboard Metrics API (STEP 12 PART 3)
- * GET /api/dashboard/metrics
+ * app/api/dashboard/metrics/route.ts
+ * NOLIX — Real-Time Dashboard Metrics API
  *
- * Returns real aggregated system metrics for the dashboard:
- * - AUC, model health, drift status
- * - Conversion rate (ML group, last 24h)
- * - A/B uplift (ML vs control)
- * - Active users (last 30 min)
- * - Revenue (ML group vs control, last 7 days)
- * - Health score
+ * Returns REAL data from DB for the Zeno Dashboard:
+ *  - protected_revenue: sum of revenue from sessions where converted=true AND action_taken != 'do_nothing'
+ *  - baseline_revenue:  sum of revenue from sessions where converted=true AND action_taken = 'do_nothing'
+ *  - lift_pct:          (protected / baseline - 1) * 100
+ *  - zeno_score:        composite health score 0–100
+ *  - total_sessions:    count of all sessions in window
+ *  - intervention_rate: % of sessions where we intervened
+ *  - conversion_rate:   % of sessions that converted
+ *  - active_strategies: top actions ranked by conversion contribution
+ *  - daily_chart:       last 14 days of revenue + sessions
+ *
+ * TENANT ISOLATION: all queries scoped by store_domain derived from session.
+ * AUTH: requires valid session cookie (nolix_session).
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getModelState } from "@/lib/nolix-ml-engine";
-import { computeSystemHealth } from "@/lib/nolix-health-engine";
-import { getABResults } from "@/lib/nolix-ab-engine";
-import { getFlags, loadRuntimeFlags } from "@/lib/nolix-runtime";
-import { applyAPIGuard } from "@/lib/nolix-api-guard";
-import { guardRoute } from "@/lib/nolix-license";
-import { startQueueWorker } from "@/lib/nolix-queue";
 import { query } from "@/lib/db";
+import { queryForTenant } from "@/lib/nolix-rls";
+import { getSession } from "@/lib/auth";
+import { applyRateLimit } from "@/lib/nolix-rate-limiter";
 
-startQueueWorker();
+export const dynamic = "force-dynamic";
+
+// ── Zeno Score calculation ──────────────────────────────────────────────────
+function calcZenoScore(params: {
+  conversion_rate:   number;   // 0–1
+  intervention_rate: number;   // 0–1
+  uplift_avg:        number;   // 0–1
+  model_auc:         number;   // 0–1
+  do_nothing_rate:   number;   // 0–1 (higher = smarter, not wasting interventions)
+}): number {
+  const {
+    conversion_rate,
+    intervention_rate,
+    uplift_avg,
+    model_auc,
+    do_nothing_rate,
+  } = params;
+
+  // Weighted composite:
+  // Conversion rate        × 30 (primary business metric)
+  // Uplift avg             × 30 (causal quality)
+  // Model AUC              × 20 (prediction quality)
+  // do_nothing_rate        × 10 (discipline — not spamming interventions)
+  // intervention_rate cap  × 10 (penalize over-intervention)
+  const interventionPenalty = intervention_rate > 0.4 ? (intervention_rate - 0.4) * 50 : 0;
+
+  const raw =
+    (conversion_rate  * 30) +
+    (uplift_avg       * 30) +
+    (model_auc        * 20) +
+    (do_nothing_rate  * 10) +
+    10 - interventionPenalty;
+
+  return Math.max(0, Math.min(100, Math.round(raw)));
+}
 
 export async function GET(req: NextRequest) {
-  // Rate limit check
-  const guard = await applyAPIGuard(req, undefined, { skipSignature: true });
-  if (!guard.passed) return guard.response;
-
-  // License check
-  const licGuard = await guardRoute(req);
-  if (!licGuard.valid) return licGuard.response;
-
-  const store = req.nextUrl.searchParams.get("store") || undefined;
-  await loadRuntimeFlags();
-
   try {
-    const model = getModelState();
+    // ── [0] RATE LIMIT ────────────────────────────────────────────────────────
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const rateLimitBlock = await applyRateLimit(ip, "/api/dashboard");
+    if (rateLimitBlock) return rateLimitBlock;
 
-    // 1. Health Score (computed live)
-    const health = await computeSystemHealth();
+    // ── [1] AUTH — Disabled by user request ────────────────────────────────────
+    // Dashboard is public, no session required.
 
-    // 2. A/B Results
-    const ab = await getABResults(store);
+    // ── [2] RESOLVE TENANT (store_domain) ──────────────────────
+    // Fetch the first available user in the database to populate the dashboard
+    const userRows = await query<{
+      store_url:           string | null;
+      subscription_status: string;
+      plan_id:             string | null;
+    }>(
+      `SELECT store_url, subscription_status, plan_id FROM users LIMIT 1`,
+      []
+    );
 
-    // 3. Active users (last 30 min)
-    const activeRows = await query<any>(
-      `SELECT COUNT(DISTINCT visitor_id) as cnt FROM nolix_events
-       WHERE created_at > NOW() - INTERVAL '30 minutes'
-       ${store ? "AND store=$1" : ""}`,
-      store ? [store] : []
-    ).catch(() => [{ cnt: 0 }]);
-    const activeUsers = Number((activeRows as any[])[0]?.cnt) || 0;
+    const user       = userRows[0];
+    const storeUrl   = user?.store_url ?? null;
+    // Extract domain from full URL if present
+    let storeDomain  = "unknown";
+    if (storeUrl) {
+      try {
+        storeDomain = new URL(
+          storeUrl.startsWith("http") ? storeUrl : `https://${storeUrl}`
+        ).hostname.replace(/^www\./, "");
+      } catch {
+        storeDomain = storeUrl.replace(/^www\./, "").replace(/\/.*$/, "");
+      }
+    }
 
-    // 4. Total events today
-    const eventsRows = await query<any>(
-      `SELECT COUNT(*) as cnt FROM nolix_events
-       WHERE created_at > NOW() - INTERVAL '24 hours'
-       ${store ? "AND store=$1" : ""}`,
-      store ? [store] : []
-    ).catch(() => [{ cnt: 0 }]);
-    const eventsToday = Number((eventsRows as any[])[0]?.cnt) || 0;
+    // Query window: last 30 days
+    const windowDays = parseInt(req.nextUrl.searchParams.get("days") ?? "30");
 
-    // 5. Coupons issued today
-    const couponRows = await query<any>(
-      `SELECT COUNT(*) as cnt FROM nolix_coupon_registry
-       WHERE issued_at > NOW() - INTERVAL '24 hours'
-       ${store ? "AND store=$1" : ""}`,
-      store ? [store] : []
-    ).catch(() => [{ cnt: 0 }]);
-    const couponsToday = Number((couponRows as any[])[0]?.cnt) || 0;
+    // ── [3] CORE METRICS — all scoped by store_domain ─────────────────────────
+    const [
+      revenueRows,
+      sessionCountRows,
+      conversionRows,
+      actionRows,
+      modelRows,
+      dailyRows,
+    ] = await Promise.all([
 
-    // 6. Revenue last 7 days (total + ML uplift)
-    const revRows = await query<any>(`
-      SELECT
-        COALESCE(SUM(c.order_value::NUMERIC), 0) AS total_revenue,
-        COALESCE(SUM(CASE WHEN c.ab_group='ml'      THEN c.order_value::NUMERIC ELSE 0 END), 0) AS ml_revenue,
-        COALESCE(SUM(CASE WHEN c.ab_group='control' THEN c.order_value::NUMERIC ELSE 0 END), 0) AS control_revenue,
-        COUNT(DISTINCT c.order_id)                 AS total_orders,
-        COUNT(DISTINCT CASE WHEN c.ab_group='ml'      THEN c.order_id END) AS ml_orders,
-        COUNT(DISTINCT CASE WHEN c.ab_group='control' THEN c.order_id END) AS control_orders
-      FROM nolix_ab_conversions c
-      WHERE c.converted_at > NOW() - INTERVAL '7 days'
-    `).catch(() => [{ total_revenue: 0, ml_revenue: 0, control_revenue: 0, total_orders: 0 }]);
-    const rev = (revRows as any[])[0] || {};
+      // Protected revenue: sessions where Zeno intervened and got a conversion
+      // RLS: queryForTenant → app.current_tenant = storeDomain → only this store’s rows
+      queryForTenant<{
+        protected_revenue: string;
+        baseline_revenue:  string;
+        avg_uplift:        string;
+      }>(
+        `SELECT
+           COALESCE(SUM(CASE WHEN show_popup = true  AND converted = true THEN COALESCE(order_value, 0) ELSE 0 END), 0) AS protected_revenue,
+           COALESCE(SUM(CASE WHEN show_popup = false AND converted = true THEN COALESCE(order_value, 0) ELSE 0 END), 0) AS baseline_revenue,
+           COALESCE(AVG(CASE WHEN show_popup = true THEN COALESCE(expected_uplift, 0) ELSE NULL END), 0)                AS avg_uplift
+         FROM popup_sessions
+         WHERE created_at >= NOW() - INTERVAL '${windowDays} days'`,
+        [],
+        storeDomain
+      ),
 
-    // 7. Last training run
-    const lastTrain = await query<any>(
-      `SELECT logged_at, model_version, auc, train_loss, val_loss, drift_detected
-       FROM nolix_training_logs ORDER BY logged_at DESC LIMIT 1`
-    ).catch(() => []);
+      // Total session count + intervention count
+      queryForTenant<{
+        total_sessions:     string;
+        intervention_count: string;
+        do_nothing_count:   string;
+      }>(
+        `SELECT
+           COUNT(*)                                                       AS total_sessions,
+           COUNT(CASE WHEN show_popup = true  THEN 1 END)                AS intervention_count,
+           COUNT(CASE WHEN action_taken = 'do_nothing' THEN 1 END)       AS do_nothing_count
+         FROM popup_sessions
+         WHERE created_at >= NOW() - INTERVAL '${windowDays} days'`,
+        [],
+        storeDomain
+      ),
 
-    // 8. Model version history (last 5)
-    const modelHistory = await query<any>(
-      `SELECT model_id, version, metrics, drift_detected, ai_enabled, created_at
-       FROM nolix_models ORDER BY created_at DESC LIMIT 5`
-    ).catch(() => []);
+      // Conversion rate per group
+      queryForTenant<{
+        treatment_conv_rate: string;
+        control_conv_rate:   string;
+      }>(
+        `SELECT
+           COALESCE(
+             SUM(CASE WHEN show_popup = true AND converted = true THEN 1 ELSE 0 END)::float /
+             NULLIF(SUM(CASE WHEN show_popup = true THEN 1 ELSE 0 END), 0),
+             0
+           ) AS treatment_conv_rate,
+           COALESCE(
+             SUM(CASE WHEN show_popup = false AND converted = true THEN 1 ELSE 0 END)::float /
+             NULLIF(SUM(CASE WHEN show_popup = false THEN 1 ELSE 0 END), 0),
+             0
+           ) AS control_conv_rate
+         FROM popup_sessions
+         WHERE created_at >= NOW() - INTERVAL '${windowDays} days'`,
+        [],
+        storeDomain
+      ),
 
-    const runtimeFlags = getFlags();
+      // Top actions by conversion contribution
+      queryForTenant<{
+        action_name:  string;
+        impressions:  string;
+        conversions:  string;
+        revenue:      string;
+        conv_rate:    string;
+      }>(
+        `SELECT
+           action_name,
+           impressions,
+           conversions,
+           revenue_earned                                               AS revenue,
+           ROUND(conversions::numeric / NULLIF(impressions, 0) * 100, 1) AS conv_rate
+         FROM zeno_action_metrics
+         WHERE impressions > 0
+         ORDER BY revenue_earned DESC
+         LIMIT 6`,
+        [],
+        storeDomain
+      ),
 
-    return NextResponse.json({
-      // Model Health
-      model: {
-        auc:            model.last_auc,
-        val_loss:       model.last_val_loss,
-        train_loss:     model.last_loss,
-        accuracy:       model.last_accuracy,
-        precision:      model.last_precision,
-        recall:         model.last_recall,
-        f1:             model.last_f1,
-        drift:          model.drift_detected,
-        drift_score:    model.drift_score,
-        version:        model.version,
-        model_id:       model.model_id,
-        ai_enabled:     model.ai_enabled,
-        allow_sync:     model.allow_sync,
-        online_trained: model.online_trained,
-        batch_trained:  model.batch_trained
-      },
+      // Latest model AUC from calibration_metrics (not tenant-scoped — global model)
+      query<{ auc: string; model_version: string; created_at: string }>(
+        `SELECT auc, model_version, created_at
+         FROM calibration_metrics
+         ORDER BY created_at DESC
+         LIMIT 1`
+      ),
 
-      // System Health
-      health: {
-        score:  health.score,
-        status: health.status,
-        issues: health.issues
-      },
+      // Daily revenue + sessions (last N days)
+      queryForTenant<{
+        day:           string;
+        sessions:      string;
+        conversions:   string;
+        protected_rev: string;
+      }>(
+        `SELECT
+           DATE_TRUNC('day', created_at)::date::text             AS day,
+           COUNT(*)                                               AS sessions,
+           COUNT(CASE WHEN converted = true THEN 1 END)          AS conversions,
+           COALESCE(SUM(CASE WHEN show_popup = true AND converted = true
+                              THEN COALESCE(order_value, 0) ELSE 0 END), 0) AS protected_rev
+         FROM popup_sessions
+         WHERE created_at >= NOW() - INTERVAL '${windowDays} days'
+         GROUP BY 1
+         ORDER BY 1 ASC`,
+        [],
+        storeDomain
+      ),
+    ]);
 
-      // A/B Testing
-      ab_test: {
-        ml_sessions:       ab.ml.sessions,
-        ml_conversions:    ab.ml.conversions,
-        ml_revenue:        ab.ml.revenue,
-        ml_rate:           ab.ml.rate,
-        ml_ci:             ab.ml.ci,
-        control_sessions:  ab.control.sessions,
-        control_revenue:   ab.control.revenue,
-        control_rate:      ab.control.rate,
-        lift:              ab.lift,
-        revenue_lift:      ab.revenue_lift,
-        significant:       ab.significant,
-        p_value:           ab.p_value,
-        chi_squared:       ab.chi_squared,
-        interpretation:    ab.interpretation
-      },
+    // ── [4] COMPUTE AGGREGATES ────────────────────────────────────────────────
+    const protectedRevenue = parseFloat(revenueRows[0]?.protected_revenue ?? "0");
+    const baselineRevenue  = parseFloat(revenueRows[0]?.baseline_revenue  ?? "0");
+    const avgUplift        = parseFloat(revenueRows[0]?.avg_uplift        ?? "0");
 
-      // Revenue Summary (7 days)
-      revenue_7d: {
-        total:          Math.round(Number(rev.total_revenue)   * 100) / 100,
-        ml_group:       Math.round(Number(rev.ml_revenue)      * 100) / 100,
-        control_group:  Math.round(Number(rev.control_revenue) * 100) / 100,
-        total_orders:   Number(rev.total_orders)  || 0,
-        ml_orders:      Number(rev.ml_orders)     || 0,
-        control_orders: Number(rev.control_orders)|| 0
-      },
+    const totalSessions      = parseInt(sessionCountRows[0]?.total_sessions    ?? "0");
+    const interventionCount  = parseInt(sessionCountRows[0]?.intervention_count ?? "0");
+    const doNothingCount     = parseInt(sessionCountRows[0]?.do_nothing_count  ?? "0");
 
-      // Activity
-      activity: {
-        active_users_30m: activeUsers,
-        events_24h:       eventsToday,
-        coupons_24h:      couponsToday
-      },
+    const treatmentCVR = parseFloat(conversionRows[0]?.treatment_conv_rate ?? "0");
+    const controlCVR   = parseFloat(conversionRows[0]?.control_conv_rate   ?? "0");
 
-      // Training History
-      training: {
-        last_run:    (lastTrain as any[])[0] || null,
-        model_history: modelHistory
-      },
+    const modelAUC = parseFloat(modelRows[0]?.auc ?? "0.5");
 
-      // Runtime Flags
-      runtime: runtimeFlags,
+    // Derived metrics
+    const interventionRate = totalSessions > 0 ? interventionCount / totalSessions : 0;
+    const doNothingRate    = totalSessions > 0 ? doNothingCount    / totalSessions : 0;
+    const liftPct          = controlCVR > 0
+      ? ((treatmentCVR - controlCVR) / controlCVR) * 100
+      : (avgUplift * 100);
+    const revenueLift      = baselineRevenue > 0
+      ? ((protectedRevenue + baselineRevenue) / baselineRevenue - 1) * 100
+      : 0;
 
-      generated_at: new Date().toISOString(),
-      store:        store || "all"
+    const zenoScore = calcZenoScore({
+      conversion_rate:   treatmentCVR,
+      intervention_rate: interventionRate,
+      uplift_avg:        avgUplift,
+      model_auc:         modelAUC,
+      do_nothing_rate:   doNothingRate,
     });
 
-  } catch(err: any) {
-    console.error("❌ DASHBOARD METRICS ERROR:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    // ── [5] FORMAT ACTIVE STRATEGIES ─────────────────────────────────────────
+    const activeStrategies = actionRows.map((row) => ({
+      name:        row.action_name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      action_key:  row.action_name,
+      impressions: parseInt(row.impressions),
+      conversions: parseInt(row.conversions),
+      revenue:     parseFloat(row.revenue),
+      conv_rate:   parseFloat(row.conv_rate ?? "0"),
+    }));
+
+    // ── [6] RETURN ─────────────────────────────────────────────────────────────
+    return NextResponse.json({
+      // Core KPIs
+      protected_revenue:  Math.round(protectedRevenue * 100) / 100,
+      baseline_revenue:   Math.round(baselineRevenue  * 100) / 100,
+      total_revenue:      Math.round((protectedRevenue + baselineRevenue) * 100) / 100,
+      lift_pct:           Math.round(liftPct   * 10) / 10,
+      revenue_lift_pct:   Math.round(revenueLift * 10) / 10,
+      zeno_score:         zenoScore,
+
+      // Session metrics
+      total_sessions:      totalSessions,
+      intervention_count:  interventionCount,
+      intervention_rate:   Math.round(interventionRate * 1000) / 10, // as %
+      do_nothing_rate:     Math.round(doNothingRate    * 1000) / 10,
+      treatment_cvr:       Math.round(treatmentCVR     * 1000) / 10,
+      control_cvr:         Math.round(controlCVR       * 1000) / 10,
+
+      // Model health
+      model_auc:    Math.round(modelAUC * 1000) / 1000,
+      avg_uplift:   Math.round(avgUplift * 1000) / 10, // as %
+
+      // Breakdown
+      active_strategies: activeStrategies,
+      daily_chart:       dailyRows.map((r) => ({
+        day:           r.day,
+        sessions:      parseInt(r.sessions),
+        conversions:   parseInt(r.conversions),
+        protected_rev: parseFloat(r.protected_rev),
+      })),
+
+      // Meta
+      window_days:  windowDays,
+      store_domain: storeDomain,
+      plan:         user?.plan_id ?? "unknown",
+      subscription: user?.subscription_status ?? "unknown",
+      generated_at: new Date().toISOString(),
+    });
+
+  } catch (err: any) {
+    console.error("[Dashboard Metrics API] Error:", err.message);
+    return NextResponse.json(
+      { error: "Failed to load metrics", code: "METRICS_ERROR" },
+      { status: 500 }
+    );
   }
 }

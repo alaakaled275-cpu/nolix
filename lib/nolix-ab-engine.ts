@@ -14,23 +14,64 @@ import { query } from "./db";
 // ============================================================
 // BUCKET ASSIGNMENT — deterministic, per-visitor, permanent
 // ============================================================
-export function assignBucket(visitorId: string): number {
+export function assignBucket(seed: string): number {
   let hash = 5381;
-  for (let i = 0; i < visitorId.length; i++) {
-    hash = ((hash << 5) + hash) + visitorId.charCodeAt(i);
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) + hash) + seed.charCodeAt(i);
     hash = hash & 0x7fffffff;
   }
   return hash % 100;
 }
 
-export type ABGroup = "ml" | "control";
+export type ABGroup = "ml" | "control" | "holdout";
 
+// Fallback synchronous method (Legacy, replaced by stratified)
 export function getABGroup(visitorId: string): ABGroup {
-  return assignBucket(visitorId) < 50 ? "ml" : "control";
+  const hash = assignBucket(visitorId);
+  if (hash < 40) return "ml";
+  if (hash < 80) return "control";
+  return "holdout"; // 20% holdout
 }
 
 export function isMLGroup(visitorId: string): boolean {
   return getABGroup(visitorId) === "ml";
+}
+
+// ============================================================
+// LAYER 13: STRATIFIED EXPERIMENTATION & THRESHOLDING
+// LAYER 18: HOLDOUT GROUP (TRUE INCREMENTALITY)
+// ============================================================
+// In memory cache for segment counts to avoid DB latency on every request
+const segmentCounts: Record<string, number> = {};
+
+export async function getStratifiedABGroup(
+    visitorId: string, 
+    device: string, 
+    is_new: boolean, 
+    intent_level: string, 
+    source: string
+): Promise<ABGroup> {
+    const segmentKey = `${device}_${is_new}_${intent_level}_${source}`;
+    
+    // We ideally want DB backing here, but for sub-ms execution we simulate the threshold logic.
+    const currentCount = segmentCounts[segmentKey] || 0;
+    segmentCounts[segmentKey] = currentCount + 1;
+
+    let stratificationSeed = visitorId;
+    if (currentCount >= 1000) {
+        // High volume segment: we can safely randomize INSIDE this segment
+        stratificationSeed = `${visitorId}_${segmentKey}`;
+    } else {
+        // Low volume segment: fallback to global visitor-level randomization to prevent noise
+        stratificationSeed = visitorId;
+    }
+
+    const hash = assignBucket(stratificationSeed);
+    
+    // 40% ML, 40% Control, 20% Strict Holdout
+    if (hash < 40) return "ml";
+    if (hash < 80) return "control";
+    return "holdout";
 }
 
 // ============================================================

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { query, ensureNolixSchema } from "@/lib/schema";
+import { queryForTenant } from "@/lib/nolix-rls";
+import { getSession } from "@/lib/auth";
+import type { NextRequest } from "next/server";
 
 let schemaReady = false;
 
@@ -174,7 +177,33 @@ export async function GET(req: import("next/server").NextRequest) {
     return NextResponse.json(generateSalesDemoResponse());
   }
 
-  // ── 1. Try real database ──────────────────────────────────────────────────
+  // ── 1. AUTH CHECK (previously missing — critical security hole) ────────────
+  const session = await getSession();
+  if (!session?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // ── 2. RESOLVE TENANT (store_domain from authenticated user) ───────────────
+  const userRows = await query<{ store_url: string | null }>(
+    `SELECT store_url FROM users WHERE email = $1 LIMIT 1`,
+    [session.email]
+  );
+  const storeUrl    = userRows[0]?.store_url ?? null;
+  let   storeDomain = "unknown";
+  if (storeUrl) {
+    try {
+      storeDomain = new URL(
+        storeUrl.startsWith("http") ? storeUrl : `https://${storeUrl}`
+      ).hostname.replace(/^www\./, "");
+    } catch {
+      storeDomain = storeUrl.replace(/^www\./, "").replace(/\/.*$/, "");
+    }
+  }
+  if (!storeDomain || storeDomain === "unknown") {
+    return NextResponse.json(generateMockResponse());
+  }
+
+  // ── 3. Try real database ──────────────────────────────────────────────────
   try {
     // Ensure schema exists (only first call)
     if (!schemaReady) {
@@ -187,7 +216,9 @@ export async function GET(req: import("next/server").NextRequest) {
       }
     }
 
+
     // Run all queries in parallel to maximize speed
+    // All popup_sessions queries use queryForTenant — RLS-scoped to this store only
     const [
       overviewRows,
       intentRows,
@@ -197,8 +228,8 @@ export async function GET(req: import("next/server").NextRequest) {
       abRows,
       recentRows
     ] = await Promise.all([
-      // 1. Overview
-      query<{ total: string; shown: string; convs: string; revenue: string; discount_avoided: string; discount_count: string; }>(`
+      // 1. Overview — RLS-scoped
+      queryForTenant<{ total: string; shown: string; convs: string; revenue: string; discount_avoided: string; discount_count: string; }>(`
         SELECT
           COUNT(*)::text AS total,
           COUNT(*) FILTER (WHERE show_popup = true)::text  AS shown,
@@ -207,18 +238,20 @@ export async function GET(req: import("next/server").NextRequest) {
           COUNT(*) FILTER (WHERE discount_avoided = true AND converted = true)::text AS discount_avoided,
           COUNT(*) FILTER (WHERE action_taken LIKE 'discount%' AND converted = true)::text AS discount_count
         FROM popup_sessions
-      `),
-      // 2. Intent
-      query<{ intent_level: string; count: string }>(
-        `SELECT intent_level, COUNT(*)::text AS count FROM popup_sessions GROUP BY intent_level`
+      `, [], storeDomain),
+      // 2. Intent — RLS-scoped
+      queryForTenant<{ intent_level: string; count: string }>(
+        `SELECT intent_level, COUNT(*)::text AS count FROM popup_sessions GROUP BY intent_level`,
+        [], storeDomain
       ),
-      // 3. Friction
-      query<{ friction_detected: string; count: string }>(
+      // 3. Friction — RLS-scoped
+      queryForTenant<{ friction_detected: string; count: string }>(
         `SELECT COALESCE(friction_detected,'none') AS friction_detected, COUNT(*)::text AS count
-         FROM popup_sessions GROUP BY friction_detected`
+         FROM popup_sessions GROUP BY friction_detected`,
+        [], storeDomain
       ),
-      // 4. Today
-      query<{ analyzed: string; actions: string; convs_today: string; revenue_today: string; discounts_avoided_today: string; }>(`
+      // 4. Today — RLS-scoped
+      queryForTenant<{ analyzed: string; actions: string; convs_today: string; revenue_today: string; discounts_avoided_today: string; }>(`
         SELECT
           COUNT(*)::text AS analyzed,
           COUNT(*) FILTER (WHERE show_popup = true)::text AS actions,
@@ -227,9 +260,9 @@ export async function GET(req: import("next/server").NextRequest) {
           COUNT(*) FILTER (WHERE discount_avoided = true AND converted = true)::text AS discounts_avoided_today
         FROM popup_sessions
         WHERE created_at >= CURRENT_DATE
-      `),
-      // 5. Top Action
-      query<{ action_taken: string; cvr: string }>(
+      `, [], storeDomain),
+      // 5. Top Action — RLS-scoped
+      queryForTenant<{ action_taken: string; cvr: string }>(
         `SELECT
            COALESCE(action_taken, offer_type, 'unknown') AS action_taken,
            ROUND(100.0 * COUNT(*) FILTER (WHERE converted=true) / NULLIF(COUNT(*),0), 1)::text AS cvr
@@ -237,14 +270,15 @@ export async function GET(req: import("next/server").NextRequest) {
          WHERE show_popup = true AND COALESCE(action_taken, offer_type) IS NOT NULL
          GROUP BY action_taken
          ORDER BY cvr::numeric DESC
-         LIMIT 1`
+         LIMIT 1`,
+        [], storeDomain
       ),
-      // 6. A/B results
+      // 6. A/B results — global (not tenant-scoped, ab_test_results is not RLS-protected)
       query<{ variant: string; offer_type: string; impressions: number; conversions: number }>(
         `SELECT variant, offer_type, impressions, conversions FROM ab_test_results ORDER BY variant, impressions DESC`
       ),
-      // 7. Recent sessions
-      query<{
+      // 7. Recent sessions — RLS-scoped
+      queryForTenant<{
         id: string; session_id: string; created_at: string; intent_level: string; intent_score: number;
         friction_detected: string | null; show_popup: boolean; offer_type: string | null;
         action_taken: string | null; converted: boolean; order_value: number | null;
@@ -255,7 +289,8 @@ export async function GET(req: import("next/server").NextRequest) {
                 show_popup, offer_type, action_taken, converted, order_value, discount_avoided,
                 reasoning, traffic_source, cart_status, device
          FROM popup_sessions
-         ORDER BY created_at DESC LIMIT 50`
+         ORDER BY created_at DESC LIMIT 50`,
+        [], storeDomain
       )
     ]);
 

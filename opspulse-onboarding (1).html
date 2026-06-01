@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpsPulse — Setup & Onboarding</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── LIGHT MODE (default) ── */
+    :root {
+      --bg: #f0f0ef;
+      --surface: rgba(255,255,255,0.72);
+      --surface-solid: #ffffff;
+      --surface-hover: #fafaf8;
+      --border: rgba(0,0,0,0.07);
+      --border-md: rgba(0,0,0,0.11);
+      --text-primary: #111110;
+      --text-secondary: #5c5c59;
+      --text-muted: #9a9a96;
+      --accent-yellow: #f5c518;
+      --accent-yellow-glow: rgba(245,197,24,0.25);
+      --accent-green: #3da85f;
+      --accent-green-bg: #eef7f1;
+      --accent-green-dark: #1b5e20;
+      --accent-red: #e04545;
+      --accent-red-bg: #fdf0f0;
+      --accent-blue: #2563eb;
+      --accent-blue-bg: #eff4ff;
+      --font: 'DM Sans', sans-serif;
+      --font-display: 'Syne', sans-serif;
+      --mono: 'DM Mono', monospace;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-elevated: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+      --transition: 0.18s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ── DARK MODE ── */
+    [data-theme="dark"] {
+      --bg: #0a0a0b;
+      --surface: rgba(18,18,20,0.92);
+      --surface-solid: #131315;
+      --surface-hover: #1c1c1f;
+      --border: rgba(255,255,255,0.07);
+      --border-md: rgba(255,255,255,0.12);
+      --text-primary: #f0f0ee;
+      --text-secondary: #8a8a86;
+      --text-muted: #5c5c58;
+      --accent-yellow: #f5c518;
+      --accent-yellow-glow: rgba(245,197,24,0.18);
+      --accent-green: #4ade80;
+      --accent-green-bg: rgba(74,222,128,0.1);
+      --accent-green-dark: #86efac;
+      --accent-red: #f87171;
+      --accent-red-bg: rgba(248,113,113,0.1);
+      --accent-blue: #60a5fa;
+      --accent-blue-bg: rgba(96,165,250,0.1);
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 0.5px rgba(255,255,255,0.05);
+      --shadow-elevated: 0 4px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.06);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      transition: background var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* BACKGROUND AMBIENT GLOW */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -120px;
+      right: -120px;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245,197,24,0.18) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -80px;
+      left: -80px;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    [data-theme="dark"] body::before { opacity: 0.5; }
+    [data-theme="dark"] body::after { opacity: 0.4; }
+
+    /* ── GATE OVERLAY (shown when script not verified) ── */
+    #gate-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: gateIn 0.4s cubic-bezier(0.4,0,0.2,1);
+    }
+    @keyframes gateIn { from { opacity:0; } to { opacity:1; } }
+
+    .gate-box {
+      background: var(--surface-solid);
+      border-radius: 20px;
+      border: 0.5px solid var(--border-md);
+      padding: 32px;
+      width: 420px;
+      max-width: 95vw;
+      text-align: center;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.28);
+      animation: gateBoxIn 0.45s cubic-bezier(0.34,1.56,0.64,1) 0.1s both;
+    }
+    @keyframes gateBoxIn { from { opacity:0; transform: scale(0.9) translateY(20px); } to { opacity:1; transform: none; } }
+
+    .gate-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--accent-red-bg);
+      border: 2px solid var(--accent-red);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .gate-icon svg { width: 28px; height: 28px; stroke: var(--accent-red); }
+    .gate-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; letter-spacing: -0.3px; }
+    .gate-sub { font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
+    .gate-steps { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; text-align: left; }
+    .gate-step { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface-hover); border-radius: 10px; border: 0.5px solid var(--border); font-size: 12px; color: var(--text-secondary); }
+    .gate-step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--border-md); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+    .gate-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--accent-yellow);
+      border: none; border-radius: 50px;
+      padding: 10px 24px;
+      font-family: var(--font-display);
+      font-size: 13px; font-weight: 700;
+      color: #1a1400; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(245,197,24,0.35);
+      transition: all 0.2s;
+    }
+    .gate-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,197,24,0.45); }
+    .gate-dismiss { font-size: 11px; color: var(--text-muted); margin-top: 12px; cursor: pointer; display: block; }
+    .gate-dismiss:hover { color: var(--text-secondary); }
+
+    /* ── MAIN ONBOARDING PANEL ── */
+    .onboard-panel {
+      width: 1000px;
+      max-width: 98vw;
+      background: var(--surface-solid);
+      border-radius: 24px;
+      border: 0.5px solid var(--border-md);
+      overflow: hidden;
+      box-shadow: 0 32px 100px rgba(0,0,0,0.18), 0 0 0 0.5px rgba(255,255,255,0.06);
+      position: relative;
+      z-index: 1;
+      animation: panelIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes panelIn { from { opacity:0; transform: translateY(32px) scale(0.97); } to { opacity:1; transform: none; } }
+
+    [data-theme="dark"] .onboard-panel {
+      background: #131315;
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    /* ── STEP BAR ── */
+    .ob-stepbar {
+      display: flex;
+      align-items: center;
+      padding: 16px 28px;
+      border-bottom: 0.5px solid var(--border);
+      background: var(--bg);
+      gap: 0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    [data-theme="dark"] .ob-stepbar { background: #0a0a0b; }
+
+    .ob-logo {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-display); font-size: 15px; font-weight: 700;
+      color: var(--text-primary); margin-right: 28px; cursor: pointer;
+      letter-spacing: -0.3px; white-space: nowrap; flex-shrink: 0;
+    }
+    .ob-logo-icon {
+      width: 24px; height: 24px; background: #f5c518; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 0 4px rgba(245,197,24,0.2);
+    }
+
+    .ob-steps { display: flex; align-items: center; flex: 1; gap: 0; }
+    .ob-step { display: flex; align-items: center; flex: 1; }
+    .ob-step-node { display: flex; align-items: center; gap: 7px; position: relative; z-index: 1; }
+    .ob-step-circle {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1.5px solid var(--border-md);
+      background: var(--surface-solid);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: var(--text-muted);
+      transition: all 0.3s; flex-shrink: 0;
+    }
+    .ob-step-circle.active { background: #111110; border-color: #111110; color: white; }
+    [data-theme="dark"] .ob-step-circle.active { background: #f5c518; border-color: #f5c518; color: #1a1400; }
+    .ob-step-circle.done { background: var(--accent-green); border-color: var(--accent-green); color: white; }
+    .ob-step-label { font-size: 10.5px; font-weight: 600; color: var(--text-muted); white-space: nowrap; transition: color 0.3s; }
+    .ob-step-label.active { color: var(--text-primary); }
+    .ob-step-label.done { color: var(--accent-green); }
+    .ob-step-line { flex: 1; height: 1px; background: var(--border); margin: 0 8px; transition: background 0.4s; }
+    .ob-step-line.done { background: var(--accent-green); }
+
+    /* THEME TOGGLE in stepbar */
+    .ob-theme-btn {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--surface-hover); border: 0.5px solid var(--border-md);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-secondary);
+      transition: all var(--transition); flex-shrink: 0; margin-left: 12px;
+    }
+    .ob-theme-btn:hover { background: var(--surface-solid); color: var(--text-primary); }
+    .ob-theme-btn svg { width: 13px; height: 13px; }
+
+    /* ── BODY ── */
+    .ob-body {
+      padding: 40px 48px;
+      min-height: 440px;
+      background: var(--surface-solid);
+    }
+    [data-theme="dark"] .ob-body { background: #131315; }
+
+    .ob-step-content { display: none; }
+    .ob-step-content.active {
+      display: block;
+      animation: stepIn 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    @keyframes stepIn { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: none; } }
+
+    /* ── FOOTER ── */
+    .ob-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 28px;
+      border-top: 0.5px solid var(--border);
+      background: var(--bg);
+    }
+    [data-theme="dark"] .ob-footer { background: #0a0a0b; }
+
+    /* ── TYPOGRAPHY ── */
+    .ob-title {
+      font-family: var(--font-display);
+      font-size: 26px; font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.5px; margin-bottom: 8px;
+    }
+    .ob-sub {
+      font-size: 13px; color: var(--text-secondary);
+      margin-bottom: 28px; line-height: 1.6;
+    }
+
+    /* ── STEP 0: GET STARTED ── */
+    .ob-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 22px; }
+    .ob-card {
+      border: 0.5px solid var(--border);
+      border-radius: 14px; padding: 18px;
+      background: var(--surface-solid);
+      box-shadow: var(--shadow-card);
+      transition: box-shadow var(--transition), transform var(--transition);
+    }
+    .ob-card:hover { box-shadow: var(--shadow-elevated); transform: translateY(-2px); }
+    [data-theme="dark"] .ob-card { background: #1c1c1f; border-color: rgba(255,255,255,0.07); }
+    .ob-card-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+    .ob-card-icon svg { width: 18px; height: 18px; }
+    .ob-card-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 5px; letter-spacing: -0.2px; }
+    .ob-card-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.6; }
+
+    .ob-stats-strip {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px;
+      background: rgba(245,197,24,0.07);
+      border: 0.5px solid rgba(245,197,24,0.25);
+      border-radius: 14px;
+    }
+    .ob-stats-strip p { font-size: 12px; color: var(--text-secondary); line-height: 1.6; flex: 1; }
+    .ob-stat-nums { display: flex; gap: 22px; flex-shrink: 0; padding-left: 16px; border-left: 0.5px solid rgba(245,197,24,0.3); }
+    .ob-stat-num-val { font-size: 16px; font-weight: 700; color: var(--text-primary); font-family: var(--font-display); }
+    .ob-stat-num-lbl { font-size: 9.5px; color: var(--text-muted); margin-top: 1px; }
+
+    /* ── STEP 1: CONNECT STORE ── */
+    .ob-platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .ob-platform {
+      border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 14px 16px;
+      background: var(--surface-solid);
+      cursor: pointer;
+      display: flex; align-items: center; gap: 12px;
+      transition: all 0.2s;
+    }
+    .ob-platform:hover { border-color: var(--border-md); background: var(--surface-hover); }
+    .ob-platform.selected { border-color: var(--accent-yellow); background: rgba(245,197,24,0.05); }
+    [data-theme="dark"] .ob-platform { background: #1c1c1f; border-color: rgba(255,255,255,0.07); }
+    [data-theme="dark"] .ob-platform.selected { background: rgba(245,197,24,0.06); }
+    .ob-platform-logo { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .ob-platform-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .ob-platform-type { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; }
+    .ob-platform-badge { margin-left: auto; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 20px; background: rgba(245,197,24,0.15); color: #92700a; flex-shrink: 0; }
+
+    .ob-info-note {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 11px 14px;
+      background: rgba(245,197,24,0.07);
+      border: 0.5px solid rgba(245,197,24,0.25);
+      border-radius: 9px; margin-top: 12px;
+    }
+    .ob-info-note svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; }
+    .ob-info-note span { font-size: 11px; color: #92700a; font-weight: 500; line-height: 1.5; }
+    [data-theme="dark"] .ob-info-note span { color: #f5c518; }
+
+    /* ── STEP 2: INSTALL SCRIPT ── */
+    .ob-code-wrap {
+      position: relative;
+      background: #0f1117;
+      border-radius: 14px;
+      padding: 20px 20px 16px;
+      border: 0.5px solid rgba(255,255,255,0.06);
+      margin-bottom: 14px;
+    }
+    .ob-code-wrap pre {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: #a8ff78;
+      line-height: 2;
+      margin: 0;
+      overflow-x: auto;
+    }
+    .ob-copy-btn {
+      position: absolute; top: 12px; right: 12px;
+      background: rgba(255,255,255,0.08);
+      border: 0.5px solid rgba(255,255,255,0.12);
+      border-radius: 8px; padding: 5px 12px;
+      font-size: 10.5px; font-weight: 600;
+      color: rgba(255,255,255,0.65);
+      cursor: pointer; font-family: var(--font);
+      transition: all 0.2s;
+    }
+    .ob-copy-btn:hover { background: rgba(255,255,255,0.14); color: white; }
+
+    .ob-key-box {
+      background: var(--surface-hover);
+      border-radius: 10px; padding: 13px 14px;
+      border: 0.5px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 14px;
+    }
+    .ob-key-val { font-family: var(--mono); font-size: 12px; color: var(--text-primary); flex: 1; }
+    .ob-key-copy {
+      font-size: 11px; font-weight: 600; color: var(--text-secondary);
+      cursor: pointer; border: 0.5px solid var(--border-md);
+      border-radius: 8px; padding: 5px 12px;
+      background: var(--surface-solid); transition: all 0.2s;
+      font-family: var(--font);
+    }
+    .ob-key-copy:hover { background: var(--surface-hover); color: var(--text-primary); }
+
+    .ob-checklist { display: flex; flex-direction: column; gap: 8px; }
+    .ob-check-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 14px; border-radius: 10px;
+      border: 0.5px solid var(--border);
+      background: var(--surface-solid);
+      font-size: 12px; font-weight: 500;
+      color: var(--text-secondary);
+    }
+    [data-theme="dark"] .ob-check-item { background: #1c1c1f; border-color: rgba(255,255,255,0.07); }
+    .ob-check-icon {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--surface-hover);
+      border: 1.5px solid var(--border-md);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all 0.3s;
+    }
+    .ob-check-icon.done { background: var(--accent-green); border-color: var(--accent-green); }
+    .ob-check-icon.done svg { stroke: white; }
+    .ob-check-icon svg { width: 11px; height: 11px; stroke: var(--text-muted); stroke-width: 2; fill: none; }
+
+    /* ── STEP 3: VERIFY ── */
+    .ob-verify-split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+    .ob-pulse-ring {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: rgba(61,168,95,0.1);
+      border: 2px solid rgba(61,168,95,0.3);
+      display: flex; align-items: center; justify-content: center;
+      animation: ringPulse 2s infinite; margin: 0 auto 16px;
+    }
+    @keyframes ringPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(61,168,95,0.25); } 50% { box-shadow: 0 0 0 20px rgba(61,168,95,0); } }
+    .ob-pulse-inner {
+      width: 66px; height: 66px; border-radius: 50%;
+      background: var(--accent-green);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ob-pulse-inner svg { width: 28px; height: 28px; stroke: white; stroke-width: 2; fill: none; }
+
+    .ob-verify-items { display: flex; flex-direction: column; gap: 8px; }
+    .ob-verify-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 10px;
+      border: 0.5px solid var(--border);
+      background: var(--surface-solid);
+      font-size: 11.5px; font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.4s;
+    }
+    [data-theme="dark"] .ob-verify-item { background: #1c1c1f; }
+    .ob-verify-item.ok { border-color: rgba(61,168,95,0.25); background: #eef7f1; color: var(--accent-green-dark); }
+    [data-theme="dark"] .ob-verify-item.ok { background: rgba(61,168,95,0.08); color: var(--accent-green); border-color: rgba(61,168,95,0.2); }
+    .ob-verify-item.pending { animation: vPulse 1.5s infinite; }
+    @keyframes vPulse { 0%,100% { opacity:1; } 50% { opacity:0.45; } }
+    .ob-vi-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .ob-vi-dot.green { background: var(--accent-green); }
+    .ob-vi-dot.orange { background: #f5c518; }
+    .ob-vi-dot.gray { background: #c0c0bc; }
+
+    .ob-live-bar {
+      padding: 10px 14px;
+      background: var(--accent-green-bg);
+      border: 0.5px solid rgba(61,168,95,0.25);
+      border-radius: 10px;
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 16px;
+    }
+    .ob-live-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent-green); flex-shrink: 0;
+      animation: lPulse 2s infinite;
+    }
+    @keyframes lPulse { 0%,100%{ opacity:1; box-shadow:0 0 0 0 rgba(61,168,95,0.4); } 50%{ opacity:0.7; box-shadow:0 0 0 5px rgba(61,168,95,0); } }
+
+    /* ── STEP 4: LIVE DEMO ── */
+    .ob-demo-split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .ob-session-mock {
+      background: #0a0a0d;
+      border-radius: 12px; padding: 14px;
+      border: 0.5px solid rgba(255,255,255,0.06);
+    }
+    .ob-session-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 8px; border-radius: 8px; margin-bottom: 6px;
+      font-size: 10.5px;
+    }
+    .ob-session-row.highlight-green {
+      background: rgba(61,168,95,0.1);
+      border: 0.5px solid rgba(61,168,95,0.2);
+    }
+    .ob-session-row.highlight-yellow {
+      background: rgba(245,197,24,0.08);
+      border: 0.5px solid rgba(245,197,24,0.2);
+    }
+
+    .ob-status-item {
+      padding: 11px 14px;
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-solid);
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    [data-theme="dark"] .ob-status-item { background: #1c1c1f; }
+
+    /* ── STEP 5: READY ── */
+    .ob-ready-center { text-align: center; padding: 10px 0; }
+    .ob-ready-badge {
+      width: 90px; height: 90px; border-radius: 50%;
+      background: var(--accent-green);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 22px;
+      box-shadow: 0 0 0 16px rgba(61,168,95,0.1);
+      animation: readyPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes readyPop { from { transform: scale(0.5); opacity:0; } to { transform: none; opacity:1; } }
+    .ob-ready-badge svg { width: 42px; height: 42px; stroke: white; stroke-width: 2.5; fill: none; }
+
+    .ob-ready-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin: 20px 0; }
+    .ob-ready-stat {
+      background: var(--surface-solid);
+      border: 0.5px solid var(--border);
+      border-radius: 14px; padding: 18px;
+      text-align: center;
+      box-shadow: var(--shadow-card);
+    }
+    [data-theme="dark"] .ob-ready-stat { background: #1c1c1f; }
+    .ob-ready-stat-val { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.4px; }
+    .ob-ready-stat-lbl { font-size: 10.5px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+    /* ── BUTTONS ── */
+    .ob-btn-primary {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--accent-yellow); border: none;
+      border-radius: 50px; padding: 10px 24px;
+      font-size: 12.5px; font-weight: 700; color: #1a1400;
+      cursor: pointer; font-family: var(--font-display); letter-spacing: -0.2px;
+      box-shadow: 0 4px 16px rgba(245,197,24,0.35);
+      transition: all 0.2s;
+    }
+    .ob-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,197,24,0.45); }
+    .ob-btn-primary svg { width: 13px; height: 13px; }
+
+    .ob-btn-secondary {
+      display: flex; align-items: center; gap: 5px;
+      background: transparent;
+      border: 0.5px solid var(--border-md);
+      border-radius: 50px; padding: 9px 18px;
+      font-size: 12px; font-weight: 500;
+      color: var(--text-secondary); cursor: pointer;
+      font-family: var(--font); transition: all 0.2s;
+    }
+    .ob-btn-secondary:hover { background: var(--surface-hover); color: var(--text-primary); }
+
+    .ob-btn-enter {
+      display: flex; align-items: center; gap: 6px;
+      background: #111110; border: none;
+      border-radius: 50px; padding: 12px 32px;
+      font-size: 14px; font-weight: 700; color: white;
+      cursor: pointer; font-family: var(--font-display);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      transition: all 0.2s;
+    }
+    [data-theme="dark"] .ob-btn-enter { background: var(--accent-yellow); color: #1a1400; }
+    .ob-btn-enter:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    [data-theme="dark"] .ob-btn-enter:hover { background: #e6b800; }
+    .ob-btn-enter svg { width: 14px; height: 14px; }
+
+    /* ── DOTS ── */
+    .ob-dots { display: flex; gap: 5px; }
+    .ob-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-md); transition: all 0.3s; }
+    .ob-dot.active { background: var(--text-primary); width: 18px; border-radius: 3px; }
+
+    /* BADGE */
+    .ob-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 10.5px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .ob-badge-green { background: var(--accent-green-bg); color: var(--accent-green-dark); }
+    [data-theme="dark"] .ob-badge-green { color: var(--accent-green); }
+
+    /* TOAST */
+    .icon-toast {
+      position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--text-primary); color: var(--surface-solid);
+      font-family: var(--font); font-size: 12px; font-weight: 600;
+      padding: 9px 20px; border-radius: 50px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.22s, transform 0.22s;
+      z-index: 9999; white-space: nowrap;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.2);
+    }
+    .icon-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @keyframes feedIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+    .feed-item-new { animation: feedIn 0.3s ease forwards; }
+
+    /* INPUT */
+    .ob-inp {
+      width: 100%; border: 0.5px solid var(--border-md);
+      border-radius: 10px; padding: 10px 12px;
+      font-family: var(--font); font-size: 12px;
+      color: var(--text-primary); background: var(--surface-hover);
+      outline: none; transition: border-color var(--transition), background var(--transition);
+    }
+    .ob-inp:focus { border-color: var(--accent-yellow); background: var(--surface-solid); }
+
+    .ob-inp-label {
+      font-size: 10.5px; font-weight: 600; color: var(--text-muted);
+      margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px;
+      display: block;
+    }
+
+    @keyframes verifySpinAnim { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      .ob-body { padding: 24px 20px; }
+      .ob-stepbar { padding: 12px 16px; }
+      .ob-grid-3 { grid-template-columns: 1fr; }
+      .ob-platform-grid { grid-template-columns: 1fr; }
+      .ob-verify-split { grid-template-columns: 1fr; }
+      .ob-demo-split { grid-template-columns: 1fr; }
+      .ob-ready-stats { grid-template-columns: 1fr 1fr; }
+      .ob-step-label { display: none; }
+      .ob-footer { padding: 14px 16px; }
+      body { padding: 0; align-items: flex-start; }
+      .onboard-panel { border-radius: 0; min-height: 100vh; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     GATE OVERLAY — shown when script not installed
+═══════════════════════════════════════════════ -->
+<div id="gate-overlay">
+  <div class="gate-box">
+    <div class="gate-icon">
+      <svg viewBox="0 0 28 28" fill="none" stroke-width="1.8" stroke-linecap="round">
+        <rect x="5" y="11" width="18" height="13" rx="2.5"/>
+        <path d="M9 11V8a5 5 0 0110 0v3"/>
+        <line x1="14" y1="16.5" x2="14" y2="19.5"/>
+        <circle cx="14" cy="15.5" r="1" fill="currentColor"/>
+      </svg>
+    </div>
+    <div class="gate-title">Script Not Verified</div>
+    <div class="gate-sub">The OpsPulse tracking script must be installed and verified on your store before you can access the dashboard.</div>
+    <div class="gate-steps">
+      <div class="gate-step"><div class="gate-step-num">1</div>Complete the setup wizard below</div>
+      <div class="gate-step"><div class="gate-step-num">2</div>Install the script tag in your store</div>
+      <div class="gate-step"><div class="gate-step-num">3</div>Verify the connection is working</div>
+      <div class="gate-step"><div class="gate-step-num">4</div>Access your dashboard automatically</div>
+    </div>
+    <button class="gate-btn" onclick="dismissGate()">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="2,7 6,11 12,3"/></svg>
+      Start Setup Wizard
+    </button>
+    <span class="gate-dismiss" onclick="dismissGate()">I already installed it — verify my connection</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MAIN ONBOARDING PANEL
+═══════════════════════════════════════════════ -->
+<div class="onboard-panel">
+
+  <!-- STEP BAR -->
+  <div class="ob-stepbar">
+    <div class="ob-logo">
+      <div class="ob-logo-icon">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="6" stroke="#1a1a1a" stroke-width="1.5"/>
+          <line x1="8" y1="2" x2="8" y2="14" stroke="#1a1a1a" stroke-width="1.2"/>
+          <line x1="2" y1="8" x2="14" y2="8" stroke="#1a1a1a" stroke-width="1.2"/>
+        </svg>
+      </div>
+      OpsPulse
+    </div>
+    <div class="ob-steps" id="ob-steps">
+      <!-- Step nodes generated by JS -->
+    </div>
+    <button class="ob-theme-btn" onclick="toggleTheme()" title="Toggle dark mode">
+      <svg id="icon-sun" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="7" cy="7" r="2.5"/><line x1="7" y1="1" x2="7" y2="2.5"/><line x1="7" y1="11.5" x2="7" y2="13"/><line x1="1" y1="7" x2="2.5" y2="7"/><line x1="11.5" y1="7" x2="13" y2="7"/><line x1="2.9" y1="2.9" x2="4" y2="4"/><line x1="10" y1="10" x2="11.1" y2="11.1"/><line x1="11.1" y1="2.9" x2="10" y2="4"/><line x1="4" y1="10" x2="2.9" y2="11.1"/></svg>
+      <svg id="icon-moon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" style="display:none"><path d="M11.5 8.5A5 5 0 015.5 2.5a5 5 0 100 9 5 5 0 006-3z"/></svg>
+    </button>
+  </div>
+
+  <!-- BODY -->
+  <div class="ob-body">
+
+    <!-- ── STEP 0: Welcome ── -->
+    <div class="ob-step-content active" id="ob-content-0">
+      <div class="ob-title">Welcome to OpsPulse</div>
+      <div class="ob-sub">The AI control room that monitors behavior, detects hesitation, and recovers revenue — automatically. Setup takes under 2 minutes.</div>
+      <div class="ob-grid-3">
+        <div class="ob-card">
+          <div class="ob-card-icon" style="background:#e8f5e9;">
+            <svg viewBox="0 0 18 18" fill="none" stroke="#2e7d32" stroke-width="1.5"><path d="M9 2C6 2 3.5 4.2 3.5 7c0 1.8.9 3.4 2.3 4.3L5.5 15h7l-.3-3.7C13.6 10.4 14.5 8.8 14.5 7 14.5 4.2 12 2 9 2z"/><line x1="6.5" y1="16.5" x2="11.5" y2="16.5"/></svg>
+          </div>
+          <div class="ob-card-title">AI Hesitation Engine</div>
+          <div class="ob-card-desc">Detects purchase hesitation signals in real-time and triggers smart discount offers automatically.</div>
+        </div>
+        <div class="ob-card">
+          <div class="ob-card-icon" style="background:#e3f2fd;">
+            <svg viewBox="0 0 18 18" fill="none" stroke="#1565c0" stroke-width="1.5"><polyline points="2,13 6,8 10,10 16,4"/></svg>
+          </div>
+          <div class="ob-card-title">A/B Testing Engine</div>
+          <div class="ob-card-desc">Run experiments on popups, discounts, and timing. AI picks the winner and deploys automatically.</div>
+        </div>
+        <div class="ob-card">
+          <div class="ob-card-icon" style="background:#fff8e1;">
+            <svg viewBox="0 0 18 18" fill="none" stroke="#92700a" stroke-width="1.5"><circle cx="9" cy="9" r="6.5"/><line x1="9" y1="5" x2="9" y2="9.5"/><line x1="9" y1="9.5" x2="12" y2="11.5"/></svg>
+          </div>
+          <div class="ob-card-title">Revenue Share 20%</div>
+          <div class="ob-card-desc">Guaranteed, automated 20% revenue share calculated and transferred to you transparently.</div>
+        </div>
+      </div>
+      <div class="ob-stats-strip">
+        <p>Takes only <strong style="color:var(--text-primary);">2 minutes</strong> to set up. Add a single script to your store and start seeing live results immediately.</p>
+        <div class="ob-stat-nums">
+          <div style="text-align:center;"><div class="ob-stat-num-val">98%</div><div class="ob-stat-num-lbl">Accuracy</div></div>
+          <div style="text-align:center;"><div class="ob-stat-num-val">2.4x</div><div class="ob-stat-num-lbl">Revenue Boost</div></div>
+          <div style="text-align:center;"><div class="ob-stat-num-val">24/7</div><div class="ob-stat-num-lbl">AI Active</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STEP 1: Connect Store ── -->
+    <div class="ob-step-content" id="ob-content-1">
+      <div class="ob-title">Connect Your Store</div>
+      <div class="ob-sub">Choose your e-commerce platform. OpsPulse will sync products, track carts, and apply smart offers in real-time.</div>
+      <div class="ob-platform-grid">
+        <div class="ob-platform selected" onclick="selectPlatform(this,'Shopify','https://your-store.myshopify.com')">
+          <div class="ob-platform-logo" style="background:#96bf48;">🛍️</div>
+          <div><div class="ob-platform-name">Shopify</div><div class="ob-platform-type">E-commerce Platform</div></div>
+          <span class="ob-platform-badge">POPULAR</span>
+        </div>
+        <div class="ob-platform" onclick="selectPlatform(this,'WooCommerce','https://your-store.com')">
+          <div class="ob-platform-logo" style="background:#9b5c8f;color:white;font-weight:800;font-size:15px;">W</div>
+          <div><div class="ob-platform-name">WooCommerce</div><div class="ob-platform-type">WordPress Plugin</div></div>
+        </div>
+        <div class="ob-platform" onclick="selectPlatform(this,'Magento','https://your-store.com')">
+          <div class="ob-platform-logo" style="background:#f26522;">🔶</div>
+          <div><div class="ob-platform-name">Magento</div><div class="ob-platform-type">Enterprise Commerce</div></div>
+        </div>
+        <div class="ob-platform" onclick="selectPlatform(this,'BigCommerce','https://your-store.com')">
+          <div class="ob-platform-logo" style="background:#34a853;color:white;font-weight:800;font-size:14px;">B</div>
+          <div><div class="ob-platform-name">BigCommerce</div><div class="ob-platform-type">SaaS Commerce</div></div>
+        </div>
+        <div class="ob-platform" onclick="selectPlatform(this,'Custom Platform','https://your-store.com')">
+          <div class="ob-platform-logo" style="background:#e0e0e0;">⚙️</div>
+          <div><div class="ob-platform-name">Custom Platform</div><div class="ob-platform-type">REST API Integration</div></div>
+        </div>
+        <div class="ob-platform" onclick="selectPlatform(this,'Other','https://your-store.com')">
+          <div class="ob-platform-logo" style="background:#f0f0ee;">🔌</div>
+          <div><div class="ob-platform-name">Other Platform</div><div class="ob-platform-type">See all integrations</div></div>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="ob-inp-label">Store URL</label>
+        <input id="ob-store-url" type="text" class="ob-inp" placeholder="https://your-store.myshopify.com">
+      </div>
+      <div class="ob-info-note">
+        <svg viewBox="0 0 14 14" fill="none" stroke="#92700a" stroke-width="1.3"><rect x="2" y="5" width="10" height="7" rx="1.5"/><path d="M4.5 5V4a2.5 2.5 0 015 0v1"/></svg>
+        <span>Your data stays 100% private. We use 256-bit encryption and never share your store data.</span>
+      </div>
+    </div>
+
+    <!-- ── STEP 2: Install Script ── -->
+    <div class="ob-step-content" id="ob-content-2">
+      <div class="ob-title">Install OpsPulse Script</div>
+      <div class="ob-sub">Copy and paste this script into the <code style="background:var(--surface-hover);padding:2px 6px;border-radius:5px;font-size:11px;font-family:var(--mono);">&lt;head&gt;</code> section of your store. One script, full intelligence.</div>
+      <div class="ob-code-wrap">
+        <button class="ob-copy-btn" onclick="obCopyScript()">Copy Code</button>
+        <pre id="ob-script-code">&lt;script
+  src=<span style="color:#f1fa8c">"https://cdn.opspulse.io/v2/engine.js"</span>
+  data-key=<span style="color:#f1fa8c">"ops_live_sk_orbix_1a2b3c4d5e6f"</span>
+  data-store=<span style="color:#f1fa8c">"orbix-store"</span>
+  async
+&gt;&lt;/script&gt;</pre>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div class="ob-inp-label">Your Unique API Key</div>
+        <div class="ob-key-box">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--text-muted)" stroke-width="1.3"><path d="M9 1.5C7 1.5 5.5 3 5.5 5c0 .4.1.9.2 1.3L2 10v2h2v-1.5h1.5V9H7l1.2-1.2c.4.1.8.2 1.3.2 2 0 3.5-1.5 3.5-3.5S11 1.5 9 1.5z"/><circle cx="10.5" cy="3.5" r="0.7" fill="var(--text-muted)"/></svg>
+          <span class="ob-key-val">ops_live_sk_orbix_1a2b3c4d5e6f</span>
+          <button class="ob-key-copy" onclick="showToast('API key copied!')">Copy</button>
+        </div>
+      </div>
+      <div class="ob-checklist">
+        <div class="ob-check-item">
+          <div class="ob-check-icon"><svg viewBox="0 0 12 12" fill="none"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5"/></svg></div>
+          <span>Paste the script tag into the <code style="background:var(--surface-hover);padding:1px 5px;border-radius:4px;font-size:10.5px;font-family:var(--mono);">&lt;head&gt;</code> section of your store theme</span>
+        </div>
+
+      </div>
+      <div class="ob-info-note" style="margin-top:14px;">
+        <svg viewBox="0 0 14 14" fill="none" stroke="#92700a" stroke-width="1.3"><path d="M7 2L1 12h12L7 2z"/><line x1="7" y1="6" x2="7" y2="9"/></svg>
+        <span><strong>Important:</strong> This key is unique to your store. Do not share it publicly — it grants full access to your store data pipeline.</span>
+      </div>
+    </div>
+
+    <!-- ── STEP 3: Verify ── -->
+    <div class="ob-step-content" id="ob-content-3">
+      <div class="ob-title">Verify Connection</div>
+      <div class="ob-sub">Enter your API key below to confirm the script is installed correctly on your store.</div>
+
+      <!-- STATE: IDLE (waiting for key input) -->
+      <div id="verify-idle-state">
+        <div class="ob-verify-split">
+          <div>
+            <!-- Key Input -->
+            <div style="margin-bottom:14px;">
+              <label class="ob-inp-label">Enter Your API Key to Verify</label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input id="verify-key-input" type="text" class="ob-inp" placeholder="ops_live_sk_…" style="font-family:var(--mono);font-size:12px;letter-spacing:0.3px;">
+                <button onclick="startVerification()" style="
+                  flex-shrink:0;white-space:nowrap;
+                  background:var(--accent-yellow);border:none;border-radius:10px;
+                  padding:10px 18px;font-family:var(--font-display);font-size:12px;
+                  font-weight:700;color:#1a1400;cursor:pointer;
+                  box-shadow:0 4px 12px rgba(245,197,24,0.3);transition:all 0.2s;
+                " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+                  Verify →
+                </button>
+              </div>
+              <div id="verify-key-error" style="display:none;margin-top:8px;font-size:11px;color:var(--accent-red);font-weight:500;display:flex;align-items:center;gap:5px;">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--accent-red)" stroke-width="1.5"><circle cx="6" cy="6" r="5"/><line x1="6" y1="4" x2="6" y2="6.5"/><circle cx="6" cy="8.5" r="0.6" fill="var(--accent-red)"/></svg>
+                <span id="verify-key-error-text">Invalid API key. Please copy the exact key from Step 2.</span>
+              </div>
+            </div>
+            <div class="ob-info-note">
+              <svg viewBox="0 0 14 14" fill="none" stroke="#92700a" stroke-width="1.3"><circle cx="7" cy="7" r="5.5"/><line x1="7" y1="4.5" x2="7" y2="7.5"/><circle cx="7" cy="9.5" r="0.6" fill="#92700a"/></svg>
+              <span>Your key is: <strong style="font-family:var(--mono);font-size:10px;color:#92700a;">ops_live_sk_orbix_1a2b3c4d5e6f</strong><br>Make sure the script is saved and published in your store first.</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;">Verification Checks</div>
+            <div class="ob-verify-items">
+              <div class="ob-verify-item" id="vcheck-1">
+                <div class="ob-vi-dot gray"></div>
+                <span style="flex:1;">API Key Format</span>
+                <span style="font-size:10.5px;color:var(--text-muted);">Waiting…</span>
+              </div>
+              <div class="ob-verify-item" id="vcheck-2">
+                <div class="ob-vi-dot gray"></div>
+                <span style="flex:1;">Script Installed</span>
+                <span style="font-size:10.5px;color:var(--text-muted);">Waiting…</span>
+              </div>
+              <div class="ob-verify-item" id="vcheck-3">
+                <div class="ob-vi-dot gray"></div>
+                <span style="flex:1;">Data Encryption</span>
+                <span style="font-size:10.5px;color:var(--text-muted);">Waiting…</span>
+              </div>
+              <div class="ob-verify-item" id="vcheck-4">
+                <div class="ob-vi-dot gray"></div>
+                <span style="flex:1;">AI Engine</span>
+                <span style="font-size:10.5px;color:var(--text-muted);">Waiting…</span>
+              </div>
+              <div class="ob-verify-item" id="vcheck-5">
+                <div class="ob-vi-dot gray"></div>
+                <span style="flex:1;">Hesitation Model</span>
+                <span style="font-size:10.5px;color:var(--text-muted);">Waiting…</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATE: CHECKING (loading animation) -->
+      <div id="verify-checking-state" style="display:none;">
+        <div class="ob-verify-split">
+          <div style="text-align:center;padding:20px 0;">
+            <div style="width:80px;height:80px;border-radius:50%;border:3px solid var(--border-md);border-top-color:var(--accent-yellow);animation:verifySpinAnim 0.9s linear infinite;margin:0 auto 18px;"></div>
+            <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:5px;">Verifying Connection…</div>
+            <div id="verify-status-text" style="font-size:11.5px;color:var(--text-muted);">Checking API key format…</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;">Verification Checks</div>
+            <div class="ob-verify-items">
+              <div class="ob-verify-item" id="vcheck-run-1">
+                <div class="ob-vi-dot gray" id="vdot-run-1"></div>
+                <span style="flex:1;">API Key Format</span>
+                <span style="font-size:10.5px;color:var(--text-muted);" id="vstatus-run-1">Checking…</span>
+              </div>
+              <div class="ob-verify-item" id="vcheck-run-2">
+                <div class="ob-vi-dot gray" id="vdot-run-2"></div>
+                <span style="flex:1;">Script Installed</span>
+                <span style="font-size:10.5px;color:var(--text-muted);" id="vstatus-run-2">Waiting…</span>
+              </div>
+              <div class="ob-verify-item" id="vcheck-run-3">
+                <div class="ob-vi-dot gray" id="vdot-run-3"></div>
+                <span style="flex:1;">Data Encryption</span>
+                <span style="font-size:10.5px;color:var(--text-muted);" id="vstatus-run-3">Waiting…</span>
+              </div>
+              <div class="ob-verify-item" id="vcheck-run-4">
+                <div class="ob-vi-dot gray" id="vdot-run-4"></div>
+                <span style="flex:1;">AI Engine</span>
+                <span style="font-size:10.5px;color:var(--text-muted);" id="vstatus-run-4">Waiting…</span>
+              </div>
+              <div class="ob-verify-item" id="vcheck-run-5">
+                <div class="ob-vi-dot gray" id="vdot-run-5"></div>
+                <span style="flex:1;">Hesitation Model</span>
+                <span style="font-size:10.5px;color:var(--text-muted);" id="vstatus-run-5">Waiting…</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATE: SUCCESS -->
+      <div id="verify-success-state" style="display:none;">
+        <div class="ob-verify-split">
+          <div>
+            <div style="text-align:center;margin-bottom:14px;">
+              <div class="ob-pulse-ring">
+                <div class="ob-pulse-inner">
+                  <svg viewBox="0 0 28 28"><polyline points="4,14 11,21 24,8"/></svg>
+                </div>
+              </div>
+              <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:3px;">Connection Verified!</div>
+              <div style="font-size:11.5px;color:var(--text-muted);">All systems active and receiving live data</div>
+            </div>
+            <div class="ob-live-bar">
+              <div class="ob-live-dot"></div>
+              <span style="font-size:11.5px;font-weight:600;color:var(--accent-green-dark);">Live data flowing — <span id="event-counter">24</span> events received in last 60s</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;">Verification Checks</div>
+            <div class="ob-verify-items">
+              <div class="ob-verify-item ok">
+                <div class="ob-vi-dot green"></div>
+                <span style="flex:1;">API Key Format</span>
+                <span style="font-size:10.5px;font-weight:700;color:var(--accent-green);">✓ Valid</span>
+              </div>
+              <div class="ob-verify-item ok">
+                <div class="ob-vi-dot green"></div>
+                <span style="flex:1;">Script Installed</span>
+                <span style="font-size:10.5px;font-weight:700;color:var(--accent-green);">✓ Active</span>
+              </div>
+              <div class="ob-verify-item ok">
+                <div class="ob-vi-dot green"></div>
+                <span style="flex:1;">Data Encryption</span>
+                <span style="font-size:10.5px;font-weight:700;color:var(--accent-green);">✓ 256-bit</span>
+              </div>
+              <div class="ob-verify-item ok">
+                <div class="ob-vi-dot green"></div>
+                <span style="flex:1;">AI Engine</span>
+                <span style="font-size:10.5px;font-weight:700;color:var(--accent-green);">✓ Online</span>
+              </div>
+              <div class="ob-verify-item ok">
+                <div class="ob-vi-dot green"></div>
+                <span style="flex:1;">Hesitation Model</span>
+                <span style="font-size:10.5px;font-weight:700;color:var(--accent-green);">✓ Calibrated</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATE: FAILED -->
+      <div id="verify-failed-state" style="display:none;">
+        <div class="ob-verify-split">
+          <div style="text-align:center;padding:16px 0;">
+            <div style="width:80px;height:80px;border-radius:50%;background:var(--accent-red-bg);border:2px solid var(--accent-red);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="var(--accent-red)" stroke-width="2.2"><line x1="9" y1="9" x2="23" y2="23"/><line x1="23" y1="9" x2="9" y2="23"/></svg>
+            </div>
+            <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:5px;">Verification Failed</div>
+            <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px;" id="verify-fail-reason">Invalid API key. Please check and try again.</div>
+            <button onclick="resetVerification()" style="
+              background:var(--surface-hover);border:0.5px solid var(--border-md);
+              border-radius:50px;padding:9px 20px;font-family:var(--font);
+              font-size:12px;font-weight:600;color:var(--text-primary);cursor:pointer;transition:all 0.2s;
+            " onmouseover="this.style.background='var(--surface-solid)'" onmouseout="this.style.background='var(--surface-hover)'">
+              ← Try Again
+            </button>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;">What to check</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="padding:10px 13px;border-radius:10px;border:0.5px solid var(--border);background:var(--surface-solid);font-size:11.5px;color:var(--text-secondary);display:flex;gap:9px;align-items:flex-start;">
+                <span style="color:var(--accent-yellow);font-weight:700;flex-shrink:0;">1</span>
+                The API key must match exactly: <code style="font-family:var(--mono);font-size:10px;background:var(--surface-hover);padding:1px 5px;border-radius:4px;">ops_live_sk_orbix_1a2b3c4d5e6f</code>
+              </div>
+              <div style="padding:10px 13px;border-radius:10px;border:0.5px solid var(--border);background:var(--surface-solid);font-size:11.5px;color:var(--text-secondary);display:flex;gap:9px;align-items:flex-start;">
+                <span style="color:var(--accent-yellow);font-weight:700;flex-shrink:0;">2</span>
+                Make sure the script tag is saved and published in your store's <code style="font-family:var(--mono);font-size:10px;background:var(--surface-hover);padding:1px 5px;border-radius:4px;">&lt;head&gt;</code>
+              </div>
+              <div style="padding:10px 13px;border-radius:10px;border:0.5px solid var(--border);background:var(--surface-solid);font-size:11.5px;color:var(--text-secondary);display:flex;gap:9px;align-items:flex-start;">
+                <span style="color:var(--accent-yellow);font-weight:700;flex-shrink:0;">3</span>
+                Go back to Step 2 and use the copy button to avoid typos
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STEP 4: Live Demo ── -->
+    <div class="ob-step-content" id="ob-content-4">
+      <div class="ob-title">See OpsPulse in Action</div>
+      <div class="ob-sub">Watch how OpsPulse analyzes visitor behavior and makes real-time revenue decisions — all automatically.</div>
+      <div class="ob-demo-split">
+        <div>
+          <div style="font-size:11.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Live Decision Feed</div>
+          <div class="ob-session-mock" id="ob-demo-feed">
+            <div class="ob-session-row highlight-green">
+              <span style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.4);flex-shrink:0;">10:24:35</span>
+              <span style="flex:1;font-size:10.5px;color:rgba(255,255,255,0.75);">Visitor from New York, USA</span>
+              <span style="font-size:9px;font-weight:700;background:rgba(61,168,95,0.2);color:#4ade80;padding:2px 7px;border-radius:20px;">High Intent</span>
+            </div>
+            <div class="ob-session-row" style="background:rgba(255,255,255,0.03);">
+              <span style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);flex-shrink:0;">10:24:36</span>
+              <span style="flex:1;font-size:10.5px;color:rgba(255,255,255,0.45);">Analyzing behavior... 3 products viewed</span>
+            </div>
+            <div class="ob-session-row highlight-yellow">
+              <span style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.4);flex-shrink:0;">10:24:37</span>
+              <span style="flex:1;font-size:10.5px;color:rgba(255,255,255,0.9);font-weight:600;">AI Decision: Show 10% discount popup</span>
+              <span style="font-size:9px;font-weight:700;background:rgba(245,197,24,0.2);color:#f5c518;padding:2px 7px;border-radius:20px;">TRIGGERED</span>
+            </div>
+            <div class="ob-session-row" style="background:rgba(255,255,255,0.03);">
+              <span style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.3);flex-shrink:0;">10:24:38</span>
+              <span style="flex:1;font-size:10.5px;color:rgba(255,255,255,0.45);">Expected Revenue Impact: +$18.42</span>
+              <span style="font-size:9px;font-weight:700;color:#4ade80;">High Conf.</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">AI Engine Status</div>
+          <div class="ob-status-item">
+            <span style="font-size:12px;color:var(--text-secondary);">Engine Status</span>
+            <span style="font-size:12px;font-weight:700;color:var(--accent-green);display:flex;align-items:center;gap:5px;">
+              <span style="width:6px;height:6px;background:var(--accent-green);border-radius:50%;animation:lPulse 2s infinite;display:inline-block;"></span>ACTIVE
+            </span>
+          </div>
+          <div class="ob-status-item">
+            <span style="font-size:12px;color:var(--text-secondary);">AI Mode</span>
+            <span style="font-size:12px;font-weight:700;color:var(--accent-blue);">Full Intelligence</span>
+          </div>
+          <div class="ob-status-item">
+            <span style="font-size:12px;color:var(--text-secondary);">Optimization</span>
+            <span style="font-size:12px;font-weight:700;color:var(--text-primary);">24/7 Active</span>
+          </div>
+          <div style="padding:11px 14px;border:0.5px solid rgba(61,168,95,0.3);border-radius:10px;background:var(--accent-green-bg);display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:12px;color:var(--accent-green-dark);">Expected Revenue Boost</span>
+            <span style="font-size:18px;font-weight:700;color:var(--accent-green);font-family:var(--font-display);">+2.4x</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STEP 5: Ready ── -->
+    <div class="ob-step-content" id="ob-content-5">
+      <div class="ob-ready-center">
+        <div class="ob-ready-badge">
+          <svg viewBox="0 0 42 42"><polyline points="7,21 17,31 35,12"/></svg>
+        </div>
+        <div class="ob-title" style="font-size:28px;margin-bottom:8px;">You're All Set! 🎉</div>
+        <div class="ob-sub" style="font-size:13.5px;">OpsPulse is now active and monitoring your store. The AI engine is learning and will start optimizing revenue immediately.</div>
+        <div class="ob-ready-stats">
+          <div class="ob-ready-stat">
+            <div class="ob-ready-stat-val" style="color:var(--accent-green);">Active</div>
+            <div class="ob-ready-stat-lbl">Engine Status</div>
+          </div>
+          <div class="ob-ready-stat">
+            <div class="ob-ready-stat-val">ASSIST</div>
+            <div class="ob-ready-stat-lbl">AI Mode</div>
+          </div>
+          <div class="ob-ready-stat">
+            <div class="ob-ready-stat-val" style="color:var(--accent-blue);">+2.4x</div>
+            <div class="ob-ready-stat-lbl">Revenue Boost</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:14px 18px;background:rgba(245,197,24,0.07);border:0.5px solid rgba(245,197,24,0.25);border-radius:12px;text-align:left;max-width:480px;margin:0 auto;">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#92700a" stroke-width="1.5" style="flex-shrink:0;margin-top:1px;"><circle cx="9" cy="9" r="7.5"/><line x1="9" y1="6" x2="9" y2="10"/><circle cx="9" cy="12.5" r="0.7" fill="#92700a"/></svg>
+          <span style="font-size:11.5px;color:#92700a;font-weight:500;line-height:1.6;">Your first decisions will appear in the dashboard within minutes. The AI will suggest offers for hesitating visitors — you approve them in ASSIST mode.</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /ob-body -->
+
+  <!-- FOOTER -->
+  <div class="ob-footer">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-size:11px;color:var(--text-muted);">Step <span id="ob-step-num">1</span> of 6</span>
+      <div class="ob-dots" id="ob-dots"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="ob-btn-secondary" id="ob-back-btn" onclick="obBack()" style="display:none;">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><line x1="12" y1="7" x2="2" y2="7"/><polyline points="6,3 2,7 6,11"/></svg>
+        Back
+      </button>
+      <button class="ob-btn-primary" id="ob-next-btn" onclick="obNext()">
+        Get Started
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="7" x2="12" y2="7"/><polyline points="8,3 12,7 8,11"/></svg>
+      </button>
+      <button class="ob-btn-enter" id="ob-enter-btn" onclick="enterDashboard()" style="display:none;">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="1" width="5.5" height="5.5" rx="1"/><rect x="7.5" y="1" width="5.5" height="5.5" rx="1"/><rect x="1" y="7.5" width="5.5" height="5.5" rx="1"/><rect x="7.5" y="7.5" width="5.5" height="5.5" rx="1"/></svg>
+        Go to Dashboard
+      </button>
+    </div>
+  </div>
+
+</div><!-- /onboard-panel -->
+
+<!-- TOAST -->
+<div class="icon-toast" id="icon-toast"></div>
+
+<script>
+(function(){
+  var TOTAL_STEPS = 6;
+  var currentStep = 0;
+  var scriptVerified = false;
+  var stepLabels = ['Get Started','Connect Store','Install Script','Verify Connection','See Live Demo','You\'re Ready!'];
+  var nextBtnLabels = ['Connect Store →','Install Script →','Verify Connection →','See Live Demo →','Almost Ready →',''];
+
+  /* ── BUILD STEP BAR ── */
+  function buildStepBar() {
+    var container = document.getElementById('ob-steps');
+    var html = '';
+    for (var i = 0; i < TOTAL_STEPS; i++) {
+      html += '<div class="ob-step">';
+      html += '<div class="ob-step-node">';
+      html += '<div class="ob-step-circle" id="sc-'+i+'">'+(i+1)+'</div>';
+      html += '<span class="ob-step-label" id="sl-'+i+'">'+stepLabels[i]+'</span>';
+      html += '</div>';
+      if (i < TOTAL_STEPS - 1) html += '<div class="ob-step-line" id="sline-'+i+'"></div>';
+      html += '</div>';
+    }
+    container.innerHTML = html;
+  }
+
+  /* ── BUILD DOTS ── */
+  function buildDots() {
+    var container = document.getElementById('ob-dots');
+    var html = '';
+    for (var i = 0; i < TOTAL_STEPS; i++) {
+      html += '<div class="ob-dot" id="dot-'+i+'"></div>';
+    }
+    container.innerHTML = html;
+  }
+
+  /* ── UPDATE UI ── */
+  function updateUI() {
+    for (var i = 0; i < TOTAL_STEPS; i++) {
+      var content = document.getElementById('ob-content-'+i);
+      if (content) content.classList.toggle('active', i === currentStep);
+      var sc = document.getElementById('sc-'+i);
+      var sl = document.getElementById('sl-'+i);
+      if (sc) {
+        if (i < currentStep) { sc.className = 'ob-step-circle done'; sc.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2"><polyline points="2,6 5,9 10,3"/></svg>'; }
+        else { sc.className = 'ob-step-circle' + (i === currentStep ? ' active' : ''); sc.textContent = i+1; }
+      }
+      if (sl) sl.className = 'ob-step-label' + (i === currentStep ? ' active' : i < currentStep ? ' done' : '');
+      var line = document.getElementById('sline-'+i);
+      if (line) line.className = 'ob-step-line' + (i < currentStep ? ' done' : '');
+      var dot = document.getElementById('dot-'+i);
+      if (dot) dot.className = 'ob-dot' + (i === currentStep ? ' active' : '');
+    }
+    document.getElementById('ob-step-num').textContent = currentStep + 1;
+    var backBtn = document.getElementById('ob-back-btn');
+    var nextBtn = document.getElementById('ob-next-btn');
+    var enterBtn = document.getElementById('ob-enter-btn');
+    backBtn.style.display = currentStep > 0 ? 'flex' : 'none';
+    if (currentStep === TOTAL_STEPS - 1) {
+      nextBtn.style.display = 'none';
+      enterBtn.style.display = 'flex';
+    } else {
+      nextBtn.style.display = 'flex';
+      enterBtn.style.display = 'none';
+      // Update next btn text
+      var textNode = nextBtn.childNodes[0];
+      if (textNode) textNode.textContent = nextBtnLabels[currentStep] || 'Next →';
+    }
+  }
+
+  /* ── NAVIGATION ── */
+  window.obNext = function() {
+    if (currentStep === 1) {
+      var url = document.getElementById('ob-store-url');
+      if (url && !url.value.trim()) {
+        url.style.borderColor = '#e04545';
+        url.focus();
+        url.placeholder = 'Please enter your store URL to continue';
+        setTimeout(function(){ url.style.borderColor = ''; url.placeholder = ''; }, 2500);
+        return;
+      }
+    }
+    if (currentStep === 3 && !verificationPassed) {
+      showToast('⚠ Please verify your API key first');
+      var inp = document.getElementById('verify-key-input');
+      if (inp) {
+        inp.style.borderColor = 'var(--accent-red)';
+        inp.focus();
+        setTimeout(function(){ inp.style.borderColor = ''; }, 2000);
+      }
+      return;
+    }
+    if (currentStep < TOTAL_STEPS - 1) {
+      currentStep++;
+      updateUI();
+    }
+    if (currentStep === 3) { showVerifyState('idle'); }
+    if (currentStep === 4) startDemoFeed();
+    if (currentStep === 5) scriptVerified = true;
+  };
+
+  window.obBack = function() {
+    if (currentStep > 0) { currentStep--; updateUI(); }
+  };
+
+  window.enterDashboard = function() {
+    if (!scriptVerified) {
+      showToast('Please complete all setup steps first');
+      return;
+    }
+    // REPLACE THIS with your actual dashboard navigation:
+    // window.location.href = '/dashboard';
+    // OR inject your dashboard HTML above this and show it
+    showToast('Redirecting to Dashboard...');
+    setTimeout(function(){
+      // Example: document.getElementById('dashboard-container').style.display = 'block';
+      // document.querySelector('.onboard-panel').style.display = 'none';
+      alert('Dashboard access granted!\n\nIntegrate this file above your dashboard code.\nThe enterDashboard() function is where you redirect.');
+    }, 800);
+  };
+
+  /* ── GATE OVERLAY ── */
+  window.dismissGate = function() {
+    var gate = document.getElementById('gate-overlay');
+    gate.style.transition = 'opacity 0.4s';
+    gate.style.opacity = '0';
+    setTimeout(function(){ gate.style.display = 'none'; }, 400);
+  };
+
+  /* ── PLATFORM SELECT ── */
+  window.selectPlatform = function(el, name, placeholder) {
+    document.querySelectorAll('.ob-platform').forEach(function(p){ p.classList.remove('selected'); });
+    el.classList.add('selected');
+    var urlInput = document.getElementById('ob-store-url');
+    if (urlInput) urlInput.placeholder = placeholder || 'https://your-store.com';
+  };
+
+  /* ── COPY SCRIPT ── */
+  window.obCopyScript = function() {
+    var text = '<script\n  src="https://cdn.opspulse.io/v2/engine.js"\n  data-key="ops_live_sk_orbix_1a2b3c4d5e6f"\n  data-store="orbix-store"\n  async\n><\/script>';
+    if (navigator.clipboard) navigator.clipboard.writeText(text);
+    var btn = document.querySelector('.ob-copy-btn');
+    if (btn) { btn.textContent = '✓ Copied!'; setTimeout(function(){ btn.textContent = 'Copy Code'; }, 2000); }
+    showToast('Script copied to clipboard!');
+  };
+
+  /* ── VERIFICATION SYSTEM ── */
+  var verificationPassed = false;
+  var CORRECT_KEY = 'ops_live_sk_orbix_1a2b3c4d5e6f';
+
+  function showVerifyState(state) {
+    document.getElementById('verify-idle-state').style.display     = state === 'idle'     ? '' : 'none';
+    document.getElementById('verify-checking-state').style.display = state === 'checking' ? '' : 'none';
+    document.getElementById('verify-success-state').style.display  = state === 'success'  ? '' : 'none';
+    document.getElementById('verify-failed-state').style.display   = state === 'failed'   ? '' : 'none';
+  }
+
+  window.resetVerification = function() {
+    verificationPassed = false;
+    showVerifyState('idle');
+    // Reset idle dots
+    for (var i = 1; i <= 5; i++) {
+      var item = document.getElementById('vcheck-'+i);
+      if (item) { item.querySelector('.ob-vi-dot').className = 'ob-vi-dot gray'; item.querySelector('span:last-child').textContent = 'Waiting…'; item.querySelector('span:last-child').style.color = ''; }
+    }
+    document.getElementById('verify-key-input').value = '';
+    document.getElementById('verify-key-error').style.display = 'none';
+  };
+
+  window.startVerification = function() {
+    var key = document.getElementById('verify-key-input').value.trim();
+    var errEl = document.getElementById('verify-key-error');
+    errEl.style.display = 'none';
+
+    if (!key) {
+      errEl.style.display = 'flex';
+      document.getElementById('verify-key-error-text').textContent = 'Please enter your API key to verify.';
+      document.getElementById('verify-key-input').style.borderColor = 'var(--accent-red)';
+      setTimeout(function(){ document.getElementById('verify-key-input').style.borderColor = ''; }, 2000);
+      return;
+    }
+
+    showVerifyState('checking');
+
+    var checks = [
+      { id: 1, label: 'Checking API key format…',   delay: 700,  ok: key.startsWith('ops_live_sk_') },
+      { id: 2, label: 'Locating script install…',   delay: 1500, ok: key === CORRECT_KEY },
+      { id: 3, label: 'Verifying encryption layer…',delay: 2300, ok: key === CORRECT_KEY },
+      { id: 4, label: 'Connecting AI engine…',       delay: 3100, ok: key === CORRECT_KEY },
+      { id: 5, label: 'Calibrating hesitation model…',delay: 3900,ok: key === CORRECT_KEY }
+    ];
+
+    var allOk = checks.every(function(c){ return c.ok; });
+
+    checks.forEach(function(c) {
+      setTimeout(function() {
+        var dotEl    = document.getElementById('vdot-run-'+c.id);
+        var statusEl = document.getElementById('vstatus-run-'+c.id);
+        var rowEl    = document.getElementById('vcheck-run-'+c.id);
+        var statusTxt = document.getElementById('verify-status-text');
+
+        if (c.ok) {
+          dotEl.className = 'ob-vi-dot green';
+          statusEl.textContent = '✓ Done';
+          statusEl.style.color = 'var(--accent-green)';
+          statusEl.style.fontWeight = '700';
+          if (statusTxt && c.id < 5) statusTxt.textContent = checks[c.id] ? checks[c.id].label : 'Finalizing…';
+        } else {
+          dotEl.className = 'ob-vi-dot';
+          dotEl.style.background = 'var(--accent-red)';
+          statusEl.textContent = '✗ Failed';
+          statusEl.style.color = 'var(--accent-red)';
+          statusEl.style.fontWeight = '700';
+        }
+
+        // After last check resolve
+        if (c.id === 5) {
+          setTimeout(function() {
+            if (allOk) {
+              verificationPassed = true;
+              showVerifyState('success');
+              startVerifyAnim();
+              showToast('✓ Connection verified successfully!');
+            } else {
+              var reason = !key.startsWith('ops_live_sk_')
+                ? 'The API key format is incorrect. Keys must start with ops_live_sk_'
+                : 'API key does not match your store. Please copy it from Step 2.';
+              document.getElementById('verify-fail-reason').textContent = reason;
+              showVerifyState('failed');
+            }
+          }, 600);
+        }
+      }, c.delay);
+    });
+  };
+
+  // Allow pressing Enter in key input
+  document.addEventListener('DOMContentLoaded', function() {
+    var inp = document.getElementById('verify-key-input');
+    if (inp) inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') startVerification(); });
+  });
+
+  /* ── VERIFY ANIMATION (event counter) ── */
+  function startVerifyAnim() {
+    var counter = document.getElementById('event-counter');
+    if (!counter) return;
+    var n = 24;
+    var iv = setInterval(function(){
+      n += Math.floor(Math.random()*4)+1;
+      counter.textContent = n;
+    }, 1200);
+    setTimeout(function(){ clearInterval(iv); }, 12000);
+  }
+
+
+  /* ── DEMO FEED ── */
+  var demoMessages = [
+    {time:'10:24:41', text:'User #4421 — Checkout page, hesitation 0.83', badge:'15% OFF', bc:'rgba(61,168,95,0.2)', tc:'#4ade80'},
+    {time:'10:24:44', text:'User #8891 — Product view, low intent', badge:'SKIP', bc:'rgba(150,150,150,0.15)', tc:'#aaa'},
+    {time:'10:24:47', text:'User #3302 — Cart abandon detected', badge:'20% OFF', bc:'rgba(96,165,250,0.2)', tc:'#60a5fa'},
+    {time:'10:24:50', text:'User #7741 — Returning visitor, checkout', badge:'10% OFF', bc:'rgba(61,168,95,0.2)', tc:'#4ade80'},
+    {time:'10:24:54', text:'User #2291 — Exit intent triggered', badge:'EXIT POP', bc:'rgba(251,146,60,0.2)', tc:'#fb923c'},
+    {time:'10:24:58', text:'User #6612 — High intent, cart $284', badge:'8% OFF', bc:'rgba(245,197,24,0.2)', tc:'#f5c518'},
+  ];
+  var demoIdx = 0;
+  function startDemoFeed() {
+    var feed = document.getElementById('ob-demo-feed');
+    if (!feed) return;
+    var iv = setInterval(function(){
+      if (demoIdx >= demoMessages.length) { clearInterval(iv); return; }
+      var m = demoMessages[demoIdx++];
+      var row = document.createElement('div');
+      row.className = 'ob-session-row feed-item-new';
+      row.style.cssText = 'background:rgba(245,197,24,0.06);border:0.5px solid rgba(245,197,24,0.15);';
+      row.innerHTML = '<span style="font-family:DM Mono,monospace;font-size:9px;color:rgba(255,255,255,0.4);flex-shrink:0;">'+m.time+'</span>'
+        +'<span style="flex:1;font-size:10.5px;color:rgba(255,255,255,0.7);padding:0 8px;">'+m.text+'</span>'
+        +'<span style="font-size:9px;font-weight:700;background:'+m.bc+';color:'+m.tc+';padding:2px 7px;border-radius:20px;">'+m.badge+'</span>';
+      feed.appendChild(row);
+      if (feed.children.length > 7) feed.removeChild(feed.firstChild);
+    }, 1800);
+  }
+
+  /* ── TOAST ── */
+  var toastTimer = null;
+  window.showToast = function(msg) {
+    var t = document.getElementById('icon-toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2500);
+  };
+
+  /* ── DARK MODE ── */
+  window.toggleTheme = function() {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('icon-sun').style.display = isDark ? '' : 'none';
+    document.getElementById('icon-moon').style.display = isDark ? 'none' : '';
+    localStorage.setItem('opspulse-theme', isDark ? 'light' : 'dark');
+  };
+
+  /* ── INIT ── */
+  (function initTheme(){
+    var saved = localStorage.getItem('opspulse-theme');
+    if (saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.getElementById('icon-sun').style.display = 'none';
+      document.getElementById('icon-moon').style.display = '';
+    }
+  })();
+
+  buildStepBar();
+  buildDots();
+  updateUI();
+
+  // Show gate overlay with delay (let page render first)
+  setTimeout(function(){
+    var gate = document.getElementById('gate-overlay');
+    gate.style.display = 'flex';
+  }, 400);
+
+})();
+</script>
+</body>
+</html>

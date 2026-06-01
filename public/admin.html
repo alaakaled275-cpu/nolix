@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZENO AI — Enterprise Admin Platform</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#07080f;--bg2:#0e1020;--bg3:#131628;--bg4:#191c30;--bg5:#1f2338;--bg6:#252840;
+  --border:#1e2238;--border2:#282d48;--border3:#333a58;
+  --text:#dde3f8;--text2:#8b95c0;--text3:#4e5878;--text4:#2d3454;
+  --purple:#6c5ce7;--purple2:#9d8ff8;--purple3:#c4bafb;--pbg:#100e28;--pbd:#252050;
+  --green:#00c896;--green2:#2de0aa;--gbg:#041a14;--gbd:#0a3828;
+  --amber:#f0a030;--amber2:#ffc060;--abg:#1c1200;--abd:#382400;
+  --red:#e03050;--red2:#ff5070;--rbg:#1c0410;--rbd:#380818;
+  --blue:#3080e8;--blue2:#60a8ff;--bbg:#040e1e;--bbd:#082858;
+  --cyan:#00d4e8;--cyan2:#40e8f8;--cbg:#040e10;
+  --r:6px;--rl:10px;--rxl:14px;
+  --mono:'IBM Plex Mono',monospace;--ui:'Plus Jakarta Sans',sans-serif;
+  --sidebar-w:228px;
+}
+body.light{
+  --bg:#f0f2fa;--bg2:#ffffff;--bg3:#f5f6fc;--bg4:#eceef8;--bg5:#e4e6f4;--bg6:#dce0f0;
+  --border:#dde0f0;--border2:#c8cce0;--border3:#b0b8d0;
+  --text:#141830;--text2:#3a4060;--text3:#7880a0;--text4:#a0a8c0;
+  --pbg:#f0eefe;--pbd:#d0c8fc;
+  --gbg:#e8faf4;--gbd:#a0e8d0;
+  --abg:#fef8e8;--abd:#f8d890;
+  --rbg:#feeef0;--rbd:#f8b0bc;
+  --bbg:#eef4fe;--bbd:#b0ccf8;
+}
+::selection{background:var(--pbg);color:var(--purple3);}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border3);border-radius:2px;}
+body{font-family:var(--ui);background:var(--bg);color:var(--text);font-size:13px;min-height:100vh;overflow:hidden;}
+
+/* ─── SHELL ─── */
+.shell{display:flex;height:100vh;overflow:hidden;}
+
+/* ─── SIDEBAR ─── */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;background:var(--bg2);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  overflow:hidden;position:relative;transition:width .2s ease;
+}
+.sidebar.collapsed{width:52px;}
+.sidebar::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--purple) 50%,transparent);
+}
+.logo{
+  padding:16px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-shrink:0;overflow:hidden;
+}
+.logo-icon{
+  width:34px;height:34px;min-width:34px;border-radius:9px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--purple),var(--blue));
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:900;color:#fff;
+  box-shadow:0 0 20px rgba(108,92,231,0.4);
+}
+.logo-text{overflow:hidden;white-space:nowrap;}
+.logo-name{font-size:16px;font-weight:800;letter-spacing:-0.3px;}
+.logo-sub{font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
+
+/* Nav */
+.nav-section{
+  padding:12px 10px 3px;font-size:9px;color:var(--text3);
+  letter-spacing:2px;text-transform:uppercase;font-weight:700;
+  overflow:hidden;white-space:nowrap;
+}
+.sidebar.collapsed .nav-section{opacity:0;}
+.nav-item{
+  display:flex;align-items:center;gap:9px;padding:7px 11px;
+  border-radius:var(--r);cursor:pointer;color:var(--text2);
+  transition:all .12s;margin:1px 6px;font-size:12px;font-weight:600;
+  position:relative;overflow:hidden;white-space:nowrap;
+}
+.nav-item:hover{background:var(--bg4);color:var(--text);}
+.nav-item.active{background:var(--pbg);color:var(--purple2);border:1px solid var(--pbd);}
+.nav-item.active::before{
+  content:'';position:absolute;left:-1px;top:20%;height:60%;
+  width:3px;background:var(--purple2);border-radius:0 2px 2px 0;
+}
+.nav-icon{font-size:14px;min-width:16px;display:flex;align-items:center;justify-content:center;}
+.nav-label{flex:1;overflow:hidden;}
+.sidebar.collapsed .nav-label,.sidebar.collapsed .badge-wrap{display:none;}
+.badge-wrap{margin-left:auto;}
+.badge{
+  font-size:9px;padding:2px 6px;border-radius:12px;font-weight:700;
+  font-family:var(--mono);
+}
+.badge.green{background:var(--gbg);color:var(--green);border:1px solid var(--gbd);}
+.badge.red{background:var(--rbg);color:var(--red2);border:1px solid var(--rbd);}
+.badge.amber{background:var(--abg);color:var(--amber2);border:1px solid var(--abd);}
+.badge.purple{background:var(--pbg);color:var(--purple2);border:1px solid var(--pbd);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.badge.live{animation:blink 1.4s infinite;}
+
+.sidebar-collapse-btn{
+  position:absolute;bottom:130px;right:-10px;width:20px;height:20px;
+  background:var(--bg3);border:1px solid var(--border2);border-radius:50%;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:var(--text3);transition:all .15s;z-index:10;
+}
+.sidebar-collapse-btn:hover{background:var(--pbg);color:var(--purple2);}
+
+.sidebar-footer{
+  margin-top:auto;padding:10px;border-top:1px solid var(--border);flex-shrink:0;
+}
+.ai-card{
+  background:var(--pbg);border:1px solid var(--pbd);border-radius:var(--rl);
+  padding:11px 13px;overflow:hidden;
+}
+.sidebar.collapsed .ai-card{padding:8px;text-align:center;}
+.ai-card-label{font-size:9px;color:var(--purple);letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;white-space:nowrap;overflow:hidden;}
+.ai-card-val{font-size:22px;font-weight:800;color:var(--purple2);font-family:var(--mono);line-height:1;}
+.ai-card-sub{font-size:10px;color:var(--text3);margin-top:3px;white-space:nowrap;overflow:hidden;}
+.ai-card-bar{margin-top:6px;background:var(--bg5);border-radius:2px;height:3px;overflow:hidden;}
+.ai-card-fill{height:3px;background:linear-gradient(90deg,var(--purple),var(--purple2));border-radius:2px;width:94.7%;}
+.online-row{display:flex;align-items:center;gap:5px;margin-top:6px;}
+@keyframes pulse-g{0%,100%{box-shadow:0 0 0 0 rgba(0,200,150,.5)}60%{box-shadow:0 0 0 4px rgba(0,200,150,0)}}
+.online-dot{width:6px;height:6px;min-width:6px;border-radius:50%;background:var(--green);animation:pulse-g 1.6s infinite;}
+.online-txt{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;}
+
+/* ─── TOPBAR ─── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.topbar{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 20px;height:52px;display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.page-title{font-size:14px;font-weight:700;flex:1;white-space:nowrap;}
+.breadcrumb{font-size:10px;color:var(--text3);margin-left:6px;}
+
+/* Search bar */
+.search-box{
+  display:flex;align-items:center;gap:7px;background:var(--bg4);
+  border:1px solid var(--border2);border-radius:var(--r);padding:5px 10px;
+  min-width:180px;transition:border-color .15s;
+}
+.search-box:focus-within{border-color:var(--purple);}
+.search-box input{background:none;border:none;outline:none;color:var(--text);font-size:12px;font-family:var(--ui);width:100%;}
+.search-box input::placeholder{color:var(--text3);}
+.search-icon{font-size:11px;color:var(--text3);}
+.kbd{font-size:9px;color:var(--text4);background:var(--bg5);border:1px solid var(--border2);border-radius:3px;padding:1px 4px;font-family:var(--mono);}
+
+/* Topbar stats */
+.ts{display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-size:11px;white-space:nowrap;}
+.ts-dot{width:5px;height:5px;border-radius:50%;}
+.ts-dot.g{background:var(--green);}
+.ts-dot.a{background:var(--amber);}
+.ts-dot.r{background:var(--red);}
+.ts-label{color:var(--text3);}
+.ts-val{font-weight:700;font-family:var(--mono);}
+
+/* Topbar actions */
+.tb-actions{display:flex;gap:6px;align-items:center;}
+.icon-btn{
+  width:30px;height:30px;border-radius:var(--r);border:1px solid var(--border2);
+  background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:13px;color:var(--text2);transition:all .12s;position:relative;
+}
+.icon-btn:hover{background:var(--bg4);color:var(--text);}
+.notif-badge{
+  position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;
+  background:var(--red2);border:2px solid var(--bg2);font-size:0;
+}
+
+/* Avatar */
+.avatar{
+  width:30px;height:30px;border-radius:var(--r);cursor:pointer;
+  background:linear-gradient(135deg,var(--purple),var(--blue));
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#fff;
+  border:1px solid var(--pbd);
+}
+
+/* ─── CONTENT ─── */
+.content{flex:1;overflow-y:auto;padding:18px 20px;}
+.page{display:none;animation:fi .18s ease;}
+.page.active{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── BUTTONS ─── */
+.btn{padding:6px 14px;border-radius:var(--r);border:none;cursor:pointer;font-family:var(--ui);font-size:11px;font-weight:700;transition:all .12s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
+.btn-primary{background:var(--purple);color:#fff;box-shadow:0 0 12px rgba(108,92,231,.3);}
+.btn-primary:hover{background:var(--purple2);box-shadow:0 0 20px rgba(108,92,231,.5);}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2);}
+.btn-ghost:hover{background:var(--bg4);color:var(--text);}
+.btn-danger{background:var(--rbg);color:var(--red2);border:1px solid var(--rbd);}
+.btn-danger:hover{background:var(--red);color:#fff;}
+.btn-success{background:var(--gbg);color:var(--green);border:1px solid var(--gbd);}
+.btn-success:hover{background:var(--green);color:#000;}
+.btn-sm{padding:4px 10px;font-size:10px;}
+.btn-xs{padding:2px 8px;font-size:10px;}
+
+/* ─── CARDS ─── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px;}
+.gcol{display:flex;flex-direction:column;gap:14px;}
+
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rl);padding:15px;position:relative;overflow:hidden;}
+.card.glow-p::before,.card.glow-g::before,.card.glow-a::before,.card.glow-r::before,.card.glow-b::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+}
+.card.glow-p::before{background:linear-gradient(90deg,transparent,var(--purple),transparent);}
+.card.glow-g::before{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.card.glow-a::before{background:linear-gradient(90deg,transparent,var(--amber),transparent);}
+.card.glow-r::before{background:linear-gradient(90deg,transparent,var(--red),transparent);}
+.card.glow-b::before{background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+
+.ct{font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:11px;font-weight:700;}
+.mv{font-size:26px;font-weight:800;line-height:1;font-family:var(--mono);}
+.ms{font-size:11px;color:var(--text3);margin-top:4px;}
+.md{font-size:11px;margin-top:7px;font-weight:600;}
+.up{color:var(--green);}.dn{color:var(--red);}.wr{color:var(--amber);}.nt{color:var(--text3);}
+
+/* ─── CHIPS ─── */
+.chip{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;}
+.chip.g{background:var(--gbg);color:var(--green);border:1px solid var(--gbd);}
+.chip.r{background:var(--rbg);color:var(--red2);border:1px solid var(--rbd);}
+.chip.a{background:var(--abg);color:var(--amber2);border:1px solid var(--abd);}
+.chip.b{background:var(--bbg);color:var(--blue2);border:1px solid var(--bbd);}
+.chip.p{background:var(--pbg);color:var(--purple2);border:1px solid var(--pbd);}
+.chip.gr{background:var(--bg5);color:var(--text2);border:1px solid var(--border2);}
+.chip.c{background:var(--cbg);color:var(--cyan2);border:1px solid rgba(0,212,232,.2);}
+
+/* ─── TABLES ─── */
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{text-align:left;padding:7px 11px;color:var(--text3);font-weight:700;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:9px 11px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--bg4);}
+.tp{color:var(--text);font-weight:600;}.tmn{font-family:var(--mono);font-size:11px;}
+
+/* ─── BARS ─── */
+.bw{background:var(--bg5);border-radius:3px;height:5px;overflow:hidden;}
+.bar{height:5px;border-radius:3px;transition:width .4s;}
+.bar.p{background:linear-gradient(90deg,var(--purple),var(--purple2));}
+.bar.g{background:linear-gradient(90deg,var(--green),var(--green2));}
+.bar.a{background:linear-gradient(90deg,var(--amber),var(--amber2));}
+.bar.r{background:linear-gradient(90deg,var(--red),var(--red2));}
+.bar.b{background:linear-gradient(90deg,var(--blue),var(--blue2));}
+
+/* ─── TOGGLES ─── */
+.toggle{position:relative;width:38px;height:21px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;position:absolute;}
+.tsl{position:absolute;inset:0;background:var(--bg5);border-radius:11px;cursor:pointer;transition:.18s;border:1px solid var(--border2);}
+.tsl::before{content:'';position:absolute;width:15px;height:15px;left:2px;top:2px;background:var(--text3);border-radius:50%;transition:.18s;}
+.toggle input:checked+.tsl{background:var(--pbg);border-color:var(--purple);}
+.toggle input:checked+.tsl::before{transform:translateX(17px);background:var(--purple2);}
+
+/* ─── CONTROLS ─── */
+.ctrl{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+.ctrl:last-child{border-bottom:none;}
+.ctrl-label{flex:1;}
+.ctrl-label strong{display:block;font-size:12px;font-weight:600;margin-bottom:2px;}
+.ctrl-label span{font-size:10px;color:var(--text3);}
+.ctrl-val{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--purple2);min-width:50px;text-align:right;}
+.sl-wrap{width:150px;}
+input[type=range]{width:100%;-webkit-appearance:none;height:3px;border-radius:2px;background:var(--bg5);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--purple2);cursor:pointer;border:2px solid var(--bg);box-shadow:0 0 5px rgba(157,143,248,.4);}
+
+/* ─── FILTER BAR ─── */
+.fb{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+.fbtn{padding:3px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-family:var(--ui);font-size:11px;font-weight:500;transition:all .12s;}
+.fbtn:hover{color:var(--text2);}
+.fbtn.active{background:var(--pbg);color:var(--purple2);border-color:var(--purple);}
+
+/* ─── DECISION LOG ─── */
+.de{background:var(--bg4);border:1px solid var(--border);border-radius:var(--rl);padding:13px 15px;margin-bottom:7px;cursor:pointer;transition:all .12s;}
+.de:hover{border-color:var(--border3);transform:translateX(2px);}
+.de.cvt{border-left:3px solid var(--green);}
+.de.wst{border-left:3px solid var(--amber);}
+.de.bnc{border-left:3px solid var(--red);}
+.de.nth{border-left:3px solid var(--text4);}
+.de-hd{display:flex;align-items:center;gap:7px;margin-bottom:7px;flex-wrap:wrap;}
+.de-bd{font-size:11px;color:var(--text3);line-height:1.65;background:var(--bg3);border-radius:var(--r);padding:8px 10px;margin-bottom:7px;}
+.de-scores{display:flex;gap:16px;flex-wrap:wrap;}
+.sc-item{display:flex;flex-direction:column;gap:2px;}
+.sc-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:700;}
+.sc-val{font-family:var(--mono);font-size:13px;font-weight:700;}
+.sc-val.r{color:var(--red2);}.sc-val.g{color:var(--green2);}.sc-val.a{color:var(--amber2);}.sc-val.p{color:var(--purple2);}.sc-val.gr{color:var(--text3);}
+
+/* ─── LIVE FEED ─── */
+.lrow{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border);}
+.lrow:last-child{border-bottom:none;}
+.lrow.nr{animation:si .25s ease;}
+@keyframes si{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.lsess{font-family:var(--mono);font-size:10px;color:var(--text3);width:76px;flex-shrink:0;}
+.lact{flex:1;font-size:12px;color:var(--text2);}
+.limp{font-size:12px;font-weight:700;min-width:56px;text-align:right;}
+
+/* ─── ALERTS ─── */
+.al{display:flex;align-items:flex-start;gap:11px;padding:12px 0;border-bottom:1px solid var(--border);}
+.al:last-child{border-bottom:none;}
+.al-icon{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;}
+.al-icon.crit{background:var(--rbg);color:var(--red2);border:1px solid var(--rbd);}
+.al-icon.warn{background:var(--abg);color:var(--amber2);border:1px solid var(--abd);}
+.al-icon.info{background:var(--bbg);color:var(--blue2);border:1px solid var(--bbd);}
+.al-icon.ok{background:var(--gbg);color:var(--green);border:1px solid var(--gbd);}
+.al-body{flex:1;}
+.al-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.al-desc{font-size:11px;color:var(--text3);line-height:1.5;}
+.al-meta{display:flex;align-items:center;gap:7px;margin-top:6px;flex-wrap:wrap;}
+.al-time{font-size:10px;color:var(--text4);font-family:var(--mono);}
+
+/* ─── HEALTH ─── */
+.hr{margin-bottom:11px;}
+.hr:last-child{margin-bottom:0;}
+.hr-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.hr-name{font-size:12px;color:var(--text2);}
+
+/* ─── FORMS ─── */
+.fg{margin-bottom:11px;}
+.fg:last-child{margin-bottom:0;}
+.fl{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;}
+.fi{background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);padding:6px 9px;color:var(--text);font-family:var(--mono);font-size:12px;width:100%;outline:none;transition:border-color .12s;}
+.fi:focus{border-color:var(--purple);box-shadow:0 0 0 2px rgba(108,92,231,.1);}
+.fi-select{appearance:none;cursor:pointer;}
+
+/* ─── DIVIDER ─── */
+.dv{height:1px;background:var(--border);margin:12px 0;}
+
+/* ─── INSIGHT BOX ─── */
+.ib{border-radius:var(--r);padding:10px 12px;font-size:11px;color:var(--text2);line-height:1.65;margin-bottom:10px;}
+.ib:last-child{margin-bottom:0;}
+.ib.a{background:var(--abg);border:1px solid var(--abd);}
+.ib.p{background:var(--pbg);border:1px solid var(--pbd);}
+.ib.g{background:var(--gbg);border:1px solid var(--gbd);}
+.ib.r{background:var(--rbg);border:1px solid var(--rbd);}
+.ib-tag{font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;display:block;margin-bottom:3px;}
+.ib-tag.a{color:var(--amber2);}
+.ib-tag.p{color:var(--purple2);}
+.ib-tag.g{color:var(--green);}
+.ib-tag.r{color:var(--red2);}
+code{background:var(--bg);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--purple3);}
+
+/* ─── MODALS ─── */
+.mo{position:fixed;inset:0;background:rgba(7,8,15,.85);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .18s;backdrop-filter:blur(4px);}
+.mo.open{opacity:1;pointer-events:all;}
+.mo-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rxl);padding:22px;min-width:380px;max-width:520px;width:90%;transform:scale(.96);transition:transform .18s;}
+.mo.open .mo-box{transform:scale(1);}
+.mo-title{font-size:15px;font-weight:800;margin-bottom:3px;}
+.mo-sub{font-size:11px;color:var(--text3);margin-bottom:14px;}
+.mo-actions{display:flex;gap:7px;justify-content:flex-end;margin-top:14px;}
+
+/* ─── TIMELINE ─── */
+.tl{padding-left:14px;position:relative;}
+.tl::before{content:'';position:absolute;left:4px;top:4px;bottom:4px;width:1px;background:var(--border2);}
+.tl-item{position:relative;padding:6px 0 6px 12px;font-size:11px;}
+.tl-dot{position:absolute;left:-5px;top:13px;width:8px;height:8px;border-radius:50%;border:2px solid var(--bg2);}
+.tl-dot.page{background:var(--blue);}
+.tl-dot.cart{background:var(--amber);}
+.tl-dot.ai{background:var(--cyan);}
+.tl-dot.ok{background:var(--green);}
+.tl-dot.no{background:var(--red);}
+.tl-t{font-family:var(--mono);font-size:9px;color:var(--text4);margin-right:6px;}
+.tl-lbl{color:var(--text);font-weight:600;}
+.tl-detail{font-size:10px;color:var(--text3);margin-top:1px;}
+
+/* ─── NOTIFICATIONS PANEL ─── */
+.notif-panel{
+  position:fixed;top:52px;right:0;width:320px;height:calc(100vh - 52px);
+  background:var(--bg2);border-left:1px solid var(--border);
+  z-index:100;transform:translateX(100%);transition:transform .2s ease;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.notif-panel.open{transform:translateX(0);}
+.notif-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.notif-header h3{font-size:13px;font-weight:700;}
+.notif-list{flex:1;overflow-y:auto;padding:8px;}
+.notif-item{background:var(--bg4);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:border-color .12s;}
+.notif-item:hover{border-color:var(--border3);}
+.notif-item.unread{border-left:3px solid var(--purple2);}
+.notif-item-title{font-size:11px;font-weight:600;margin-bottom:2px;}
+.notif-item-desc{font-size:10px;color:var(--text3);}
+.notif-item-time{font-size:9px;color:var(--text4);margin-top:4px;font-family:var(--mono);}
+.notif-footer{padding:10px;border-top:1px solid var(--border);}
+
+/* ─── CHART CANVAS ─── */
+.chart-wrap{position:relative;width:100%;}
+canvas{display:block;width:100% !important;}
+
+/* ─── LIVE DOT ─── */
+@keyframes pdot{0%,100%{box-shadow:0 0 0 0 rgba(0,200,150,.5)}60%{box-shadow:0 0 0 4px rgba(0,200,150,0)}}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pdot 1.4s infinite;flex-shrink:0;}
+
+/* ─── STAT MINI ─── */
+.sm{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
+.sm:last-child{border-bottom:none;}
+.sm-label{font-size:11px;color:var(--text3);}
+.sm-val{font-family:var(--mono);font-size:12px;font-weight:700;}
+
+/* ─── FLOW DIAGRAM ─── */
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 0;}
+.fn{padding:7px 14px;border-radius:var(--r);font-size:11px;font-weight:700;white-space:nowrap;}
+.fa{color:var(--text3);font-size:14px;}
+
+/* ─── MODE BUTTONS ─── */
+.mbtn{padding:6px 14px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--ui);font-size:11px;font-weight:700;transition:all .12s;}
+.mbtn:hover{background:var(--bg4);}
+.mbtn.active{background:var(--pbg);color:var(--purple2);border-color:var(--purple);}
+.mbtn.active.cons{background:var(--bbg);color:var(--blue2);border-color:var(--blue);}
+.mbtn.active.aggr{background:var(--rbg);color:var(--red2);border-color:var(--red);}
+
+/* ─── TOAST ─── */
+#toast{
+  position:fixed;bottom:20px;right:20px;padding:11px 18px;background:var(--bg3);
+  border:1px solid var(--border2);border-radius:var(--rl);color:var(--text);font-size:12px;
+  font-weight:600;z-index:9999;transform:translateY(70px);opacity:0;transition:all .25s;
+  display:flex;align-items:center;gap:9px;max-width:300px;
+}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.success{border-color:var(--gbd);}
+#toast.error{border-color:var(--rbd);}
+#toast.warning{border-color:var(--abd);}
+#toast.info{border-color:var(--bbd);}
+
+/* ─── SECTION HEADER ─── */
+.sh{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.sh h3{font-size:13px;font-weight:700;}
+.sh-actions{margin-left:auto;display:flex;gap:5px;}
+
+/* ─── STORES TABLE ─── */
+.store-logo{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+
+/* ─── AB TEST CARD ─── */
+.ab-card{background:var(--bg4);border:1px solid var(--border);border-radius:var(--rl);padding:13px;margin-bottom:8px;}
+.ab-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.ab-variants{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ab-variant{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center;}
+.ab-variant.winner{border-color:var(--green);background:var(--gbg);}
+
+/* ─── AUDIT LOG ─── */
+.audit-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.audit-row:last-child{border-bottom:none;}
+.audit-icon{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;}
+.audit-body{flex:1;}
+.audit-title{font-size:11px;color:var(--text);font-weight:600;}
+.audit-meta{font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono);}
+
+/* ─── MISC ─── */
+.rank-circle{width:20px;height:20px;border-radius:50%;background:var(--bg5);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:var(--mono);color:var(--text3);}
+.tag-key{font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--bg5);padding:1px 5px;border-radius:3px;border:1px solid var(--border2);}
+.sep{display:flex;align-items:center;gap:8px;font-size:9px;color:var(--text4);text-transform:uppercase;letter-spacing:2px;margin:12px 0;}
+.sep::before,.sep::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* Light mode btn */
+.theme-btn{cursor:pointer;font-size:14px;}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toast"><span id="t-icon">✓</span><span id="t-msg"></span></div>
+
+<!-- NOTIFICATIONS PANEL -->
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-header">
+    <h3>🔔 Notifications <span class="chip p" style="font-size:9px">7 new</span></h3>
+    <button class="btn btn-ghost btn-xs" onclick="toggleNotifPanel()">✕ Close</button>
+  </div>
+  <div class="notif-list">
+    <div class="notif-item unread">
+      <div class="notif-item-title">🔴 High error rate — Street Kings</div>
+      <div class="notif-item-desc">API error rate 8.2% exceeded threshold of 5%</div>
+      <div class="notif-item-time">2 min ago</div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-item-title">💳 Payment webhook failing — Urban Wear</div>
+      <div class="notif-item-desc">Stripe webhook timeout, 3 retries exhausted</div>
+      <div class="notif-item-time">15 min ago</div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-item-title">✅ Budget cap hit — Luxury Boutique</div>
+      <div class="notif-item-desc">Daily discount budget $500 reached at 16:40</div>
+      <div class="notif-item-time">4h ago</div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-item-title">⚠ Wasted discount rate rising</div>
+      <div class="notif-item-desc">Minimal Style: 9.1% waste rate this week</div>
+      <div class="notif-item-time">5h ago</div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-item-title">🤖 A/B test paused — Accessories Hub</div>
+      <div class="notif-item-desc">Confidence below 0.60 for 15 minutes</div>
+      <div class="notif-item-time">3h ago</div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-item-title">🏪 New store pending — Classic Outfits</div>
+      <div class="notif-item-desc">Domain validation required before AI activation</div>
+      <div class="notif-item-time">1h ago</div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-item-title">📈 AI confidence improved to 94.7%</div>
+      <div class="notif-item-desc">↑ 5.2% vs last 7 days after model update v2.4.1</div>
+      <div class="notif-item-time">Yesterday</div>
+    </div>
+  </div>
+  <div class="notif-footer">
+    <button class="btn btn-ghost btn-sm" style="width:100%" onclick="showToast('All notifications marked as read','success');document.querySelectorAll(\'.notif-item.unread\').forEach(n=>n.classList.remove(\'unread\'))">Mark all as read</button>
+  </div>
+</div>
+
+<!-- SESSION REPLAY MODAL -->
+<div class="mo" id="mo-replay">
+  <div class="mo-box">
+    <div class="mo-title">Session Replay</div>
+    <div class="mo-sub" id="mo-replay-id">sess_a3f8b · Behavior Timeline</div>
+    <div class="dv"></div>
+    <div class="tl" id="mo-timeline"></div>
+    <div class="dv"></div>
+    <div style="display:flex;gap:12px;">
+      <div style="flex:1;"><div class="fl">Hesitation</div><div id="mo-hes" style="font-size:22px;font-weight:800;font-family:var(--mono);"></div></div>
+      <div style="flex:1;"><div class="fl">Intent</div><div id="mo-intent" style="font-size:22px;font-weight:800;font-family:var(--mono);color:var(--green)"></div></div>
+      <div style="flex:1;"><div class="fl">AI Action</div><div id="mo-action" style="margin-top:4px;"></div></div>
+    </div>
+    <div class="mo-actions">
+      <button class="btn btn-ghost" onclick="closeMo('mo-replay')">Close</button>
+      <button class="btn btn-primary" onclick="closeMo('mo-replay');showToast('Manual override sent','success')">Override AI</button>
+    </div>
+  </div>
+</div>
+
+<!-- DISCOUNT MODAL -->
+<div class="mo" id="mo-discount">
+  <div class="mo-box">
+    <div class="mo-title">Send Manual Discount</div>
+    <div class="mo-sub" id="mo-disc-sess">Session: sess_a3f8b</div>
+    <div class="dv"></div>
+    <div class="fg">
+      <label class="fl">Discount Amount</label>
+      <select class="fi fi-select">
+        <option>5% — Soft nudge (low hesitation)</option>
+        <option selected>10% — Standard</option>
+        <option>15% — Aggressive</option>
+        <option>20% — Emergency only</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Reason / Override Note</label>
+      <input class="fi" type="text" value="Manual override — high hesitation detected">
+    </div>
+    <div class="ib a"><span class="ib-tag a">⚠ Budget Warning</span>Manual discounts count against daily budget. Remaining: <strong style="color:var(--amber2)">$318</strong> of $500.</div>
+    <div class="mo-actions">
+      <button class="btn btn-ghost" onclick="closeMo('mo-discount')">Cancel</button>
+      <button class="btn btn-primary" onclick="closeMo('mo-discount');showToast('Discount sent successfully','success')">Send Discount</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVITE USER MODAL -->
+<div class="mo" id="mo-invite">
+  <div class="mo-box">
+    <div class="mo-title">Invite Team Member</div>
+    <div class="mo-sub">Invite a user to access this admin panel</div>
+    <div class="dv"></div>
+    <div class="fg"><label class="fl">Full Name</label><input class="fi" type="text" placeholder="Sarah Johnson"></div>
+    <div class="fg"><label class="fl">Email Address</label><input class="fi" type="email" placeholder="sarah@company.com"></div>
+    <div class="fg"><label class="fl">Role</label>
+      <select class="fi fi-select">
+        <option>Super Admin — Full access</option>
+        <option selected>Admin — Manage stores & AI</option>
+        <option>Analyst — Read-only + exports</option>
+        <option>Store Manager — Single store only</option>
+        <option>Support — Sessions & alerts only</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Accessible Stores</label>
+      <select class="fi fi-select">
+        <option>All Stores</option>
+        <option>Fashion Store only</option>
+        <option>Urban Wear only</option>
+        <option>Custom (select after invite)</option>
+      </select>
+    </div>
+    <div class="mo-actions">
+      <button class="btn btn-ghost" onclick="closeMo('mo-invite')">Cancel</button>
+      <button class="btn btn-primary" onclick="closeMo('mo-invite');showToast('Invite sent successfully','success')">Send Invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SHELL
+════════════════════════════════════════════ -->
+<div class="shell">
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="logo">
+    <div class="logo-icon">Z</div>
+    <div class="logo-text">
+      <div class="logo-name">ZENO<span style="color:var(--purple2)"> AI</span></div>
+      <div class="logo-sub">Admin Platform</div>
+    </div>
+  </div>
+
+  <div style="overflow-y:auto;flex:1;padding-bottom:6px;">
+    <div class="nav-section">Intelligence</div>
+    <div class="nav-item active" onclick="showPage('ai-control',this,'🧠 AI Control Center')">
+      <span class="nav-icon">🧠</span><span class="nav-label">AI Control Center</span>
+    </div>
+    <div class="nav-item" onclick="showPage('decision-logs',this,'📋 Decision Logs')">
+      <span class="nav-icon">📋</span><span class="nav-label">Decision Logs</span>
+      <span class="badge-wrap"><span class="badge amber">132</span></span>
+    </div>
+    <div class="nav-item" onclick="showPage('live-monitor',this,'📡 Live Monitoring')">
+      <span class="nav-icon">📡</span><span class="nav-label">Live Monitoring</span>
+      <span class="badge-wrap"><span class="badge green live">LIVE</span></span>
+    </div>
+    <div class="nav-item" onclick="showPage('ab-testing',this,'🧪 A/B Testing')">
+      <span class="nav-icon">🧪</span><span class="nav-label">A/B Testing</span>
+      <span class="badge-wrap"><span class="badge purple">3</span></span>
+    </div>
+
+    <div class="nav-section">Analytics</div>
+    <div class="nav-item" onclick="showPage('revenue',this,'💸 Revenue Intelligence')">
+      <span class="nav-icon">💸</span><span class="nav-label">Revenue Intel</span>
+    </div>
+    <div class="nav-item" onclick="showPage('users',this,'👥 Users & Sessions')">
+      <span class="nav-icon">👥</span><span class="nav-label">Users & Sessions</span>
+      <span class="badge-wrap"><span class="badge green">87</span></span>
+    </div>
+    <div class="nav-item" onclick="showPage('charts',this,'📊 Analytics Charts')">
+      <span class="nav-icon">📊</span><span class="nav-label">Analytics Charts</span>
+    </div>
+
+    <div class="nav-section">Operations</div>
+    <div class="nav-item" onclick="showPage('stores',this,'🏪 Store Management')">
+      <span class="nav-icon">🏪</span><span class="nav-label">Store Management</span>
+    </div>
+    <div class="nav-item" onclick="showPage('system-config',this,'⚙️ System Config')">
+      <span class="nav-icon">⚙️</span><span class="nav-label">System Config</span>
+    </div>
+    <div class="nav-item" onclick="showPage('alerts',this,'🚨 Alerts & Incidents')">
+      <span class="nav-icon">🚨</span><span class="nav-label">Alerts</span>
+      <span class="badge-wrap"><span class="badge red">15</span></span>
+    </div>
+    <div class="nav-item" onclick="showPage('audit-log',this,'📝 Audit Log')">
+      <span class="nav-icon">📝</span><span class="nav-label">Audit Log</span>
+    </div>
+
+    <div class="nav-section">Team</div>
+    <div class="nav-item" onclick="showPage('team',this,'👤 Team & Roles')">
+      <span class="nav-icon">👤</span><span class="nav-label">Team & Roles</span>
+    </div>
+  </div>
+
+  <div class="sidebar-collapse-btn" onclick="toggleSidebar()" id="collapse-btn">◀</div>
+
+  <div class="sidebar-footer">
+    <div class="ai-card">
+      <div class="ai-card-label">AI Confidence</div>
+      <div class="ai-card-val">94.7%</div>
+      <div class="ai-card-bar"><div class="ai-card-fill"></div></div>
+      <div class="online-row"><div class="online-dot"></div><div class="online-txt">847 decisions/min · active</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;flex-direction:column;">
+      <div class="page-title" id="page-title">🧠 AI Control Center</div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-box" style="margin-left:8px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search sessions, stores, logs..." id="global-search" oninput="globalSearch(this.value)">
+      <span class="kbd">⌘K</span>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:flex;gap:6px;margin-left:4px;flex-wrap:nowrap;">
+      <div class="ts"><div class="ts-dot g"></div><span class="ts-label">Engine</span><span class="ts-val">Active</span></div>
+      <div class="ts"><div class="ts-dot a"></div><span class="ts-label">Dec/min</span><span class="ts-val" id="tb-dpm">847</span></div>
+      <div class="ts"><div class="ts-dot g"></div><span class="ts-label">Uptime</span><span class="ts-val">99.8%</span></div>
+      <div class="ts"><div class="ts-dot g"></div><span class="ts-label">Rev/min</span><span class="ts-val" id="tb-rev">$2,140</span></div>
+    </div>
+
+    <!-- Actions -->
+    <div class="tb-actions">
+      <button class="icon-btn theme-btn" onclick="toggleTheme()" title="Toggle Light/Dark">🌙</button>
+      <button class="icon-btn" onclick="toggleNotifPanel()" title="Notifications">
+        🔔<span class="notif-badge"></span>
+      </button>
+      <button class="icon-btn" onclick="showToast('Keyboard shortcuts: ⌘1-7 pages · ⌘S save · ⌘K search','info')" title="Shortcuts">⌨</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ Export</button>
+      <button class="btn btn-primary btn-sm" onclick="saveConfig()">💾 Save Config</button>
+      <div class="avatar" title="Admin User" onclick="showPage('team',null,'👤 Team & Roles')">A</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══════════════════════════════════
+         PAGE: AI CONTROL CENTER
+    ═══════════════════════════════════ -->
+    <div class="page active" id="page-ai-control">
+      <div class="g5">
+        <div class="card glow-p">
+          <div class="ct">Intervention Rate</div>
+          <div class="mv" id="d-intervention" style="color:var(--purple2)">40%</div>
+          <div class="ms">of hesitating sessions</div>
+          <div class="md up">▲ Active</div>
+        </div>
+        <div class="card glow-a">
+          <div class="ct">Conv. Aggression</div>
+          <div class="mv" id="d-conv" style="color:var(--amber2)">42%</div>
+          <div class="ms">target threshold</div>
+          <div class="md wr">↑ Aggressive</div>
+        </div>
+        <div class="card glow-g">
+          <div class="ct">Discount Budget/day</div>
+          <div class="mv" id="d-budget" style="color:var(--green)">$500</div>
+          <div class="ms">used: $182 today (36%)</div>
+          <div class="md up">Circuit breaker: ON</div>
+        </div>
+        <div class="card">
+          <div class="ct">Max Discount %</div>
+          <div class="mv" id="d-maxdisc">15%</div>
+          <div class="ms">per-session ceiling</div>
+          <div class="md nt">■ Capped</div>
+        </div>
+        <div class="card">
+          <div class="ct">Strategy Mode</div>
+          <div class="mv" id="d-mode" style="font-size:17px;margin-top:6px;">Balanced</div>
+          <div class="ms">operating mode</div>
+          <div class="md" style="color:var(--purple2)">■ Running</div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card glow-p">
+          <div class="ct">AI Behavior Controls</div>
+          <div class="ctrl">
+            <div class="ctrl-label"><strong>Intervention Rate</strong><span>% of hesitating sessions AI acts on</span></div>
+            <div class="sl-wrap"><input type="range" min="10" max="80" value="40" oninput="sl('intervention',this.value,'%')"></div>
+            <div class="ctrl-val" id="v-intervention">40%</div>
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-label"><strong>Conversion Aggression</strong><span>target conversion threshold</span></div>
+            <div class="sl-wrap"><input type="range" min="20" max="70" value="42" oninput="sl('conv',this.value,'%')"></div>
+            <div class="ctrl-val" id="v-conv">42%</div>
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-label"><strong>Discount Budget / day</strong><span>max AI can spend on discounts</span></div>
+            <div class="sl-wrap"><input type="range" min="100" max="2000" step="50" value="500" oninput="sl('budget',this.value,'$',true)"></div>
+            <div class="ctrl-val" id="v-budget">$500</div>
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-label"><strong>Max Discount %</strong><span>per-session ceiling — protects margin</span></div>
+            <div class="sl-wrap"><input type="range" min="5" max="30" value="15" oninput="sl('maxdisc',this.value,'%')"></div>
+            <div class="ctrl-val" id="v-maxdisc">15%</div>
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-label"><strong>Min Confidence to Act</strong><span>below this → do_nothing (hard floor)</span></div>
+            <div class="sl-wrap"><input type="range" min="30" max="95" value="60" oninput="sl('confidence',this.value,'%')"></div>
+            <div class="ctrl-val" id="v-confidence">60%</div>
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-label"><strong>Hesitation Score Threshold</strong><span>above = "hesitating user"</span></div>
+            <div class="sl-wrap"><input type="range" min="30" max="90" step="5" value="55" oninput="sl('hesthresh',this.value,'%')"></div>
+            <div class="ctrl-val" id="v-hesthresh">55%</div>
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-label"><strong>Session Timeout (min)</strong><span>after which session expires</span></div>
+            <div class="sl-wrap"><input type="range" min="5" max="60" step="5" value="30" oninput="sl('timeout',this.value,' min')"></div>
+            <div class="ctrl-val" id="v-timeout">30 min</div>
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-label"><strong>Decision Cooldown (sec)</strong><span>min time between AI acts on same session</span></div>
+            <div class="sl-wrap"><input type="range" min="30" max="300" step="10" value="120" oninput="sl('cooldown',this.value,'s')"></div>
+            <div class="ctrl-val" id="v-cooldown">120s</div>
+          </div>
+        </div>
+
+        <div class="gcol">
+          <div class="card">
+            <div class="ct">Strategy Mode</div>
+            <div style="display:flex;gap:7px;margin-bottom:11px;">
+              <button class="mbtn cons" onclick="setMode(this,'Conservative','cons')">Conservative</button>
+              <button class="mbtn active" onclick="setMode(this,'Balanced','bal')">Balanced</button>
+              <button class="mbtn aggr" onclick="setMode(this,'Aggressive','aggr')">Aggressive</button>
+            </div>
+            <div id="mode-desc" style="font-size:11px;color:var(--text3);line-height:1.7;padding:9px;background:var(--bg4);border-radius:var(--r);">
+              <strong style="color:var(--text2)">Balanced:</strong> AI intervenes on clear signals only (confidence ≥ 0.60). Moderate discount usage. Best for stable revenue with minimal risk.
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:10px;">
+              <div style="background:var(--bg4);border-radius:var(--r);padding:8px;text-align:center;">
+                <div class="fl" style="text-align:center;">Risk</div>
+                <div id="mode-risk" style="font-size:13px;font-weight:800;color:var(--amber2)">Medium</div>
+              </div>
+              <div style="background:var(--bg4);border-radius:var(--r);padding:8px;text-align:center;">
+                <div class="fl" style="text-align:center;">Discount</div>
+                <div id="mode-disc" style="font-size:13px;font-weight:800;color:var(--amber2)">Moderate</div>
+              </div>
+              <div style="background:var(--bg4);border-radius:var(--r);padding:8px;text-align:center;">
+                <div class="fl" style="text-align:center;">Conv. Lift</div>
+                <div id="mode-lift" style="font-size:13px;font-weight:800;color:var(--green)">+128%</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="ct">AI Guardrails</div>
+            <div class="ctrl" style="padding:8px 0;"><div class="ctrl-label"><strong>AI Decisions Enabled</strong><span>Master switch — kills all AI actions</span></div><label class="toggle"><input type="checkbox" checked onchange="gc(this,'AI Decisions')"><span class="tsl"></span></label></div>
+            <div class="ctrl" style="padding:8px 0;"><div class="ctrl-label"><strong>Popup Interventions</strong><span>urgency / exit-intent popups</span></div><label class="toggle"><input type="checkbox" checked onchange="gc(this,'Popups')"><span class="tsl"></span></label></div>
+            <div class="ctrl" style="padding:8px 0;"><div class="ctrl-label"><strong>Discount Issuance</strong><span>AI can issue % discounts</span></div><label class="toggle"><input type="checkbox" checked onchange="gc(this,'Discount Issuance')"><span class="tsl"></span></label></div>
+            <div class="ctrl" style="padding:8px 0;"><div class="ctrl-label"><strong>Budget Circuit Breaker</strong><span>auto-pause discounts if budget exceeded</span></div><label class="toggle"><input type="checkbox" checked onchange="gc(this,'Circuit Breaker')"><span class="tsl"></span></label></div>
+            <div class="ctrl" style="padding:8px 0;"><div class="ctrl-label"><strong>Repeat Customer Guard</strong><span>skip discount if likely to convert anyway</span></div><label class="toggle"><input type="checkbox" onchange="gc(this,'Repeat Guard')"><span class="tsl"></span></label></div>
+            <div class="ctrl" style="padding:8px 0;border-bottom:none;"><div class="ctrl-label"><strong>Bot Detection Filter</strong><span>exclude detected bots from AI</span></div><label class="toggle"><input type="checkbox" checked onchange="gc(this,'Bot Filter')"><span class="tsl"></span></label></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flow diagram -->
+      <div class="card glow-p">
+        <div class="ct">Config → AI Engine → Live Results (Full Data Flow)</div>
+        <div class="flow">
+          <div class="fn" style="background:var(--pbg);border:1px solid var(--pbd);color:var(--purple2);">⚙ Admin Config</div>
+          <span class="fa">→</span>
+          <div class="fn" style="background:var(--bg5);border:1px solid var(--border2);color:var(--text2);font-family:var(--mono);">💾 PostgreSQL</div>
+          <span class="fa">→</span>
+          <div class="fn" style="background:var(--bg5);border:1px solid var(--border2);color:var(--text2);font-family:var(--mono);">🐍 ai_brain.py</div>
+          <span class="fa">→</span>
+          <div class="fn" style="background:var(--bg5);border:1px solid var(--border2);color:var(--text2);font-family:var(--mono);">POST /api/engine/decide</div>
+          <span class="fa">→</span>
+          <div class="fn" style="background:var(--bg5);border:1px solid var(--border2);color:var(--text2);font-family:var(--mono);">popup / discount</div>
+          <span class="fa">→</span>
+          <div class="fn" style="background:var(--gbg);border:1px solid var(--gbd);color:var(--green);">📈 Live Results</div>
+          <span class="fa">→</span>
+          <div class="fn" style="background:var(--bbg);border:1px solid var(--bbd);color:var(--blue2);">📋 Decision Logs</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px;">
+          <div class="ib p" style="margin:0;"><span class="ib-tag p">intervention_rate</span>Controls % of hesitating sessions AI acts on (0.10–0.80)</div>
+          <div class="ib a" style="margin:0;"><span class="ib-tag a">conversion_target</span>Aggression level — higher = accepts riskier interventions</div>
+          <div class="ib g" style="margin:0;"><span class="ib-tag g">min_confidence_to_act</span>Hard floor — AI stays silent if confidence is below this</div>
+          <div class="ib r" style="margin:0;"><span class="ib-tag r">circuit_breaker</span>Auto-kills discount issuance when daily cap is exceeded</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE: DECISION LOGS
+    ═══════════════════════════════════ -->
+    <div class="page" id="page-decision-logs">
+      <div class="g4" style="margin-bottom:12px;">
+        <div class="card"><div class="ct">Total Decisions (24h)</div><div class="mv">132</div></div>
+        <div class="card glow-g"><div class="ct">Converted</div><div class="mv" style="color:var(--green)">74</div><div class="ms">56% success rate</div></div>
+        <div class="card glow-a"><div class="ct">Wasted Discounts</div><div class="mv" style="color:var(--amber2)">21</div><div class="ms">$284 lost</div></div>
+        <div class="card"><div class="ct">Avg Confidence</div><div class="mv" style="color:var(--purple2)">0.71</div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+        <div class="fb" style="margin:0;">
+          <button class="fbtn active" onclick="fd(this,'all')">All (132)</button>
+          <button class="fbtn" onclick="fd(this,'cvt')">Converted ✓ (74)</button>
+          <button class="fbtn" onclick="fd(this,'wst')">Wasted (21)</button>
+          <button class="fbtn" onclick="fd(this,'bnc')">Bounced (28)</button>
+          <button class="fbtn" onclick="fd(this,'nth')">Do Nothing (9)</button>
+        </div>
+        <div style="display:flex;gap:5px;">
+          <button class="btn btn-ghost btn-sm" onclick="showToast('Logs exported','success')">⬇ Export CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="showToast('Logs refreshed','success')">↻ Refresh</button>
+        </div>
+      </div>
+      <div id="decision-list">
+        <div class="de cvt" data-t="cvt">
+          <div class="de-hd"><span class="chip p tmn">sess_a3f8b</span><span class="chip g">✓ Converted</span><span class="chip a">discount_10%</span><span class="chip b">urgency_popup</span><span style="margin-left:auto;font-size:10px;color:var(--text4);font-family:var(--mono)">2 min ago</span></div>
+          <div class="de-bd"><span style="color:var(--text3)">Decision:</span> <strong style="color:var(--amber2)">discount_10% + urgency_popup</strong><br><em style="color:var(--text2)">"high hesitation (0.78) + cart $94 + 3rd visit this week + exit intent"</em><br><span style="color:var(--text3)">Path:</span> <span class="tag-key">hesitation_high</span> → <span class="tag-key">intent_positive</span> → <span class="tag-key">cart_value_ok</span> → <span class="tag-key">intervene</span></div>
+          <div class="de-scores">
+            <div class="sc-item"><div class="sc-label">Hesitation</div><div class="sc-val r">0.78</div></div>
+            <div class="sc-item"><div class="sc-label">Intent</div><div class="sc-val g">0.64</div></div>
+            <div class="sc-item"><div class="sc-label">Confidence</div><div class="sc-val p">0.81</div></div>
+            <div class="sc-item"><div class="sc-label">Cart</div><div class="sc-val a">$94</div></div>
+            <div class="sc-item"><div class="sc-label">Revenue</div><div class="sc-val g">+$94</div></div>
+            <div class="sc-item"><div class="sc-label">Disc. Cost</div><div class="sc-val a">-$9.40</div></div>
+            <div class="sc-item" style="margin-left:auto;"><div class="sc-label">Net Uplift</div><div class="sc-val g">+$84.60</div></div>
+          </div>
+        </div>
+        <div class="de wst" data-t="wst">
+          <div class="de-hd"><span class="chip p tmn">sess_7d2c1</span><span class="chip a">⚠ Wasted Discount</span><span class="chip a">discount_15%</span><span style="margin-left:auto;font-size:10px;color:var(--text4);font-family:var(--mono)">8 min ago</span></div>
+          <div class="de-bd"><span style="color:var(--text3)">Decision:</span> <strong style="color:var(--amber2)">discount_15%</strong><br><em style="color:var(--text2)">"high hesitation + long session (6m55s)"</em><br><span style="color:var(--red2)">⚠ Post-analysis:</span> <span style="color:var(--text3)">Repeat customer with intent 0.88 — would convert without discount. Enable <span class="tag-key">repeat_customer_guard</span> to fix.</span></div>
+          <div class="de-scores">
+            <div class="sc-item"><div class="sc-label">Hesitation</div><div class="sc-val a">0.55</div></div>
+            <div class="sc-item"><div class="sc-label">Intent</div><div class="sc-val g">0.88</div></div>
+            <div class="sc-item"><div class="sc-label">Confidence</div><div class="sc-val a">0.61</div></div>
+            <div class="sc-item"><div class="sc-label">Wasted Cost</div><div class="sc-val r">-$18.50</div></div>
+            <div class="sc-item" style="margin-left:auto;"><div class="sc-label">Verdict</div><div class="sc-val a">Avoidable</div></div>
+          </div>
+        </div>
+        <div class="de bnc" data-t="bnc">
+          <div class="de-hd"><span class="chip p tmn">sess_9e1a4</span><span class="chip r">✕ Bounced</span><span class="chip gr">do_nothing</span><span style="margin-left:auto;font-size:10px;color:var(--text4);font-family:var(--mono)">15 min ago</span></div>
+          <div class="de-bd"><span style="color:var(--text3)">Decision:</span> <strong style="color:var(--text2)">do_nothing</strong><br><em style="color:var(--text2)">"confidence 0.48 below min threshold 0.60 — low engagement (0.21)"</em><br><span style="color:var(--green)">✓ Correct call:</span> <span style="color:var(--text3)">Low-intent user — any discount would have been wasted.</span></div>
+          <div class="de-scores">
+            <div class="sc-item"><div class="sc-label">Hesitation</div><div class="sc-val r">0.91</div></div>
+            <div class="sc-item"><div class="sc-label">Intent</div><div class="sc-val r">0.21</div></div>
+            <div class="sc-item"><div class="sc-label">Confidence</div><div class="sc-val r">0.48</div></div>
+            <div class="sc-item"><div class="sc-label">Cost</div><div class="sc-val g">$0</div></div>
+            <div class="sc-item" style="margin-left:auto;"><div class="sc-label">Result</div><div class="sc-val r">Bounced</div></div>
+          </div>
+        </div>
+        <div class="de cvt" data-t="cvt">
+          <div class="de-hd"><span class="chip p tmn">sess_b5f3d</span><span class="chip g">✓ Converted</span><span class="chip b">urgency_popup</span><span style="margin-left:auto;font-size:10px;color:var(--text4);font-family:var(--mono)">22 min ago</span></div>
+          <div class="de-bd"><strong style="color:var(--amber2)">urgency_popup</strong> only — no discount (budget saved)<br><em style="color:var(--text2)">"moderate hesitation (0.62) + scroll 89% + first visit + high intent"</em><br><span style="color:var(--green)">✓ Optimal:</span> <span style="color:var(--text3)">Converted via psychology alone. Zero discount cost.</span></div>
+          <div class="de-scores">
+            <div class="sc-item"><div class="sc-label">Hesitation</div><div class="sc-val a">0.62</div></div>
+            <div class="sc-item"><div class="sc-label">Intent</div><div class="sc-val g">0.74</div></div>
+            <div class="sc-item"><div class="sc-label">Confidence</div><div class="sc-val g">0.79</div></div>
+            <div class="sc-item"><div class="sc-label">Cost</div><div class="sc-val g">$0</div></div>
+            <div class="sc-item" style="margin-left:auto;"><div class="sc-label">Net Uplift</div><div class="sc-val g">+$127</div></div>
+          </div>
+        </div>
+        <div class="de nth" data-t="nth">
+          <div class="de-hd"><span class="chip p tmn">sess_m3x9p</span><span class="chip gr">do_nothing</span><span class="chip b">Control Group</span><span style="margin-left:auto;font-size:10px;color:var(--text4);font-family:var(--mono)">58 min ago</span></div>
+          <div class="de-bd"><strong style="color:var(--text2)">do_nothing</strong><br><em style="color:var(--text2)">"excluded by intervention_rate threshold — part of A/B control group"</em><br><span style="color:var(--blue2)">ℹ Note:</span> <span style="color:var(--text3)">Intentional exclusion to measure organic baseline conversion rate.</span></div>
+          <div class="de-scores">
+            <div class="sc-item"><div class="sc-label">Hesitation</div><div class="sc-val a">0.61</div></div>
+            <div class="sc-item"><div class="sc-label">Confidence</div><div class="sc-val p">0.72</div></div>
+            <div class="sc-item"><div class="sc-label">Cost</div><div class="sc-val g">$0</div></div>
+            <div class="sc-item" style="margin-left:auto;"><div class="sc-label">Group</div><div class="sc-val gr">Control</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE: LIVE MONITORING
+    ═══════════════════════════════════ -->
+    <div class="page" id="page-live-monitor">
+      <div class="g4">
+        <div class="card glow-g"><div class="ct">Live Sessions</div><div class="mv" style="color:var(--green)" id="ls-sessions">1,247</div><div class="md up" id="ls-delta">↑ 84 / min</div></div>
+        <div class="card glow-a"><div class="ct">Active Interventions</div><div class="mv" style="color:var(--amber2)" id="ls-interventions">38</div><div class="ms">popups + discounts live</div></div>
+        <div class="card glow-p"><div class="ct">Revenue / min</div><div class="mv" style="color:var(--purple2)" id="ls-rev">$2,140</div><div class="md up">↑ 12% vs avg</div></div>
+        <div class="card"><div class="ct">AI Decisions / min</div><div class="mv" id="ls-dpm">847</div><div class="md up">within budget</div></div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="sh"><div class="live-dot"></div><h3>Real-Time Decision Feed</h3><div class="sh-actions"><button class="btn btn-ghost btn-xs" onclick="togglePause()">⏸ Pause</button></div></div>
+          <div id="live-feed" style="max-height:320px;overflow-y:auto;">
+            <div class="lrow"><span class="lsess">sess_f9a2c</span><span class="lact">→ <span class="chip a">discount_10%</span> triggered (hes:0.81 conf:0.77)</span><span class="limp" style="color:var(--green)">+$84</span></div>
+            <div class="lrow"><span class="lsess">sess_3d7b1</span><span class="lact">→ <span class="chip b">urgency_popup</span> shown (hes:0.65 conf:0.73)</span><span class="limp" style="color:var(--amber2)">pending</span></div>
+            <div class="lrow"><span class="lsess">sess_a1c5e</span><span class="lact">→ <span class="chip gr">do_nothing</span> — confidence 0.42 below threshold</span><span class="limp" style="color:var(--text3)">—</span></div>
+            <div class="lrow"><span class="lsess">sess_7f3a9</span><span class="lact">→ <span class="chip a">discount_15%</span> triggered (cart:$210)</span><span class="limp" style="color:var(--green)">+$178</span></div>
+            <div class="lrow"><span class="lsess">sess_b2d8c</span><span class="lact">→ <span class="chip b">urgency_popup</span> → converted ✓</span><span class="limp" style="color:var(--green)">+$56 ✓</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ct">Platform Health</div>
+          <div class="hr"><div class="hr-hd"><span class="hr-name">API Services</span><span class="chip g">99.2%</span></div><div class="bw"><div class="bar g" style="width:99%"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">p99 latency: 14ms</div></div>
+          <div class="hr"><div class="hr-hd"><span class="hr-name">AI Engine (ai_brain.py)</span><span class="chip g">97.1%</span></div><div class="bw"><div class="bar g" style="width:97%"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">decision latency: 8ms</div></div>
+          <div class="hr"><div class="hr-hd"><span class="hr-name">PostgreSQL Database</span><span class="chip g">100%</span></div><div class="bw"><div class="bar g" style="width:100%"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">query latency: 3ms</div></div>
+          <div class="hr"><div class="hr-hd"><span class="hr-name">Redis Event Queue</span><span class="chip a">Degraded</span></div><div class="bw"><div class="bar a" style="width:78%"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">queue depth: 340 (high)</div></div>
+          <div class="hr"><div class="hr-hd"><span class="hr-name">Stripe Integration</span><span class="chip r">Partial</span></div><div class="bw"><div class="bar r" style="width:61%"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)">webhook timeouts</div></div>
+          <div class="hr"><div class="hr-hd"><span class="hr-name">Webhooks (outbound)</span><span class="chip g">95%</span></div><div class="bw"><div class="bar g" style="width:95%"></div></div></div>
+          <div class="dv"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div class="sm"><span class="sm-label">Budget used</span><span class="sm-val" style="color:var(--amber2)">$182/$500</span></div>
+            <div class="sm"><span class="sm-label">Circuit breaker</span><span class="sm-val" style="color:var(--green)">ARMED</span></div>
+            <div class="sm"><span class="sm-label">Active stores</span><span class="sm-val">12/14</span></div>
+            <div class="sm"><span class="sm-label">Bots blocked</span><span class="sm-val">23</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="g3" style="margin-top:0;">
+        <div class="card"><div class="ct">Decision Breakdown (live)</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;"><span>discount_10%</span><span style="color:var(--amber2);font-weight:700">31%</span></div><div class="bw"><div class="bar a" style="width:31%"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;"><span>urgency_popup</span><span style="color:var(--blue2);font-weight:700">28%</span></div><div class="bw"><div class="bar b" style="width:28%"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;"><span>discount_15%</span><span style="color:var(--red2);font-weight:700">9%</span></div><div class="bw"><div class="bar r" style="width:9%"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;"><span>do_nothing</span><span style="color:var(--text3);font-weight:700">32%</span></div><div class="bw"><div class="bar" style="width:32%;background:var(--text4)"></div></div></div>
+          </div>
+        </div>
+        <div class="card"><div class="ct">Live Conversion Rate</div>
+          <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:9px;"><div class="mv" style="color:var(--green)">6.4%</div><div style="font-size:11px;color:var(--text3)">vs 2.8% baseline</div></div>
+          <div class="bw" style="height:7px;border-radius:4px;margin-bottom:5px;"><div class="bar g" style="width:64%;height:7px;border-radius:4px;"></div></div>
+          <div style="font-size:11px;color:var(--text3)">+128% AI uplift · <span style="color:var(--green);font-weight:700">56 conversions</span> last hour</div>
+        </div>
+        <div class="card"><div class="ct">Budget Status</div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:7px;"><div class="mv" style="color:var(--amber2)">$182</div><div style="font-size:11px;color:var(--text3)">of $500 budget</div></div>
+          <div class="bw" style="height:7px;border-radius:4px;margin-bottom:5px;"><div class="bar a" style="width:36%;height:7px;border-radius:4px;"></div></div>
+          <div style="font-size:11px;color:var(--text3)">36% used · <span style="color:var(--green);font-weight:700">$318 remaining</span></div>
+          <div style="font-size:10px;color:var(--text4);margin-top:3px;">Projected end-of-day: ~$280</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE: A/B TESTING
+    ═══════════════════════════════════ -->
+    <div class="page" id="page-ab-testing">
+      <div class="g4" style="margin-bottom:12px;">
+        <div class="card"><div class="ct">Active Tests</div><div class="mv" style="color:var(--purple2)">3</div></div>
+        <div class="card glow-g"><div class="ct">Winning Variants</div><div class="mv" style="color:var(--green)">2</div><div class="ms">declared winners</div></div>
+        <div class="card glow-a"><div class="ct">Tests Paused</div><div class="mv" style="color:var(--amber2)">1</div><div class="ms">low confidence</div></div>
+        <div class="card"><div class="ct">Avg Test Duration</div><div class="mv">8.2d</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;">
+        <h3 style="font-size:13px;font-weight:700;">A/B Experiments</h3>
+        <button class="btn btn-primary btn-sm" onclick="showToast('New A/B test created','success')">＋ New Experiment</button>
+      </div>
+      <div class="ab-card">
+        <div class="ab-header">
+          <span class="chip g">● Running</span>
+          <strong style="font-size:13px;">Discount vs Popup — Fashion Store</strong>
+          <span style="font-size:11px;color:var(--text3);margin-left:auto;">Day 5 of 14 · Confidence: 0.74</span>
+          <button class="btn btn-ghost btn-xs" onclick="showToast('Test paused','warning')">Pause</button>
+        </div>
+        <div class="ab-variants">
+          <div class="ab-variant">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">CONTROL (A)</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:4px;">urgency_popup</div>
+            <div style="font-size:11px;color:var(--text3);">Conv. rate: <strong style="color:var(--text)">5.1%</strong></div>
+            <div style="font-size:11px;color:var(--text3);">Sessions: <strong style="color:var(--text)">312</strong></div>
+            <div style="font-size:11px;color:var(--text3);">Avg order: <strong style="color:var(--text)">$88</strong></div>
+          </div>
+          <div class="ab-variant winner">
+            <div style="font-size:10px;color:var(--green);margin-bottom:4px;font-weight:700;">VARIANT (B) ↑ WINNING</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:4px;">discount_10% + popup</div>
+            <div style="font-size:11px;color:var(--text3);">Conv. rate: <strong style="color:var(--green)">7.8%</strong></div>
+            <div style="font-size:11px;color:var(--text3);">Sessions: <strong style="color:var(--text)">318</strong></div>
+            <div style="font-size:11px;color:var(--text3);">Avg order: <strong style="color:var(--text)">$94</strong></div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--text3);">
+          Uplift: <strong style="color:var(--green)">+52.9%</strong> conversion · Statistical significance: 74% · 
+          <span style="color:var(--amber2)">Need 95% to declare winner. Est. 9 more days.</span>
+        </div>
+      </div>
+      <div class="ab-card">
+        <div class="ab-header">
+          <span class="chip a">⏸ Paused</span>
+          <strong style="font-size:13px;">Confidence Threshold Test — Accessories Hub</strong>
+          <span style="font-size:11px;color:var(--text3);margin-left:auto;">Day 8 · Confidence: 0.51 (below 0.60)</span>
+          <button class="btn btn-success btn-xs" onclick="showToast('A/B test resumed','success')">Resume</button>
+        </div>
+        <div class="ab-variants">
+          <div class="ab-variant">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">CONTROL (A)</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:4px;">threshold: 0.60</div>
+            <div style="font-size:11px;color:var(--text3);">Conv. rate: <strong style="color:var(--text)">6.2%</strong></div>
+            <div style="font-size:11px;color:var(--text3);">Wasted: <strong style="color:var(--text)">9.1%</strong></div>
+          </div>
+          <div class="ab-variant">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">VARIANT (B)</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:4px;">threshold: 0.75</div>
+            <div style="font-size:11px;color:var(--text3);">Conv. rate: <strong style="color:var(--text)">6.0%</strong></div>
+            <div style="font-size:11px;color:var(--text3);">Wasted: <strong style="color:var(--green)">3.8%</strong></div>
+          </div>
+        </div>
+        <div style="margin-top:10px;" class="ib a"><span class="ib-tag a">📊 Early Insight</span>Higher threshold (0.75) reduces wasted discounts by 58% with only -3.2% conversion impact. If trend holds: saves ~$54/day. Test paused due to low volume — resuming will extend by 7 days.</div>
+      </div>
+      <div class="ab-card">
+        <div class="ab-header">
+          <span class="chip b">● Scheduled</span>
+          <strong style="font-size:13px;">Strategy Mode Test — Urban Wear</strong>
+          <span style="font-size:11px;color:var(--text3);margin-left:auto;">Starts in 2 days · 14-day run</span>
+          <button class="btn btn-ghost btn-xs" onclick="showToast('Test cancelled','warning')">Cancel</button>
+        </div>
+        <div class="ab-variants">
+          <div class="ab-variant"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">CONTROL (A)</div><div style="font-size:14px;font-weight:700;">Balanced Mode</div></div>
+          <div class="ab-variant"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">VARIANT (B)</div><div style="font-size:14px;font-weight:700;">Aggressive Mode</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE: REVENUE
+    ═══════════════════════════════════ -->
+    <div class="page" id="page-revenue">
+      <div class="g4">
+        <div class="card glow-p"><div class="ct">Conv. Before AI</div><div class="mv">2.8%</div><div class="ms">organic baseline</div></div>
+        <div class="card glow-g"><div class="ct">Conv. After AI</div><div class="mv" style="color:var(--green)">6.4%</div><div class="md up">+128% uplift</div></div>
+        <div class="card glow-a"><div class="ct">Discount Cost Today</div><div class="mv" style="color:var(--amber2)">$182</div><div class="ms">36% of $500 budget</div></div>
+        <div class="card glow-p"><div class="ct">True AI Uplift</div><div class="mv" style="color:var(--purple2)">$8,420</div><div class="md up">46x ROI on discounts</div></div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="ct">Revenue by Store</div>
+          <div class="tw">
+            <table>
+              <tr><th>#</th><th>Store</th><th>AI Revenue</th><th>Our 20%</th><th>Wasted %</th><th>Status</th></tr>
+              <tr><td><div class="rank-circle">1</div></td><td class="tp">Fashion Store</td><td style="color:var(--green);font-weight:700;font-family:var(--mono)">$101,047</td><td class="tmn">$20,209</td><td><span class="chip a">4.2%</span></td><td><span class="chip g">Active</span></td></tr>
+              <tr><td><div class="rank-circle">2</div></td><td class="tp">Urban Wear</td><td style="color:var(--green);font-weight:700;font-family:var(--mono)">$58,370</td><td class="tmn">$11,674</td><td><span class="chip g">2.1%</span></td><td><span class="chip g">Active</span></td></tr>
+              <tr><td><div class="rank-circle">3</div></td><td class="tp">Luxury Boutique</td><td style="color:var(--green);font-weight:700;font-family:var(--mono)">$44,316</td><td class="tmn">$8,863</td><td><span class="chip g">1.8%</span></td><td><span class="chip a">Budget Cap</span></td></tr>
+              <tr><td><div class="rank-circle">4</div></td><td class="tp">Accessories Hub</td><td style="color:var(--green);font-weight:700;font-family:var(--mono)">$30,592</td><td class="tmn">$6,118</td><td><span class="chip a">6.7%</span></td><td><span class="chip g">Active</span></td></tr>
+              <tr><td><div class="rank-circle">5</div></td><td class="tp">Minimal Style</td><td style="color:var(--green);font-weight:700;font-family:var(--mono)">$23,717</td><td class="tmn">$4,743</td><td><span class="chip r">9.1%</span></td><td><span class="chip r">High Waste</span></td></tr>
+              <tr><td><div class="rank-circle" style="background:var(--rbg);color:var(--red2)">!</div></td><td class="tp">Street Kings</td><td style="color:var(--amber2);font-weight:700;font-family:var(--mono)">$14,209</td><td class="tmn">$2,842</td><td><span class="chip r">11.4%</span></td><td><span class="chip r">Error</span></td></tr>
+            </table>
+          </div>
+          <div class="dv"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <div><div class="fl">Total AI Revenue</div><div style="font-size:16px;font-weight:800;color:var(--green);font-family:var(--mono)">$272,251</div></div>
+            <div><div class="fl">Our 20% Cut</div><div style="font-size:16px;font-weight:800;color:var(--purple2);font-family:var(--mono)">$54,449</div></div>
+            <div><div class="fl">Total Discount Cost</div><div style="font-size:16px;font-weight:800;color:var(--amber2);font-family:var(--mono)">$3,108</div></div>
+          </div>
+        </div>
+        <div class="gcol">
+          <div class="card">
+            <div class="ct">Discount Efficiency</div>
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <div><div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;"><span>True uplift (discount caused conversion)</span><span style="color:var(--green);font-weight:700">68%</span></div><div class="bw"><div class="bar g" style="width:68%"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;"><span>Would convert anyway (wasted margin)</span><span style="color:var(--amber2);font-weight:700">21%</span></div><div class="bw"><div class="bar a" style="width:21%"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:11px;"><span>No conversion (pure waste)</span><span style="color:var(--red2);font-weight:700">11%</span></div><div class="bw"><div class="bar r" style="width:11%"></div></div></div>
+            </div>
+            <div class="dv"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <div class="sm"><span class="sm-label">Avg discount given</span><span class="sm-val" style="color:var(--amber2)">11.2%</span></div>
+              <div class="sm"><span class="sm-label">Avg cart (discounted)</span><span class="sm-val">$94</span></div>
+              <div class="sm"><span class="sm-label">ROI on discounts</span><span class="sm-val" style="color:var(--green)">46x</span></div>
+              <div class="sm"><span class="sm-label">Wasted spend today</span><span class="sm-val" style="color:var(--red2)">$38.20</span></div>
+            </div>
+          </div>
+          <div class="ib a"><span class="ib-tag a">⚡ Key Optimization</span>Raising <code>min_confidence_to_act</code> from 0.60→0.70 saves <strong style="color:var(--amber2)">~$54/day</strong> with &lt;3% conv. impact. Enabling <code>repeat_customer_guard</code> eliminates "wasted margin" category entirely.</div>
+          <div class="ib p"><span class="ib-tag p">📈 True Uplift Formula</span><code>UPLIFT = (AI_conv% - baseline%) × sessions × AOV</code><br>Today: <strong style="color:var(--purple2)">(6.4%-2.8%) × 1,247 × $188 = $8,420</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE: ANALYTICS CHARTS
+    ═══════════════════════════════════ -->
+    <div class="page" id="page-charts">
+      <div class="g2">
+        <div class="card glow-p">
+          <div class="ct">Conversion Rate Over Time (30 days)</div>
+          <canvas id="chart-conv" height="140"></canvas>
+        </div>
+        <div class="card glow-g">
+          <div class="ct">Revenue by Day (last 30 days)</div>
+          <canvas id="chart-rev" height="140"></canvas>
+        </div>
+      </div>
+      <div class="g3">
+        <div class="card">
+          <div class="ct">Decision Outcomes (30 days)</div>
+          <canvas id="chart-outcomes" height="160"></canvas>
+        </div>
+        <div class="card">
+          <div class="ct">Discount Waste by Store</div>
+          <canvas id="chart-waste" height="160"></canvas>
+        </div>
+        <div class="card">
+          <div class="ct">AI Confidence Trend</div>
+          <canvas id="chart-confidence" height="160"></canvas>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="ct">Hourly Sessions & Interventions (today)</div>
+          <canvas id="chart-hourly" height="130"></canvas>
+        </div>
+        <div class="card">
+          <div class="ct">Revenue Attribution (AI vs Organic)</div>
+          <canvas id="chart-attribution" height="130"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE: USERS & SESSIONS
+    ═══════════════════════════════════ -->
+    <div class="page" id="page-users">
+      <div class="g4" style="margin-bottom:12px;">
+        <div class="card glow-g"><div class="ct">Live Sessions</div><div class="mv" style="color:var(--green)">1,247</div></div>
+        <div class="card glow-a"><div class="ct">Hesitating</div><div class="mv" style="color:var(--amber2)">312</div><div class="ms">score &gt; 0.55</div></div>
+        <div class="card glow-r"><div class="ct">At Risk</div><div class="mv" style="color:var(--red2)">84</div><div class="ms">likely to bounce</div></div>
+        <div class="card glow-g"><div class="ct">Converting Now</div><div class="mv" style="color:var(--green)">38</div><div class="ms">on payment page</div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="fb" style="margin:0;">
+          <button class="fbtn active" onclick="fs(this,'all')">All</button>
+          <button class="fbtn" onclick="fs(this,'hesitating')">Hesitating</button>
+          <button class="fbtn" onclick="fs(this,'risk')">At Risk</button>
+          <button class="fbtn" onclick="fs(this,'converting')">Converting</button>
+        </div>
+        <span style="font-size:10px;color:var(--text3)">Showing 8 of 1,247 live sessions</span>
+      </div>
+      <div class="card">
+        <div class="tw">
+          <table>
+            <tr><th>Session ID</th><th>Store</th><th>Hesitation</th><th>Intent</th><th>Scroll</th><th>Time</th><th>Cart</th><th>Last Action</th><th>Status</th><th>Actions</th></tr>
+            <tr>
+              <td class="tmn tp">sess_a3f8b</td><td style="font-size:11px">Fashion Store</td>
+              <td style="color:var(--red2);font-weight:700;font-family:var(--mono)">0.78</td>
+              <td style="color:var(--green);font-weight:700;font-family:var(--mono)">0.64</td>
+              <td>87%</td><td class="tmn">4m 22s</td><td class="tmn" style="color:var(--amber2)">$94</td>
+              <td style="font-size:11px">Viewed checkout</td><td><span class="chip a">Hesitating</span></td>
+              <td><div style="display:flex;gap:3px;"><button class="btn btn-ghost btn-xs" onclick="openReplay('sess_a3f8b','0.78','0.64')">Replay</button><button class="btn btn-success btn-xs" onclick="openDiscount('sess_a3f8b')">Discount</button><button class="btn btn-primary btn-xs" onclick="showToast('Popup triggered','success')">Popup</button></div></td>
+            </tr>
+            <tr>
+              <td class="tmn tp">sess_b5f3d</td><td style="font-size:11px">Urban Wear</td>
+              <td style="color:var(--amber2);font-weight:700;font-family:var(--mono)">0.45</td>
+              <td style="color:var(--green);font-weight:700;font-family:var(--mono)">0.82</td>
+              <td>62%</td><td class="tmn">2m 10s</td><td class="tmn" style="color:var(--green)">$127</td>
+              <td style="font-size:11px">Added to cart</td><td><span class="chip b">Active</span></td>
+              <td><div style="display:flex;gap:3px;"><button class="btn btn-ghost btn-xs" onclick="openReplay('sess_b5f3d','0.45','0.82')">Replay</button><button class="btn btn-primary btn-xs" onclick="showToast('Popup triggered','success')">Popup</button></div></td>
+            </tr>
+            <tr>
+              <td class="tmn tp">sess_9e1a4</td><td style="font-size:11px">Street Kings</td>
+              <td style="color:var(--red2);font-weight:700;font-family:var(--mono)">0.91</td>
+              <td style="color:var(--red2);font-weight:700;font-family:var(--mono)">0.21</td>
+              <td>12%</td><td class="tmn">0m 48s</td><td class="tmn" style="color:var(--text3)">$0</td>
+              <td style="font-size:11px">Landing page</td><td><span class="chip r">At Risk</span></td>
+              <td><div style="display:flex;gap:3px;"><button class="btn btn-ghost btn-xs" onclick="openReplay('sess_9e1a4','0.91','0.21')">Replay</button><button class="btn btn-danger btn-xs" onclick="showToast('Session blocked','warning')">Block</button></div></td>
+            </tr>
+            <tr>
+              <td class="tmn tp">sess_7d2c1</td><td style="font-size:11px">Fashion Store</td>
+              <td style="color:var(--green);font-weight:700;font-family:var(--mono)">0.22</td>
+              <td style="color:var(--green);font-weight:700;font-family:var(--mono)">0.91</td>
+              <td>94%</td><td class="tmn">6m 55s</td><td class="tmn" style="color:var(--green)">$123</td>
+              <td style="font-size:11px">Payment page</td><td><span class="chip g">Converting</span></td>
+              <td><button class="btn btn-ghost btn-xs" onclick="openReplay('sess_7d2c1','0.22','0.91')">Replay</button></td>
+            </tr>
+            <tr>
+              <td class="tmn tp">sess_c2a7e</td><td style="font-size:11px">Accessories Hub</td>
+              <td style="color:var(--red2);font-weight:700;font-family:var(--mono)">0.83</td>
+              <td style="color:var(--amber2);font-weight:700;font-family:var(--mono)">0.44</td>
+              <td>55%</td><td class="tmn">3m 12s</td><td class="tmn" style="color:var(--amber2)">$67</td>
+              <td style="font-size:11px">Product page</td><td><span class="chip a">Hesitating</span></td>
+              <td><div style="display:flex;gap:3px;"><button class="btn btn-ghost btn-xs" onclick="openReplay('sess_c2a7e','0.83','0.44')">Replay</button><button class="btn btn-success btn-xs" onclick="openDiscount('sess_c2a7e')">Discount</button></div></td>
+            </tr>
+            <tr>
+              <td class="tmn tp">sess_r7k2w</td><td style="font-size:11px">Urban Wear</td>
+              <td style="color:var(--red2);font-weight:700;font-family:var(--mono)">0.88</td>
+              <td style="color:var(--red2);font-weight:700;font-family:var(--mono)">0.18</td>
+              <td>8%</td><td class="tmn">0m 22s</td><td class="tmn" style="color:var(--text3)">$0</td>
+              <td style="font-size:11px">Entry page</td><td><span class="chip r">Suspected Bot</span></td>
+              <td><button class="btn btn-danger btn-xs" onclick="showToast('Bot blocked + IP flagged','warning')">Block Bot</button></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE: STORE MANAGEMENT
+    ═══════════════════════════════════ -->
+    <div class="page" id="page-stores">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="font-size:13px;font-weight:700;">Store Management <span class="chip p" style="margin-left:6px;">14 total</span></h3>
+        <button class="btn btn-primary btn-sm" onclick="showToast('Add new store flow opened','success')">＋ Add Store</button>
+      </div>
+      <div class="card">
+        <div class="tw">
+          <table>
+            <tr><th>Store</th><th>Domain</th><th>Plan</th><th>AI Status</th><th>Conv. Rate</th><th>Revenue (30d)</th><th>Waste %</th><th>Strategy</th><th>Actions</th></tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px;"><div class="store-logo" style="background:var(--pbg);color:var(--purple2)">F</div><span class="tp">Fashion Store</span></div></td>
+              <td class="tmn" style="color:var(--text3)">fashion-store.com</td><td><span class="chip p">Pro</span></td><td><span class="chip g">Active</span></td>
+              <td style="color:var(--green);font-weight:700">7.2%</td>
+              <td style="color:var(--green);font-family:var(--mono);font-weight:700">$101,047</td>
+              <td><span class="chip a">4.2%</span></td><td><span class="chip gr">Balanced</span></td>
+              <td><div style="display:flex;gap:3px;"><button class="btn btn-ghost btn-xs" onclick="showToast('Store config opened','info')">Configure</button><button class="btn btn-ghost btn-xs" onclick="showToast('Store paused','warning')">Pause AI</button></div></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px;"><div class="store-logo" style="background:var(--bbg);color:var(--blue2)">U</div><span class="tp">Urban Wear</span></div></td>
+              <td class="tmn" style="color:var(--text3)">urbanwear.io</td><td><span class="chip p">Pro</span></td><td><span class="chip g">Active</span></td>
+              <td style="color:var(--green);font-weight:700">6.8%</td>
+              <td style="color:var(--green);font-family:var(--mono);font-weight:700">$58,370</td>
+              <td><span class="chip g">2.1%</span></td><td><span class="chip gr">Aggressive</span></td>
+              <td><div style="display:flex;gap:3px;"><button class="btn btn-ghost btn-xs" onclick="showToast('Store config opened','info')">Configure</button><button class="btn btn-ghost btn-xs">Pause AI</button></div></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px;"><div class="store-logo" style="background:var(--abg);color:var(--amber2)">L</div><span class="tp">Luxury Boutique</span></div></td>
+              <td class="tmn" style="color:var(--text3)">luxuryboutique.co</td><td><span class="chip a">Growth</span></td><td><span class="chip a">Budget Cap</span></td>
+              <td style="color:var(--green);font-weight:700">5.9%</td>
+              <td style="color:var(--green);font-family:var(--mono);font-weight:700">$44,316</td>
+              <td><span class="chip g">1.8%</span></td><td><span class="chip gr">Conservative</span></td>
+              <td><div style="display:flex;gap:3px;"><button class="btn btn-ghost btn-xs" onclick="showToast('Budget raised to $750','success')">Raise Budget</button></div></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px;"><div class="store-logo" style="background:var(--rbg);color:var(--red2)">S</div><span class="tp">Street Kings</span></div></td>
+              <td class="tmn" style="color:var(--text3)">streetkings.shop</td><td><span class="chip gr">Starter</span></td><td><span class="chip r">Error 8.2%</span></td>
+              <td style="color:var(--amber2);font-weight:700">3.1%</td>
+              <td style="color:var(--amber2);font-family:var(--mono);font-weight:700">$14,209</td>
+              <td><span class="chip r">11.4%</span></td><td><span class="chip gr">Balanced</span></td>
+              <td><div style="display:flex;gap:3px;"><button class="btn btn-danger btn-xs" onclick="showToast('Street Kings AI paused','warning')">Pause AI</button><button class="btn btn-ghost btn-xs">Investigate</button></div></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:8px;"><div class="store-logo" style="background:var(--gbg);color:var(--green)">C</div><span class="tp">Classic Outfits</span></div></td>
+              <td class="tmn" style="color:var(--text3)">classic-outfits.com</td><td><span class="chip gr">Starter</span></td><td><span class="chip a">Pending Validation</span></td>
+              <td style="color:var(--text3)">—</td><td style="color:var(--text3);font-family:var(--mono)">$0</td>
+              <td>—</td><td>—</td>
+              <td><div style="display:flex;gap:3px;"><button class="btn btn-success btn-xs" onclick="showToast('Classic Outfits activated','success')">Approve</button><button class="btn btn-danger btn-xs" onclick="showToast('Store rejected','warning')">Reject</button></div></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE: SYSTEM CONFIG
+    ═══════════════════════════════════ -->
+    <div class="page" id="page-system-config">
+      <div class="g2">
+        <div class="card glow-p">
+          <div class="ct">API Endpoint Control</div>
+          <div class="ctrl" style="padding:8px 0;"><div class="ctrl-label"><strong>User Tracking</strong><span class="tmn" style="font-size:10px">POST /api/track/event</span></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+          <div class="ctrl" style="padding:8px 0;"><div class="ctrl-label"><strong>AI Decisions</strong><span class="tmn" style="font-size:10px">POST /api/engine/decide</span></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+          <div class="ctrl" style="padding:8px 0;"><div class="ctrl-label"><strong>Webhooks (outbound)</strong><span class="tmn" style="font-size:10px">event delivery</span></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+          <div class="ctrl" style="padding:8px 0;"><div class="ctrl-label"><strong>Session Replay API</strong><span class="tmn" style="font-size:10px">GET /api/sessions/:id/replay</span></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+          <div class="ctrl" style="padding:8px 0;border-bottom:none;"><div class="ctrl-label"><strong>Analytics Export</strong><span class="tmn" style="font-size:10px">GET /api/analytics/export</span></div><label class="toggle"><input type="checkbox"><span class="tsl"></span></label></div>
+        </div>
+        <div class="card">
+          <div class="ct">Rate Limits</div>
+          <div class="fg"><label class="fl">Events / sec per store</label><input class="fi" value="500" type="number"></div>
+          <div class="fg"><label class="fl">AI Decisions / sec (global)</label><input class="fi" value="100" type="number"></div>
+          <div class="fg"><label class="fl">Webhook deliveries / min</label><input class="fi" value="1000" type="number"></div>
+          <div class="fg"><label class="fl">Rate limit breach action</label><select class="fi fi-select"><option>Auto-throttle</option><option selected>Queue overflow</option><option>Drop requests</option></select></div>
+        </div>
+        <div class="card glow-r">
+          <div class="ct">Security & Auth</div>
+          <div class="fg"><label class="fl">Platform Master Key</label><input class="fi" value="sk-zeno-master-••••••••f3a9" type="password"></div>
+          <div class="fg"><label class="fl">Store API Key</label><input class="fi" value="sk-zeno-store-••••••••c2b7" type="password"></div>
+          <div class="fg"><label class="fl">Webhook Secret</label><input class="fi" value="whsec-••••••••7b2d" type="password"></div>
+          <div class="fg"><label class="fl">Allowed Domain (CORS)</label><input class="fi" value="fashion-store.com" type="text"></div>
+          <div class="fg" style="margin-bottom:0;"><label class="fl">IP Whitelist</label><input class="fi" value="95.141.22.10, 185.220.101.0/24" type="text"></div>
+        </div>
+        <div class="card">
+          <div class="ct">Retry & Resilience</div>
+          <div class="fg"><label class="fl">Retry Strategy</label><select class="fi fi-select"><option selected>Exponential Backoff</option><option>Linear</option><option>Immediate</option></select></div>
+          <div class="fg"><label class="fl">Max Retries</label><input class="fi" value="3" type="number"></div>
+          <div class="fg"><label class="fl">Initial Delay (ms)</label><input class="fi" value="500" type="number"></div>
+          <div class="fg"><label class="fl">Max Delay (ms)</label><input class="fi" value="10000" type="number"></div>
+          <div class="fg" style="margin-bottom:0;"><label class="fl">Circuit Breaker Threshold (%)</label><input class="fi" value="5" type="number"></div>
+        </div>
+        <div class="card glow-p">
+          <div class="ct">AI Engine (ai_brain.py)</div>
+          <div class="fg"><label class="fl">Hesitation Model Version</label><select class="fi fi-select"><option selected>v2.4.1 — Production</option><option>v2.3.0 — Stable</option><option>v2.5.0-beta</option></select></div>
+          <div class="fg"><label class="fl">Intent Model Version</label><select class="fi fi-select"><option selected>v1.8.2 — Production</option><option>v1.7.0 — Stable</option></select></div>
+          <div class="fg"><label class="fl">A/B Test Split (% gets AI)</label><input class="fi" value="70" type="number"></div>
+          <div class="fg" style="margin-bottom:0;"><label class="fl">Decision Cooldown (sec)</label><input class="fi" value="120" type="number"></div>
+        </div>
+        <div class="card">
+          <div class="ct">Notifications</div>
+          <div class="fg"><label class="fl">Alert Email</label><input class="fi" value="admin@zeno.ai" type="email"></div>
+          <div class="fg"><label class="fl">Slack Webhook</label><input class="fi" value="https://hooks.slack.com/services/••••••" type="text"></div>
+          <div class="ctrl" style="padding:8px 0;"><div class="ctrl-label"><strong>Email on Budget Breach</strong></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+          <div class="ctrl" style="padding:8px 0;"><div class="ctrl-label"><strong>Slack on API Errors</strong></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+          <div class="ctrl" style="padding:8px 0;border-bottom:none;"><div class="ctrl-label"><strong>Daily Revenue Report (11pm)</strong></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn btn-primary" onclick="saveConfig()">💾 Save All Config</button>
+        <button class="btn btn-ghost" onclick="showToast('Config exported','success')">⬇ Export JSON</button>
+        <button class="btn btn-danger" onclick="if(confirm('Reset to defaults?'))showToast('Reset to defaults','warning')">↺ Reset Defaults</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE: ALERTS
+    ═══════════════════════════════════ -->
+    <div class="page" id="page-alerts">
+      <div class="g4" style="margin-bottom:12px;">
+        <div class="card glow-r"><div class="ct">Critical</div><div class="mv" style="color:var(--red2)">2</div></div>
+        <div class="card glow-a"><div class="ct">Warnings</div><div class="mv" style="color:var(--amber2)">8</div></div>
+        <div class="card"><div class="ct">Info</div><div class="mv" style="color:var(--blue2)">5</div></div>
+        <div class="card glow-g"><div class="ct">Resolved (24h)</div><div class="mv" style="color:var(--green)">41</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="fb" style="margin:0;">
+          <button class="fbtn active" onclick="fa2(this,'all')">All (15)</button>
+          <button class="fbtn" onclick="fa2(this,'crit')">Critical (2)</button>
+          <button class="fbtn" onclick="fa2(this,'warn')">Warning (8)</button>
+          <button class="fbtn" onclick="fa2(this,'info')">Info (5)</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="showToast('All alerts acknowledged','success')">✓ Ack All</button>
+      </div>
+      <div class="card" id="alert-list">
+        <div class="al" data-sv="crit">
+          <div class="al-icon crit">✕</div>
+          <div class="al-body"><div class="al-title">🔴 High error rate — Street Kings store</div><div class="al-desc">API error rate 8.2% exceeds 5% threshold. Connection timeouts on /api/track/event. AI decisions degraded.</div>
+          <div class="al-meta"><span class="al-time">2 min ago</span><span class="chip r">Critical</span><button class="btn btn-danger btn-xs" onclick="showToast('Street Kings AI paused','warning')">Pause AI</button><button class="btn btn-ghost btn-xs" onclick="showToast('Alert acknowledged','success')">Ack</button></div></div>
+        </div>
+        <div class="al" data-sv="crit">
+          <div class="al-icon crit">✕</div>
+          <div class="al-body"><div class="al-title">🔴 Payment webhook failure — Urban Wear</div><div class="al-desc">Stripe webhook timeout. 3 retries exhausted. Conversions may not record. Manual reconciliation required.</div>
+          <div class="al-meta"><span class="al-time">15 min ago</span><span class="chip r">Critical</span><button class="btn btn-ghost btn-xs" onclick="showToast('Retrying...','info')">Retry</button><button class="btn btn-ghost btn-xs" onclick="showToast('Acknowledged','success')">Ack</button></div></div>
+        </div>
+        <div class="al" data-sv="warn">
+          <div class="al-icon warn">!</div>
+          <div class="al-body"><div class="al-title">⚠ New store pending — Classic Outfits</div><div class="al-desc">Domain validation not approved. AI blocked until admin review.</div>
+          <div class="al-meta"><span class="al-time">1h ago</span><span class="chip a">Warning</span><button class="btn btn-success btn-xs" onclick="showToast('Classic Outfits activated','success')">Approve</button><button class="btn btn-danger btn-xs" onclick="showToast('Rejected','warning')">Reject</button></div></div>
+        </div>
+        <div class="al" data-sv="warn">
+          <div class="al-icon warn">!</div>
+          <div class="al-body"><div class="al-title">⚠ Rate limit reached — 3 stores auto-throttled</div><div class="al-desc">Minimal Style, Street Kings, Trendy Looks hit 500 events/sec limit. Auto-throttled. No data loss.</div>
+          <div class="al-meta"><span class="al-time">2h ago</span><span class="chip a">Warning</span><button class="btn btn-ghost btn-xs" onclick="showPage('system-config',null,'⚙️ System Config')">Adjust Limits</button></div></div>
+        </div>
+        <div class="al" data-sv="warn">
+          <div class="al-icon warn">!</div>
+          <div class="al-body"><div class="al-title">⚠ A/B test paused — Accessories Hub</div><div class="al-desc">Confidence score below 0.60 for 15+ minutes. Both groups collapsed to baseline.</div>
+          <div class="al-meta"><span class="al-time">3h ago</span><span class="chip a">Warning</span><button class="btn btn-primary btn-xs" onclick="showToast('A/B test resumed','success')">Resume Test</button></div></div>
+        </div>
+        <div class="al" data-sv="warn">
+          <div class="al-icon warn">!</div>
+          <div class="al-body"><div class="al-title">⚠ Wasted discount rate rising — Minimal Style</div><div class="al-desc">Waste rate reached 9.1% (up from 4.2%). Recommend raising confidence threshold to 0.75. Est. savings: ~$28/day.</div>
+          <div class="al-meta"><span class="al-time">5h ago</span><span class="chip a">Warning</span><button class="btn btn-primary btn-xs" onclick="showToast('Threshold raised to 0.75','success')">Apply Fix</button></div></div>
+        </div>
+        <div class="al" data-sv="info">
+          <div class="al-icon ok">✓</div>
+          <div class="al-body"><div class="al-title">✅ Budget circuit breaker — Luxury Boutique</div><div class="al-desc">Daily discount budget $500 reached at 16:40. Circuit breaker activated. Discounts paused, popups active. Resets midnight.</div>
+          <div class="al-meta"><span class="al-time">4h ago</span><span class="chip g">Info</span><button class="btn btn-primary btn-xs" onclick="showToast('Budget raised to $750','success')">Raise Budget</button></div></div>
+        </div>
+        <div class="al" data-sv="info">
+          <div class="al-icon ok">✓</div>
+          <div class="al-body"><div class="al-title">✅ AI confidence improved to 94.7%</div><div class="al-desc">↑ 5.2% vs last 7 days following hesitation model update v2.4.1. Wasted discount rate dropped from 14% to 11%.</div>
+          <div class="al-meta"><span class="al-time">Yesterday</span><span class="chip g">Info</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE: AUDIT LOG
+    ═══════════════════════════════════ -->
+    <div class="page" id="page-audit-log">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="font-size:13px;font-weight:700;">Audit Log <span style="font-size:11px;color:var(--text3);font-weight:400;">Full history of all admin actions</span></h3>
+        <button class="btn btn-ghost btn-sm" onclick="showToast('Audit log exported','success')">⬇ Export CSV</button>
+      </div>
+      <div class="card">
+        <div class="audit-row">
+          <div class="audit-icon" style="background:var(--gbg);color:var(--green);border:1px solid var(--gbd);">⚙</div>
+          <div class="audit-body"><div class="audit-title">Strategy mode changed → Balanced</div><div class="audit-meta">admin@zeno.ai · 2 min ago · IP: 95.141.22.10</div></div>
+          <span class="chip g" style="flex-shrink:0;">Success</span>
+        </div>
+        <div class="audit-row">
+          <div class="audit-icon" style="background:var(--abg);color:var(--amber2);border:1px solid var(--abd);">💸</div>
+          <div class="audit-body"><div class="audit-title">Discount budget changed: $300 → $500</div><div class="audit-meta">admin@zeno.ai · 1h ago · IP: 95.141.22.10</div></div>
+          <span class="chip a" style="flex-shrink:0;">Modified</span>
+        </div>
+        <div class="audit-row">
+          <div class="audit-icon" style="background:var(--pbg);color:var(--purple2);border:1px solid var(--pbd);">👤</div>
+          <div class="audit-body"><div class="audit-title">User invited: sarah@fashion-store.com (Role: Analyst)</div><div class="audit-meta">admin@zeno.ai · 3h ago · IP: 95.141.22.10</div></div>
+          <span class="chip g" style="flex-shrink:0;">Success</span>
+        </div>
+        <div class="audit-row">
+          <div class="audit-icon" style="background:var(--rbg);color:var(--red2);border:1px solid var(--rbd);">🚫</div>
+          <div class="audit-body"><div class="audit-title">AI paused for store: Street Kings</div><div class="audit-meta">admin@zeno.ai · 4h ago · IP: 95.141.22.10</div></div>
+          <span class="chip r" style="flex-shrink:0;">Action</span>
+        </div>
+        <div class="audit-row">
+          <div class="audit-icon" style="background:var(--gbg);color:var(--green);border:1px solid var(--gbd);">🏪</div>
+          <div class="audit-body"><div class="audit-title">Store approved: TrendyLooks (classic-outfits.com)</div><div class="audit-meta">admin@zeno.ai · 6h ago · IP: 95.141.22.10</div></div>
+          <span class="chip g" style="flex-shrink:0;">Success</span>
+        </div>
+        <div class="audit-row">
+          <div class="audit-icon" style="background:var(--abg);color:var(--amber2);border:1px solid var(--abd);">🔧</div>
+          <div class="audit-body"><div class="audit-title">Confidence threshold changed: 0.55 → 0.60</div><div class="audit-meta">ops@zeno.ai · Yesterday 18:30 · IP: 185.220.101.5</div></div>
+          <span class="chip a" style="flex-shrink:0;">Modified</span>
+        </div>
+        <div class="audit-row">
+          <div class="audit-icon" style="background:var(--pbg);color:var(--purple2);border:1px solid var(--pbd);">🔑</div>
+          <div class="audit-body"><div class="audit-title">API key rotated for store: Fashion Store</div><div class="audit-meta">admin@zeno.ai · Yesterday 12:00 · IP: 95.141.22.10</div></div>
+          <span class="chip g" style="flex-shrink:0;">Success</span>
+        </div>
+        <div class="audit-row">
+          <div class="audit-icon" style="background:var(--bbg);color:var(--blue2);border:1px solid var(--bbd);">🧪</div>
+          <div class="audit-body"><div class="audit-title">A/B test created: Discount vs Popup — Fashion Store</div><div class="audit-meta">admin@zeno.ai · 5 days ago · IP: 95.141.22.10</div></div>
+          <span class="chip b" style="flex-shrink:0;">Created</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAGE: TEAM & ROLES
+    ═══════════════════════════════════ -->
+    <div class="page" id="page-team">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="font-size:13px;font-weight:700;">Team & Role Management</h3>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('mo-invite').classList.add('open')">＋ Invite Member</button>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="ct">Team Members</div>
+          <div class="tw">
+            <table>
+              <tr><th>Member</th><th>Role</th><th>Access</th><th>Last Active</th><th>Actions</th></tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px;"><div class="avatar" style="width:26px;height:26px;font-size:10px;">A</div><div><div class="tp" style="font-size:12px;">Admin User</div><div style="font-size:10px;color:var(--text3)">admin@zeno.ai</div></div></div></td>
+                <td><span class="chip p">Super Admin</span></td>
+                <td><span class="chip gr">All Stores</span></td>
+                <td class="tmn" style="color:var(--green)">Now</td>
+                <td><span style="font-size:10px;color:var(--text4)">You</span></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px;"><div class="avatar" style="width:26px;height:26px;font-size:10px;background:linear-gradient(135deg,var(--green),var(--blue));">S</div><div><div class="tp" style="font-size:12px;">Sarah Johnson</div><div style="font-size:10px;color:var(--text3)">sarah@company.com</div></div></div></td>
+                <td><span class="chip b">Analyst</span></td>
+                <td><span class="chip gr">Fashion Store</span></td>
+                <td class="tmn">2h ago</td>
+                <td><div style="display:flex;gap:3px;"><button class="btn btn-ghost btn-xs" onclick="showToast('Role editor opened','info')">Edit</button><button class="btn btn-danger btn-xs" onclick="showToast('Access revoked','warning')">Revoke</button></div></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px;"><div class="avatar" style="width:26px;height:26px;font-size:10px;background:linear-gradient(135deg,var(--amber),var(--red));">M</div><div><div class="tp" style="font-size:12px;">Mohammed Ali</div><div style="font-size:10px;color:var(--text3)">ops@zeno.ai</div></div></div></td>
+                <td><span class="chip a">Admin</span></td>
+                <td><span class="chip gr">All Stores</span></td>
+                <td class="tmn">Yesterday</td>
+                <td><div style="display:flex;gap:3px;"><button class="btn btn-ghost btn-xs" onclick="showToast('Role editor opened','info')">Edit</button><button class="btn btn-danger btn-xs" onclick="showToast('Access revoked','warning')">Revoke</button></div></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px;"><div class="avatar" style="width:26px;height:26px;font-size:10px;background:linear-gradient(135deg,var(--cyan),var(--green));">L</div><div><div class="tp" style="font-size:12px;">Lena Weber</div><div style="font-size:10px;color:var(--text3)">lena@client.com</div></div></div></td>
+                <td><span class="chip gr">Store Manager</span></td>
+                <td><span class="chip gr">Urban Wear</span></td>
+                <td class="tmn">3 days ago</td>
+                <td><div style="display:flex;gap:3px;"><button class="btn btn-ghost btn-xs" onclick="showToast('Role editor opened','info')">Edit</button><button class="btn btn-danger btn-xs" onclick="showToast('Removed','warning')">Remove</button></div></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ct">Roles & Permissions</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="background:var(--bg4);border:1px solid var(--pbd);border-radius:var(--r);padding:10px 12px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span class="chip p">Super Admin</span></div>
+              <div style="font-size:11px;color:var(--text3);">Full access — all stores, configs, users, billing. Can delete data and manage roles.</div>
+            </div>
+            <div style="background:var(--bg4);border:1px solid var(--abd);border-radius:var(--r);padding:10px 12px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span class="chip a">Admin</span></div>
+              <div style="font-size:11px;color:var(--text3);">Manage stores, AI config, A/B tests, alerts. Cannot manage users or billing.</div>
+            </div>
+            <div style="background:var(--bg4);border:1px solid var(--bbd);border-radius:var(--r);padding:10px 12px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span class="chip b">Analyst</span></div>
+              <div style="font-size:11px;color:var(--text3);">Read-only access to all analytics, decision logs, revenue. Can export reports.</div>
+            </div>
+            <div style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span class="chip gr">Store Manager</span></div>
+              <div style="font-size:11px;color:var(--text3);">Single store access only. View sessions, send manual discounts, view alerts for their store.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+// ─── PAGE NAV ───
+function showPage(id, el, title) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const p = document.getElementById('page-' + id);
+  if (p) { p.classList.add('active'); if (id === 'charts') initCharts(); }
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (title) document.getElementById('page-title').textContent = title;
+}
+
+// ─── SIDEBAR COLLAPSE ───
+let sidebarCollapsed = false;
+function toggleSidebar() {
+  sidebarCollapsed = !sidebarCollapsed;
+  const s = document.getElementById('sidebar');
+  const btn = document.getElementById('collapse-btn');
+  s.classList.toggle('collapsed', sidebarCollapsed);
+  btn.textContent = sidebarCollapsed ? '▶' : '◀';
+}
+
+// ─── SLIDERS ───
+function sl(key, val, suffix, prefix) {
+  const v = parseFloat(val);
+  let disp = prefix ? '$' + Math.round(v) : (suffix ? v + suffix : parseFloat(v).toFixed(2));
+  const vel = document.getElementById('v-' + key);
+  const del = document.getElementById('d-' + key);
+  if (vel) vel.textContent = disp;
+  if (del) del.textContent = disp;
+}
+
+// ─── MODE ───
+const modes = {
+  Conservative: { desc: '<strong style="color:var(--text2)">Conservative:</strong> Acts only on very strong signals (confidence ≥ 0.80). Minimal discounts. Maximizes margin protection.', risk: 'Low', rc: 'var(--green)', disc: 'Minimal', dc: 'var(--green)', lift: '+60%', lc: 'var(--amber2)' },
+  Balanced:     { desc: '<strong style="color:var(--text2)">Balanced:</strong> Clear signals only (confidence ≥ 0.60). Moderate discount usage. Stable revenue with acceptable risk.', risk: 'Medium', rc: 'var(--amber2)', disc: 'Moderate', dc: 'var(--amber2)', lift: '+128%', lc: 'var(--green)' },
+  Aggressive:   { desc: '<strong style="color:var(--text2)">Aggressive:</strong> Acts on moderate signals (confidence ≥ 0.45). Heavy discount usage. Max conversion at cost of margin.', risk: 'High', rc: 'var(--red2)', disc: 'Heavy', dc: 'var(--red2)', lift: '+180%', lc: 'var(--green)' }
+};
+function setMode(btn, mode, cls) {
+  document.querySelectorAll('.mbtn').forEach(b => b.classList.remove('active','cons','aggr'));
+  btn.classList.add('active');
+  if (cls !== 'bal') btn.classList.add(cls);
+  document.getElementById('d-mode').textContent = mode;
+  const m = modes[mode];
+  document.getElementById('mode-desc').innerHTML = m.desc;
+  document.getElementById('mode-risk').textContent = m.risk; document.getElementById('mode-risk').style.color = m.rc;
+  document.getElementById('mode-disc').textContent = m.disc; document.getElementById('mode-disc').style.color = m.dc;
+  document.getElementById('mode-lift').textContent = m.lift; document.getElementById('mode-lift').style.color = m.lc;
+  showToast('Strategy mode → ' + mode, 'success');
+}
+
+// ─── GUARDRAILS ───
+function gc(cb, name) { showToast(name + (cb.checked ? ' enabled' : ' disabled'), cb.checked ? 'success' : 'warning'); }
+
+// ─── DECISION FILTER ───
+function fd(btn, type) {
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.de').forEach(el => {
+    el.style.display = (type === 'all' || el.dataset.t === type) ? 'block' : 'none';
+  });
+}
+
+// ─── SESSION FILTER ───
+function fs(btn, type) {
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── ALERT FILTER ───
+function fa2(btn, type) {
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.al').forEach(el => {
+    el.style.display = (type === 'all' || el.dataset.sv === type) ? 'flex' : 'none';
+  });
+}
+
+// ─── REPLAY MODAL ───
+function openReplay(sess, hes, intent) {
+  document.getElementById('mo-replay-id').textContent = sess + ' · Behavior Timeline';
+  const hesF = parseFloat(hes);
+  document.getElementById('mo-hes').textContent = hes;
+  document.getElementById('mo-hes').style.color = hesF > 0.7 ? 'var(--red2)' : hesF > 0.5 ? 'var(--amber2)' : 'var(--green)';
+  document.getElementById('mo-intent').textContent = intent;
+  const action = hesF > 0.7 ? '<span class="chip a">discount_10%</span>' : '<span class="chip b">urgency_popup</span>';
+  document.getElementById('mo-action').innerHTML = action;
+  const events = [
+    { dot:'page', t:'0s', label:'Page loaded', detail:'Referral: google ads' },
+    { dot:'page', t:'15s', label:'Scrolled 40%', detail:'Viewed product grid' },
+    { dot:'cart', t:'1m 08s', label:'Clicked product', detail:'Product: ' + (hesF > 0.7 ? 'Blue Denim Jacket $94' : 'White Sneakers $127') },
+    { dot:'cart', t:'2m 45s', label:'Added to cart', detail:'Cart value updated' },
+    { dot:'page', t:'3m 50s', label:'Viewed checkout', detail:'Hesitation score: ' + hes },
+    { dot:'ai', t:'4m 00s', label:'🤖 AI Decision', detail:'Action triggered' },
+  ];
+  document.getElementById('mo-timeline').innerHTML = events.map(e =>
+    `<div class="tl-item"><div class="tl-dot ${e.dot}"></div><span class="tl-t">${e.t}</span><span class="tl-lbl">${e.label}</span><div class="tl-detail">${e.detail}</div></div>`
+  ).join('');
+  document.getElementById('mo-replay').classList.add('open');
+}
+
+// ─── DISCOUNT MODAL ───
+function openDiscount(sess) {
+  document.getElementById('mo-disc-sess').textContent = 'Session: ' + sess;
+  document.getElementById('mo-discount').classList.add('open');
+}
+
+// ─── CLOSE MODAL ───
+function closeMo(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.mo').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+// ─── TOAST ───
+let tt;
+function showToast(msg, type = 'success') {
+  const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+  document.getElementById('t-icon').textContent = icons[type] || '✓';
+  document.getElementById('t-msg').textContent = msg;
+  const t = document.getElementById('toast');
+  t.className = 'show ' + type;
+  clearTimeout(tt);
+  tt = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ─── NOTIFICATIONS ───
+function toggleNotifPanel() {
+  document.getElementById('notif-panel').classList.toggle('open');
+}
+
+// ─── THEME ───
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  const btn = document.querySelector('.theme-btn');
+  btn.textContent = document.body.classList.contains('light') ? '🌒' : '🌙';
+  showToast(document.body.classList.contains('light') ? 'Light mode on' : 'Dark mode on', 'info');
+}
+
+// ─── SAVE / EXPORT ───
+function saveConfig() { showToast('Configuration saved to database ✓', 'success'); }
+function exportData() { showToast('Exporting data... download starting', 'info'); }
+
+// ─── GLOBAL SEARCH ───
+function globalSearch(q) {
+  if (!q) return;
+  if (q.length > 2) showToast('Searching: "' + q + '"...', 'info');
+}
+
+// ─── KEYBOARD SHORTCUTS ───
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey)) {
+    if (e.key === 's') { e.preventDefault(); saveConfig(); }
+    if (e.key === 'k') { e.preventDefault(); document.getElementById('global-search').focus(); }
+    if (e.key >= '1' && e.key <= '7') {
+      const pages = ['ai-control','decision-logs','live-monitor','ab-testing','revenue','users','charts'];
+      const titles = ['🧠 AI Control Center','📋 Decision Logs','📡 Live Monitoring','🧪 A/B Testing','💸 Revenue Intelligence','👥 Users & Sessions','📊 Analytics Charts'];
+      const idx = parseInt(e.key) - 1;
+      if (pages[idx]) { e.preventDefault(); showPage(pages[idx], null, titles[idx]); }
+    }
+  }
+});
+
+// ─── LIVE FEED ───
+let feedPaused = false;
+function togglePause() {
+  feedPaused = !feedPaused;
+  showToast(feedPaused ? 'Feed paused' : 'Feed resumed', feedPaused ? 'warning' : 'success');
+}
+const sessIds = ['sess_f1a2b','sess_c3d4e','sess_x7y8z','sess_p9q0r','sess_k8j3h','sess_t4e9r'];
+const lActions = [
+  ['<span class="chip a">discount_10%</span> triggered (conf:0.74)', '+$' + (Math.floor(Math.random()*120)+40)],
+  ['<span class="chip b">urgency_popup</span> → converted ✓', '+$' + (Math.floor(Math.random()*180)+50)],
+  ['<span class="chip gr">do_nothing</span> — conf:0.' + (Math.floor(Math.random()*19)+30) + ' low', '—'],
+  ['<span class="chip a">discount_15%</span> triggered (high value cart)', '+$' + (Math.floor(Math.random()*200)+80)],
+  ['<span class="chip b">urgency_popup</span> shown — pending', '<span style="color:var(--amber2)">pending</span>'],
+];
+setInterval(() => {
+  if (feedPaused) return;
+  const feed = document.getElementById('live-feed');
+  if (!feed || !document.getElementById('page-live-monitor').classList.contains('active')) return;
+  const s = sessIds[Math.floor(Math.random() * sessIds.length)];
+  const a = lActions[Math.floor(Math.random() * lActions.length)];
+  const impStr = typeof a[1] === 'string' ? a[1] : '+$' + (Math.floor(Math.random()*160)+30);
+  const impCol = impStr.startsWith('+') ? 'var(--green)' : impStr === '—' ? 'var(--text3)' : 'var(--amber2)';
+  const row = document.createElement('div');
+  row.className = 'lrow nr';
+  row.innerHTML = `<span class="lsess">${s}</span><span class="lact">→ ${a[0]}</span><span class="limp" style="color:${impCol}">${impStr}</span>`;
+  feed.insertBefore(row, feed.firstChild);
+  if (feed.children.length > 10) feed.removeChild(feed.lastChild);
+}, 2000);
+
+// ─── LIVE STATS UPDATE ───
+setInterval(() => {
+  const dpm = 820 + Math.floor(Math.random() * 60);
+  const rev = 1980 + Math.floor(Math.random() * 400);
+  ['tb-dpm','ls-dpm'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = dpm; });
+  ['tb-rev','ls-rev'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '$' + rev.toLocaleString(); });
+  const si = document.getElementById('ls-sessions');
+  if (si) {
+    const cur = parseInt(si.textContent.replace(',','')) || 1247;
+    const delta = Math.floor(Math.random() * 30) - 8;
+    const next = Math.max(900, cur + delta);
+    si.textContent = next.toLocaleString();
+    const sd = document.getElementById('ls-delta');
+    if (sd) { sd.textContent = (delta >= 0 ? '↑ ' : '↓ ') + Math.abs(delta) + ' / min'; sd.className = 'md ' + (delta >= 0 ? 'up' : 'dn'); }
+  }
+  const ii = document.getElementById('ls-interventions');
+  if (ii) ii.textContent = 22 + Math.floor(Math.random() * 30);
+}, 3500);
+
+// ─── CHARTS ───
+let chartsInited = false;
+function initCharts() {
+  if (chartsInited) return;
+  chartsInited = true;
+  const isLight = document.body.classList.contains('light');
+  const gc_ = (id) => document.getElementById(id)?.getContext('2d');
+  const gridC = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.04)';
+  const textC = isLight ? '#7880a0' : '#4e5878';
+  const baseOpts = {
+    responsive: true, maintainAspectRatio: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: gridC }, ticks: { color: textC, font: { size: 10 } } },
+      y: { grid: { color: gridC }, ticks: { color: textC, font: { size: 10 } } }
+    }
+  };
+  const days30 = Array.from({length:30},(_,i)=>`${i+1}`);
+  const makeGrad = (ctx, c1, c2) => { try { const g = ctx.createLinearGradient(0,0,0,200); g.addColorStop(0, c1); g.addColorStop(1, c2); return g; } catch(e){ return c1; } };
+
+  // Conv rate chart
+  const cc = gc_('chart-conv');
+  if (cc) {
+    const data = Array.from({length:30},()=>+(2.2+Math.random()*5).toFixed(1));
+    data[0]=2.8; data[29]=6.4;
+    new Chart(cc, { type:'line', data:{ labels:days30, datasets:[
+      {label:'AI Conv%',data,borderColor:'#00c896',backgroundColor:makeGrad(cc,'rgba(0,200,150,.2)','rgba(0,200,150,0)'),fill:true,tension:0.4,pointRadius:0,borderWidth:2},
+      {label:'Baseline',data:Array(30).fill(2.8),borderColor:'#4e5878',borderDash:[4,4],pointRadius:0,borderWidth:1,fill:false}
+    ]}, options:{...baseOpts, plugins:{legend:{display:true,labels:{color:textC,font:{size:10},boxWidth:12}}}} });
+  }
+
+  // Revenue chart
+  const rc = gc_('chart-rev');
+  if (rc) {
+    const data = Array.from({length:30},()=>Math.floor(180000+Math.random()*120000));
+    new Chart(rc, { type:'bar', data:{ labels:days30, datasets:[{label:'Revenue',data,backgroundColor:'rgba(108,92,231,0.6)',borderColor:'#6c5ce7',borderWidth:1,borderRadius:3}]}, options:{...baseOpts} });
+  }
+
+  // Outcomes donut
+  const oc = gc_('chart-outcomes');
+  if (oc) {
+    new Chart(oc, { type:'doughnut', data:{
+      labels:['Converted','Wasted','Bounced','Do Nothing'],
+      datasets:[{data:[74,21,28,9],backgroundColor:['#00c896','#f0a030','#e03050','#2e3454'],borderColor:'transparent',borderWidth:0}]
+    }, options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{color:textC,font:{size:10},boxWidth:10,padding:8}}}} });
+  }
+
+  // Waste bar
+  const wc = gc_('chart-waste');
+  if (wc) {
+    new Chart(wc, { type:'bar', data:{
+      labels:['Fashion','Urban','Luxury','Access.','Minimal','Street'],
+      datasets:[{data:[4.2,2.1,1.8,6.7,9.1,11.4],backgroundColor:['#f0a030','#00c896','#00c896','#f0a030','#e03050','#e03050'],borderRadius:4}]
+    }, options:{...baseOpts, indexAxis:'y'} });
+  }
+
+  // Confidence line
+  const conf = gc_('chart-confidence');
+  if (conf) {
+    const data = Array.from({length:30},()=>+(88+Math.random()*8).toFixed(1));
+    data[29]=94.7;
+    new Chart(conf, { type:'line', data:{labels:days30,datasets:[{data,borderColor:'#9d8ff8',backgroundColor:makeGrad(conf,'rgba(157,143,248,.2)','rgba(157,143,248,0)'),fill:true,tension:0.4,pointRadius:0,borderWidth:2}]}, options:{...baseOpts} });
+  }
+
+  // Hourly
+  const hc = gc_('chart-hourly');
+  if (hc) {
+    const hrs = Array.from({length:24},(_,i)=>`${i}h`);
+    new Chart(hc, { type:'bar', data:{labels:hrs,datasets:[
+      {label:'Sessions',data:Array.from({length:24},()=>Math.floor(600+Math.random()*800)),backgroundColor:'rgba(96,168,255,0.5)',borderRadius:2},
+      {label:'Interventions',data:Array.from({length:24},()=>Math.floor(20+Math.random()*60)),backgroundColor:'rgba(240,160,48,0.7)',borderRadius:2}
+    ]}, options:{...baseOpts,plugins:{legend:{display:true,labels:{color:textC,font:{size:10},boxWidth:10,padding:6}}},scales:{x:{stacked:false,grid:{color:gridC},ticks:{color:textC,font:{size:9}}},y:{grid:{color:gridC},ticks:{color:textC,font:{size:10}}}}} });
+  }
+
+  // Attribution
+  const ac = gc_('chart-attribution');
+  if (ac) {
+    new Chart(ac, { type:'pie', data:{
+      labels:['AI Uplift','Organic'],
+      datasets:[{data:[8420, 4200],backgroundColor:['#6c5ce7','#1f2338'],borderColor:'transparent'}]
+    }, options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{color:textC,font:{size:10},boxWidth:10}}}} });
+  }
+}
+</script>
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</body>
+</html>

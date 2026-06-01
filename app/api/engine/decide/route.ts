@@ -16,12 +16,20 @@
  * DO NOTHING is NOT a fallback. It is a valid, correct decision.
  *
  * ANY fallback that produces an action without this calculation = BUG.
+ *
+ * PRODUCTION GUARDS (added for SaaS scale):
+ *  - Redis sliding-window rate limiter (120 req/min per IP, 500/min per license key)
+ *  - DDoS burst detection: 3× limit in 10s → 5-min IP ban
+ *  - Multi-tenancy isolation via x-nolix-tenant header (injected by middleware)
  */
 import { NextRequest, NextResponse } from "next/server";
 import { query, ensureNolixSchema } from "@/lib/schema";
+import { queryForTenant } from "@/lib/nolix-rls";
 import { logPrediction } from "@/lib/calibration";
 import { getRuntimeFlag } from "@/lib/nolix-runtime";
 import { findSimilarUsers, similarityBoost } from "@/lib/nolix-vector-engine";
+import { applyRateLimit } from "@/lib/nolix-rate-limiter";
+import { extractTenantDomain } from "@/lib/nolix-tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -106,7 +114,9 @@ async function estimateTreatmentProbabilities(
   analysisMultipliers: Record<string, number>
 ): Promise<Record<string, number>> {
   // Historical data from the uplift model
-  const historical = await query<{
+  // RLS: queryForTenant sets app.current_tenant = storeDomain inside a transaction
+  // → only this store's rows are returned (DB-level isolation, not just WHERE clause)
+  const historical = await queryForTenant<{
     action_type: string;
     treatment_conversions: number;
     treatment_impressions: number;
@@ -116,7 +126,8 @@ async function estimateTreatmentProbabilities(
     `SELECT action_type, treatment_conversions, treatment_impressions, uplift_rate, confidence
      FROM nolix_uplift_model
      WHERE cohort_key = $1 AND action_type = ANY($2::text[])`,
-    [cohortKey, eligibleActions]
+    [cohortKey, eligibleActions],
+    storeDomain
   ).catch(() => [] as any[]);
 
   const histMap: Record<string, { uplift: number; confidence: number }> = {};
@@ -163,6 +174,15 @@ async function estimateTreatmentProbabilities(
 
 export async function POST(req: NextRequest) {
   try {
+    // ── [0] RATE LIMIT — Redis sliding window (FIRST CHECK, before any compute) ──
+    const ip         = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const licenseKey = req.headers.get("x-nolix-key") ?? undefined;
+    const rateLimitBlock = await applyRateLimit(ip, "/api/engine/decide", licenseKey);
+    if (rateLimitBlock) return rateLimitBlock;
+
+    // ── [0b] TENANT ISOLATION — resolve store domain from middleware header ──
+    const tenantFromHeader = extractTenantDomain(req);
+
     await ensureNolixSchema();
     const body = await req.json();
 
@@ -196,9 +216,12 @@ export async function POST(req: NextRequest) {
       current_url, device,
     } = body;
 
-    const store_domain = current_url
-      ? new URL(current_url).hostname.replace(/^www\./, "")
-      : "unknown_store";
+    // Tenant from middleware header is most reliable (injected from Referer/Origin)
+    const store_domain = (tenantFromHeader && tenantFromHeader !== "unknown")
+      ? tenantFromHeader
+      : current_url
+        ? new URL(current_url).hostname.replace(/^www\./, "")
+        : "unknown_store";
 
     // ── DOMAIN GATE — REALITY FINGERPRINT CHECK (MANDATORY) ─────────────────
     // Zeno WILL NOT act on stores that haven't passed the classification gate.
@@ -422,18 +445,23 @@ export async function POST(req: NextRequest) {
     const p = payloads[bestAction] ?? payloads.urgency;
 
     // ── STEP 10: RECORD IMPRESSION FOR LEARNING LOOP ─────────────────────────
+    // Both tables are RLS-protected: queryForTenant sets app.current_tenant
+    // inside a BEGIN/COMMIT transaction — writes are DB-level isolated to this store.
     Promise.all([
-      query(
+      queryForTenant(
         `INSERT INTO popup_sessions (
-          session_id, intent_level, intent_score, friction_detected,
+          session_id, store_domain, intent_level, intent_score, friction_detected,
           show_popup, action_taken, cohort_key, expected_uplift, business_explanation
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
          ON CONFLICT (session_id) DO UPDATE SET
+          store_domain=EXCLUDED.store_domain,
           friction_detected=EXCLUDED.friction_detected,
           action_taken=EXCLUDED.action_taken,
           expected_uplift=EXCLUDED.expected_uplift`,
         [
-          session_id, intentLevel,
+          session_id,
+          store_domain,           // ← RLS key column — enforced by DB policy
+          intentLevel,
           Math.round(base_p_convert * 100),
           friction, true, bestAction, cohortKey,
           bestUplift,
@@ -441,15 +469,17 @@ export async function POST(req: NextRequest) {
           `P(convert|no_action)=${(base_p_convert * 100).toFixed(1)}%, ` +
           `P(convert|action)=${(bestPConvertAction * 100).toFixed(1)}%, ` +
           `economic_value=$${bestEconomicValue.toFixed(2)}`
-        ]
+        ],
+        store_domain
       ),
-      query(
+      queryForTenant(
         `INSERT INTO zeno_action_metrics (
            store_domain, intent_category, friction_type, action_name, impressions
          ) VALUES ($1,$2,$3,$4,1)
          ON CONFLICT (store_domain, intent_category, friction_type, action_name)
          DO UPDATE SET impressions = zeno_action_metrics.impressions + 1, updated_at = now()`,
-        [store_domain, intentLevel, friction, bestAction]
+        [store_domain, intentLevel, friction, bestAction],
+        store_domain
       ),
     ]).catch((err) => console.warn("[decide] Learning loop save failed:", err));
 

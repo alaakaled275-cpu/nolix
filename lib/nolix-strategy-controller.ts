@@ -22,8 +22,10 @@ export async function runLearningCycle() {
     const weights = adjustStrategyWeights(map);
 
     // Save global weights in Redis for quick access by Hybrid Brain
-    await redis.set("nolix:learning:strategy_weights", JSON.stringify(weights));
-    await redis.set("nolix:learning:ml_success_rate", mlPerformance.toString());
+    if (redis) {
+      await redis.set("nolix:learning:strategy_weights", JSON.stringify(weights));
+      await redis.set("nolix:learning:ml_success_rate", mlPerformance.toString());
+    }
 
     // Evaluate Pricing Success
     const pricingData = await query(`
@@ -34,7 +36,7 @@ export async function runLearningCycle() {
 
     if (pricingData.length > 50) {
       const avgRoi = pricingData.reduce((acc, row) => acc + Number(row.roi_ratio), 0) / pricingData.length;
-      await redis.set("nolix:learning:pricing_efficiency", avgRoi.toString());
+      if (redis) await redis.set("nolix:learning:pricing_efficiency", avgRoi.toString());
     }
 
     console.log("[Learning Cycle] Completed.", { mlPerformance, weights });

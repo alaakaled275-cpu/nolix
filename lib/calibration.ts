@@ -6,8 +6,13 @@
  * - Brier Score: mean((predicted - actual)^2) — lower = more honest
  * - LogLoss: penalizes confident wrong predictions exponentially
  * - Drift Detection: compares 7-day vs 30-day Brier — catches model degradation
+ *
+ * RLS-MIGRATED:
+ *  - logPrediction()    → queryForTenant (scoped to store_domain)
+ *  - bindOutcome()      → queryForTenant (scoped to store_domain — added param)
+ *  - computeCalibration() → queryForTenant when domain known, queryAsService for admin
  */
-import { query } from "./db";
+import { queryForTenant, queryAsService } from "./nolix-rls";
 
 export interface CalibrationReport {
   brier_score: number;        // 0.0 = perfect, 0.25 = random, 1.0 = perfectly wrong
@@ -102,41 +107,59 @@ function buildCalibrationCurve(rows: { p: number; y: number }[]): CalibrationBuc
 /**
  * Main calibration function.
  * Reads from zeno_reality_logs and computes full calibration report.
+ *
+ * RLS: When storeDomain is provided, uses queryForTenant → only that store's data.
+ *      When storeDomain is omitted (admin mode), uses queryAsService → all stores.
  */
 export async function computeCalibration(
   storeDomain?: string,
   windowDays: number = 30
 ): Promise<CalibrationReport> {
-  const domainClause = storeDomain ? "AND store_domain = $2" : "";
-  const params: any[] = [`${windowDays} days`];
-  if (storeDomain) params.push(storeDomain);
+  const windowInterval = `${windowDays} days`;
 
-  // Fetch settled predictions (where actual_class is known)
-  const rows = await query<{
-    predicted_probability: number;
-    actual_class: string;
-  }>(
-    `SELECT predicted_probability, actual_class
-     FROM zeno_reality_logs
-     WHERE actual_class IS NOT NULL
-       AND verification_source != 'pending'
-       AND timestamp > now() - $1::interval
-       ${domainClause}`,
-    params
-  );
+  // ── Fetch settled predictions (where actual_class is known) ──────────────
+  let rows: { predicted_probability: number; actual_class: string }[];
+
+  if (storeDomain && storeDomain !== "unknown") {
+    // Tenant-scoped: only this store's predictions (RLS enforced at DB level)
+    rows = await queryForTenant<{
+      predicted_probability: number;
+      actual_class: string;
+    }>(
+      `SELECT predicted_probability, actual_class
+       FROM zeno_reality_logs
+       WHERE actual_class IS NOT NULL
+         AND verification_source != 'pending'
+         AND timestamp > now() - $1::interval`,
+      [windowInterval],
+      storeDomain
+    );
+  } else {
+    // Admin mode: all stores — queryAsService bypasses RLS
+    rows = await queryAsService<{
+      predicted_probability: number;
+      actual_class: string;
+    }>(
+      `SELECT predicted_probability, actual_class
+       FROM zeno_reality_logs
+       WHERE actual_class IS NOT NULL
+         AND verification_source != 'pending'
+         AND timestamp > now() - $1::interval`,
+      [windowInterval]
+    );
+  }
 
   const structured = rows.map((r) => ({
     p: Number(r.predicted_probability),
     y: r.actual_class === "convert" ? 1 : 0,
   }));
 
-  const brier = computeBrier(structured);
+  const brier   = computeBrier(structured);
   const logLoss = computeLogLoss(structured);
   const accuracy = structured.length > 0
     ? structured.filter((r) => (r.p >= 0.5 ? 1 : 0) === r.y).length / structured.length
     : 0;
 
-  // Overconfidence bias: mean(predicted) - actual_rate
   const meanPredicted = structured.length > 0
     ? structured.reduce((a, r) => a + r.p, 0) / structured.length
     : 0;
@@ -145,31 +168,43 @@ export async function computeCalibration(
     : 0;
   const overconfidenceBias = meanPredicted - actualRate;
 
-  // 7-day Brier for drift detection
-  const recent7Params: any[] = ["7 days"];
-  if (storeDomain) recent7Params.push(storeDomain);
+  // ── 7-day Brier for drift detection ──────────────────────────────────────
+  let recent7Rows: { predicted_probability: number; actual_class: string }[];
 
-  const recent7Rows = await query<{
-    predicted_probability: number;
-    actual_class: string;
-  }>(
-    `SELECT predicted_probability, actual_class
-     FROM zeno_reality_logs
-     WHERE actual_class IS NOT NULL
-       AND verification_source != 'pending'
-       AND timestamp > now() - $1::interval
-       ${domainClause}`,
-    recent7Params
-  );
+  if (storeDomain && storeDomain !== "unknown") {
+    recent7Rows = await queryForTenant<{
+      predicted_probability: number;
+      actual_class: string;
+    }>(
+      `SELECT predicted_probability, actual_class
+       FROM zeno_reality_logs
+       WHERE actual_class IS NOT NULL
+         AND verification_source != 'pending'
+         AND timestamp > now() - '7 days'::interval`,
+      [],
+      storeDomain
+    );
+  } else {
+    recent7Rows = await queryAsService<{
+      predicted_probability: number;
+      actual_class: string;
+    }>(
+      `SELECT predicted_probability, actual_class
+       FROM zeno_reality_logs
+       WHERE actual_class IS NOT NULL
+         AND verification_source != 'pending'
+         AND timestamp > now() - '7 days'::interval`
+    );
+  }
 
   const recent7 = recent7Rows.map((r) => ({
     p: Number(r.predicted_probability),
     y: r.actual_class === "convert" ? 1 : 0,
   }));
 
-  const brier7 = computeBrier(recent7);
-  const driftMagnitude = brier7 - brier; // positive = getting worse recently
-  const driftDetected = Math.abs(driftMagnitude) > 0.05 && recent7.length >= 10;
+  const brier7        = computeBrier(recent7);
+  const driftMagnitude = brier7 - brier;
+  const driftDetected  = Math.abs(driftMagnitude) > 0.05 && recent7.length >= 10;
   const driftDirection: CalibrationReport["drift_direction"] =
     driftMagnitude > 0.05 ? "degrading" : driftMagnitude < -0.05 ? "improving" : "stable";
 
@@ -187,16 +222,16 @@ export async function computeCalibration(
       : "Critical: Model predictions do not match reality. Stop relying on estimates. Run full audit.";
 
   return {
-    brier_score: Math.round(brier * 10000) / 10000,
-    brier_label: brierLabel(brier),
-    log_loss: Math.round(logLoss * 10000) / 10000,
-    sample_size: structured.length,
-    drift_detected: driftDetected,
-    drift_magnitude: Math.round(driftMagnitude * 10000) / 10000,
-    drift_direction: driftDirection,
-    accuracy_rate: Math.round(accuracy * 10000) / 10000,
+    brier_score:         Math.round(brier * 10000) / 10000,
+    brier_label:         brierLabel(brier),
+    log_loss:            Math.round(logLoss * 10000) / 10000,
+    sample_size:         structured.length,
+    drift_detected:      driftDetected,
+    drift_magnitude:     Math.round(driftMagnitude * 10000) / 10000,
+    drift_direction:     driftDirection,
+    accuracy_rate:       Math.round(accuracy * 10000) / 10000,
     overconfidence_bias: Math.round(overconfidenceBias * 10000) / 10000,
-    calibration_curve: calibrationCurve,
+    calibration_curve:   calibrationCurve,
     recommendation,
   };
 }
@@ -204,29 +239,41 @@ export async function computeCalibration(
 /**
  * Log a new prediction to zeno_reality_logs.
  * Call this every time Zeno makes a decision.
+ *
+ * RLS: Uses queryForTenant — scoped to data.store_domain.
+ * Only that store's logs are visible in subsequent reads.
  */
 export async function logPrediction(data: {
-  session_id: string;
-  store_domain: string;
-  predicted_class: string;
+  session_id:            string;
+  store_domain:          string;
+  predicted_class:       string;
   predicted_probability: number;
-  p_convert_no_action: number;
-  p_convert_action: number;
-  uplift_estimated: number;
-  action_taken: string;
-  economic_decision: "intervene" | "wait";
-  decision_cost: number;
-  causal_weights: Record<string, number>;
-  session_signals: Record<string, any>;
+  p_convert_no_action:   number;
+  p_convert_action:      number;
+  uplift_estimated:      number;
+  action_taken:          string;
+  economic_decision:     "intervene" | "wait";
+  decision_cost:         number;
+  causal_weights:        Record<string, number>;
+  session_signals:       Record<string, any>;
 }): Promise<string | null> {
+  // Guard: unknown domain → don't pollute calibration data
+  if (!data.store_domain || data.store_domain === "unknown") {
+    console.warn("[calibration] logPrediction: unknown store_domain — skipped");
+    return null;
+  }
+
   try {
-    const result = await query<{ id: string }>(
+    // queryForTenant: SET LOCAL app.current_tenant = store_domain inside transaction
+    // RLS policy enforces: store_domain = current_setting('app.current_tenant')
+    // → this INSERT can ONLY write into this tenant's partition of the table
+    const result = await queryForTenant<{ id: string }>(
       `INSERT INTO zeno_reality_logs (
         session_id, store_domain, predicted_class, predicted_probability,
         p_convert_no_action, p_convert_action, uplift_estimated,
         action_taken, economic_decision, decision_cost,
         causal_weights, session_signals
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        ON CONFLICT (session_id) DO NOTHING
        RETURNING id`,
       [
@@ -242,7 +289,8 @@ export async function logPrediction(data: {
         data.decision_cost,
         JSON.stringify(data.causal_weights),
         JSON.stringify(data.session_signals),
-      ]
+      ],
+      data.store_domain
     );
     return result[0]?.id ?? null;
   } catch (err) {
@@ -254,19 +302,35 @@ export async function logPrediction(data: {
 /**
  * Bind actual outcome to an existing prediction.
  * Called when a conversion event OR timeout arrives.
+ *
+ * SIGNATURE CHANGE: store_domain is now required for RLS isolation.
+ * The Shopify webhook has the domain from x-shopify-shop-domain header.
+ *
+ * RLS: Uses queryForTenant — only updates this store's logs.
  */
 export async function bindOutcome(
-  session_id: string,
-  actual_class: "convert" | "exit",
-  verification_source: "checkout_event" | "timeout" | "manual"
+  session_id:          string,
+  actual_class:        "convert" | "exit",
+  verification_source: "checkout_event" | "timeout" | "manual",
+  store_domain?:       string   // required for RLS; falls back to queryAsService if missing
 ): Promise<void> {
   try {
-    await query(
-      `UPDATE zeno_reality_logs
-       SET actual_class = $1, verification_source = $2
-       WHERE session_id = $3 AND actual_class IS NULL`,
-      [actual_class, verification_source, session_id]
-    );
+    const sql = `
+      UPDATE zeno_reality_logs
+      SET actual_class = $1, verification_source = $2
+      WHERE session_id = $3
+        AND actual_class IS NULL
+    `;
+    const params = [actual_class, verification_source, session_id];
+
+    if (store_domain && store_domain !== "unknown") {
+      // Scoped update — only touches this store's rows (RLS enforced)
+      await queryForTenant(sql, params, store_domain);
+    } else {
+      // Admin/fallback: no domain context → service bypass
+      // This covers timeout cron jobs that don't know the domain
+      await queryAsService(sql, params);
+    }
   } catch (err) {
     console.warn("[calibration] bindOutcome failed:", err);
   }

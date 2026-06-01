@@ -1,0 +1,150 @@
+/* =========================
+   ROOT SYSTEM (Design Tokens)
+========================= */
+
+:root {
+  --bg: #0b0f1a;
+  --card-bg: rgba(255,255,255,0.05);
+  --border: rgba(255,255,255,0.08);
+
+  --primary: #6c5cff;
+  --accent: #00d4ff;
+
+  --text: #ffffff;
+  --text-dim: rgba(255,255,255,0.6);
+
+  --radius: 16px;
+  --blur: 20px;
+
+  --shadow-soft: 0 10px 40px rgba(0,0,0,0.4);
+  --glow: 0 0 30px rgba(108,92,255,0.3);
+
+  --transition: all 0.4s cubic-bezier(0.25,0.8,0.25,1);
+}
+
+/* =========================
+   RESET
+========================= */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* =========================
+   LAYOUT
+========================= */
+
+.app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+.container {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: center;
+
+  height: 100%;
+}
+
+/* =========================
+   BACKGROUND
+========================= */
+
+.background-layer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 30% 30%, #1a1f3a, #0b0f1a);
+  z-index: 0;
+}
+
+/* =========================
+   CARDS
+========================= */
+
+.card,
+.main-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(var(--blur));
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow-soft);
+
+  transition: var(--transition);
+}
+
+.main-card {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-soft), var(--glow);
+}
+
+.card.small {
+  width: 160px;
+}
+
+/* =========================
+   TYPOGRAPHY
+========================= */
+
+.main-number {
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+
+.label {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+.card h2 {
+  font-size: 24px;
+}
+
+/* =========================
+   HOVER (base)
+========================= */
+
+.card:hover,
+.main-card:hover {
+  transform: translateY(-5px) scale(1.03);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6), var(--glow);
+}
+
+/* =========================
+   FLOATING LAYER
+========================= */
+
+.floating-layer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  opacity: 0.6;
+}

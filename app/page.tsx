@@ -1,632 +1,364 @@
-import Script from "next/script";
-import { getSession } from "@/lib/auth";
+"use client";
+import { useState, useEffect } from "react";
+import styles from "./landing.module.css";
 
-export default async function Home() {
-  const session = await getSession();
+const STEPS = [
+  {
+    icon: "🔗",
+    num: "01",
+    title: "Enter URL",
+    desc: "Paste your store URL — no login, no access needed.",
+  },
+  {
+    icon: "🤖",
+    num: "02",
+    title: "AI Analyzes Store",
+    desc: "Zeno fetches your real page data and scans for revenue leaks.",
+  },
+  {
+    icon: "💰",
+    num: "03",
+    title: "Get Zeno Health Score",
+    desc: "Receive a 0–100 score with a breakdown of exactly what to fix.",
+  },
+];
 
-  let htmlContent = `
+const TRUST = [
+  { icon: "⚡", text: "Real analysis in 15 seconds" },
+  { icon: "🔒", text: "No access to your store needed" },
+  { icon: "🎯", text: "AI-powered, not guesswork" },
+];
 
-  <!-- ═══════════════════ NAVBAR ═══════════════════ -->
-  <nav class="navbar" id="navbar">
-    <div class="nav-container">
-      <a href="/waitlist" class="nav-logo">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28"><path d="M50 15 L85 35 L85 75 L50 95 L50 63 L65 54 L65 43 L50 34 L35 43 L35 54 L50 63 L50 95 L15 75 L15 35 Z" fill="#EF4444" /></svg>
-        <span class="logo-text" style="display:flex;align-items:center;font-weight:900;letter-spacing:1px;font-size:1.1rem;"><span style="color:#fff">NOLI</span><span style="color:#EF4444">X</span></span>
-      </a>
-      <ul class="nav-links">
-        <li><a href="#features">FEATURES</a></li>
-        <li><a href="${session ? "/dashboard" : "/waitlist"}">PRICING</a></li>
-        <li><a href="#faq">FAQ</a></li>
-        <li><a href="#blog">BLOG</a></li>
-      </ul>
-      ${session 
-        ? `<a href="/dashboard" class="btn-login" id="loginBtn" style="background:var(--red);color:#fff;">DASHBOARD</a>` 
-        : `<a href="/signup" class="btn-login" style="margin-right:8px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;">SIGN UP</a>
-           <a href="/login" class="btn-login" id="loginBtn">LOGIN</a>`
+type ValidationState =
+  | "idle"
+  | "validating"
+  | "valid"
+  | "invalid"
+  | "unreachable"
+  | "analyzing";
+
+export default function ConvertAIPage() {
+  const [url, setUrl] = useState("");
+  const [validationState, setValidationState] = useState<ValidationState>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [validDomain, setValidDomain] = useState("");
+  const [isShopify, setIsShopify] = useState(false);
+  const [validationDebounce, setValidationDebounce] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  // Live URL format hint (client-side only, before API call)
+  const looksLikeUrl = url.trim().length > 3 && url.includes(".");
+
+  // Clear error when user types
+  function handleUrlChange(val: string) {
+    setUrl(val);
+    if (validationState === "invalid" || validationState === "unreachable") {
+      setValidationState("idle");
+      setErrorMessage("");
+    }
+
+    // Debounced validation after 800ms of no typing
+    if (validationDebounce) clearTimeout(validationDebounce);
+    if (val.trim().length > 4 && val.includes(".")) {
+      const t = setTimeout(() => validateUrl(val, false), 900);
+      setValidationDebounce(t);
+    }
+  }
+
+  async function validateUrl(rawUrl: string, isSubmit: boolean): Promise<boolean> {
+    setValidationState("validating");
+    setErrorMessage("");
+
+    try {
+      const res = await fetch("/api/validate-store", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: rawUrl }),
+      });
+      const data = await res.json();
+
+      if (data.valid) {
+        setValidDomain(data.domain);
+        setIsShopify(data.isShopify ?? false);
+        setValidationState("valid");
+        return true;
+      } else {
+        setValidationState(data.error === "unreachable" || data.error === "timeout" ? "unreachable" : "invalid");
+        setErrorMessage(data.message ?? "Invalid URL. Please enter a valid store website.");
+        return false;
       }
-      <button class="hamburger" id="hamburger">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-  </nav>
+    } catch {
+      setValidationState("invalid");
+      setErrorMessage("Something went wrong. Please try again.");
+      return false;
+    }
+  }
 
-  <!-- ═══════════════════ HERO ═══════════════════ -->`;
+  async function handleAnalyze(e: React.FormEvent) {
+    e.preventDefault();
+    if (!url.trim()) return;
 
-  const heroHTML = `
-  <nav class="navbar" id="navbar">
-    <div class="nav-container">
-      <a href="/waitlist" class="nav-logo">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28"><path d="M50 15 L85 35 L85 75 L50 95 L50 63 L65 54 L65 43 L50 34 L35 43 L35 54 L50 63 L50 95 L15 75 L15 35 Z" fill="#EF4444" /></svg>
-        <span class="logo-text" style="display:flex;align-items:center;font-weight:900;letter-spacing:1px;font-size:1.1rem;"><span style="color:#fff">NOLI</span><span style="color:#EF4444">X</span></span>
-      </a>
-      <ul class="nav-links">
-        <li><a href="#features">FEATURES</a></li>
-        <li><a href="/waitlist">PRICING</a></li>
-        <li><a href="#faq">FAQ</a></li>
-        <li><a href="#blog">BLOG</a></li>
-      </ul>
-      <a href="/waitlist" class="btn-login" id="loginBtn">LOGIN</a>
-      <button class="hamburger" id="hamburger">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-  </nav>
+    // If already validated, go straight to results
+    if (validationState === "valid" && validDomain) {
+      setValidationState("analyzing");
+      const params = new URLSearchParams({ store: validDomain });
+      window.location.href = `/results?${params.toString()}`;
+      return;
+    }
 
-  <!-- ═══════════════════ HERO ═══════════════════ -->
-  <section class="hero" id="home">
-    <div class="hero-bg-glow"></div>
+    // Validate first
+    const ok = await validateUrl(url, true);
+    if (!ok) return;
 
-    <div class="hero-container">
-      <!-- LEFT: Text Content -->
-      <div class="hero-content">
-        <div class="hero-badge reveal-up">
-          <span class="badge-dot"></span>
-          <span>Powered by Zeno AI Operator</span>
-        </div>
-        <h1 class="hero-title reveal-up delay-1">
-          The Future of<br />Revenue<br />Intelligence
-        </h1>
-        <div class="hero-divider reveal-up delay-2"></div>
-        <p class="hero-subtitle reveal-up delay-2">
-          Track, manage, and optimize your e-commerce revenue with Zeno AI in one centralized system..
-        </p>
-        <div class="hero-cta reveal-up delay-3">
-          <a href="/waitlist" class="btn-primary" id="viewPlansBtn">
-            VIEW PLANS
-            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
-          </a>
-          <a href="/waitlist" class="btn-ghost" id="watchDemoBtn">
-            <span class="play-icon">▶</span> Watch Demo
-          </a>
-        </div>
-        <div class="hero-stats reveal-up delay-4">
-          <div class="stat"><span class="stat-num">100+</span><span class="stat-label">Signals</span></div>
-          <div class="stat-divider"></div>
-          <div class="stat"><span class="stat-num">99.9%</span><span class="stat-label">Uptime</span></div>
-          <div class="stat-divider"></div>
-          <div class="stat"><span class="stat-num">50K+</span><span class="stat-label">Marketers</span></div>
-        </div>
-      </div>
+    // Then navigate
+    setValidationState("analyzing");
+    const domain = url.trim().replace(/^https?:\/\//i, "").replace(/^www\./i, "").split("/")[0];
+    const params = new URLSearchParams({ store: domain });
+    window.location.href = `/results?${params.toString()}`;
+  }
 
-      <!-- RIGHT: 3D Isometric Scene -->
-      <div class="hero-visual" id="heroVisual">
-        <!-- Stars/particles canvas -->
-        <canvas class="particles-canvas" id="particlesCanvas"></canvas>
-
-        <!-- Isometric 3D scene -->
-        <div class="iso-scene">
-
-          <!-- Glowing curved platform base -->
-          <div class="iso-platform"></div>
-
-          <!-- Light streaks / beams -->
-          <div class="light-streak streak-1"></div>
-          <div class="light-streak streak-2"></div>
-          <div class="light-streak streak-3"></div>
-          <div class="light-streak streak-4"></div>
-
-          <!-- PANEL A: Big main blue panel with bar chart -->
-          <div class="iso-panel panel-main float-slow">
-            <div class="panel-glow-border"></div>
-            <div class="panel-inner">
-              <div class="panel-top-bar">
-                <div class="ptb-dot cyan"></div>
-                <div class="ptb-dot blue"></div>
-                <div class="ptb-line"></div>
-              </div>
-              <div class="panel-bars">
-                <div class="bar-col"><div class="bar-fill" style="height:38%"></div></div>
-                <div class="bar-col"><div class="bar-fill" style="height:62%"></div></div>
-                <div class="bar-col"><div class="bar-fill" style="height:48%"></div></div>
-                <div class="bar-col"><div class="bar-fill" style="height:78%"></div></div>
-                <div class="bar-col"><div class="bar-fill" style="height:55%"></div></div>
-                <div class="bar-col"><div class="bar-fill bar-active" style="height:94%"></div></div>
-                <div class="bar-col"><div class="bar-fill" style="height:68%"></div></div>
-              </div>
-              <div class="panel-label">Campaign ROI</div>
-            </div>
-          </div>
-
-          <!-- PANEL B: Wave chart (orange/red) -->
-          <div class="iso-panel panel-wave float-medium">
-            <div class="panel-glow-border" style="border-color: rgba(255,107,0,0.4);"></div>
-            <div class="panel-inner">
-              <svg class="wave-svg" viewBox="0 0 200 80" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="wg1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#FF6B00" stop-opacity="0.85"/>
-                    <stop offset="100%" stop-color="#FF2D00" stop-opacity="0.05"/>
-                  </linearGradient>
-                  <filter id="fgw">
-                    <feGaussianBlur stdDeviation="2.5" result="blur"/>
-                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                  </filter>
-                </defs>
-                <path class="anim-wave" d="M0,65 C20,55 35,40 55,35 C75,30 85,45 105,38 C125,31 140,20 160,18 C175,16 188,22 200,20 L200,80 L0,80 Z" fill="url(#wg1)"/>
-                <path class="anim-wave-line" d="M0,70 C15,60 30,50 50,42 C70,34 90,50 110,44 C130,38 150,28 175,26 C185,25 193,28 200,27" fill="none" stroke="#FF2D55" stroke-width="2.5" filter="url(#fgw)"/>
-                <path d="M0,65 C20,55 35,40 55,35 C75,30 85,45 105,38 C125,31 140,20 160,18 C175,16 188,22 200,20" fill="none" stroke="#FF8C00" stroke-width="2"/>
-                <circle cx="160" cy="18" r="4" fill="#FF6B00" filter="url(#fgw)"/>
-                <circle cx="160" cy="18" r="9" fill="#FF6B00" opacity="0.25"/>
-              </svg>
-              <div class="panel-label" style="color:#FF8C00; margin-top:4px;">Conversion Rate</div>
-            </div>
-          </div>
-
-          <!-- PANEL C: Dot grid -->
-          <div class="iso-panel panel-dots float-fast">
-            <div class="panel-inner">
-              <div class="dots-grid" id="dotsGrid"></div>
-              <div class="panel-label">Tracking Pixels</div>
-            </div>
-          </div>
-
-          <!-- PANEL D: Mini accent numbers panel -->
-          <div class="iso-panel panel-accent float-medium" style="animation-delay:-2.1s;">
-            <div class="panel-inner">
-              <div class="acc-row">
-                <div class="acc-item">
-                  <span class="acc-val">142K</span>
-                  <span class="acc-lbl">Clicks</span>
-                </div>
-                <div class="acc-sep"></div>
-                <div class="acc-item">
-                  <span class="acc-val orange">8.4K</span>
-                  <span class="acc-lbl">Convs</span>
-                </div>
-              </div>
-              <div class="acc-sparkline">
-                <svg viewBox="0 0 80 20"><polyline points="0,18 15,12 28,15 42,6 55,9 68,3 80,5" fill="none" stroke="#EF4444" stroke-width="1.5"/></svg>
-              </div>
-            </div>
-          </div>
-
-          <!-- Circular gauge top-right -->
-          <div class="iso-gauge float-slow" style="animation-delay:-1.2s;">
-            <svg viewBox="0 0 100 100" class="gauge-svg">
-              <defs>
-                <filter id="gg">
-                  <feGaussianBlur stdDeviation="3" result="b"/>
-                  <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-                </filter>
-              </defs>
-              <circle cx="50" cy="50" r="43" fill="rgba(0,20,60,0.5)" stroke="rgba(0,210,255,0.12)" stroke-width="1"/>
-              <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(0,210,255,0.1)" stroke-width="10"/>
-              <circle cx="50" cy="50" r="38" fill="none" stroke="#3fc8ff" stroke-width="10"
-                stroke-dasharray="175 64" stroke-dashoffset="58" stroke-linecap="round"
-                filter="url(#gg)" class="gauge-arc"/>
-              <circle cx="50" cy="50" r="25" fill="none" stroke="rgba(0,100,255,0.12)" stroke-width="6"/>
-              <circle cx="50" cy="50" r="25" fill="none" stroke="#0066FF" stroke-width="6"
-                stroke-dasharray="110 47" stroke-dashoffset="35" stroke-linecap="round" class="gauge-inner"/>
-              <circle cx="50" cy="50" r="5" fill="#3fc8ff" filter="url(#gg)"/>
-              <text x="50" y="46" text-anchor="middle" fill="white" font-size="11" font-weight="800" font-family="Inter,sans-serif">87%</text>
-              <text x="50" y="57" text-anchor="middle" fill="#3fc8ff" font-size="5.5" font-family="Inter,sans-serif" letter-spacing="1">EFFICIENCY</text>
-            </svg>
-          </div>
-
-          <!-- Laptop bottom-left -->
-          <div class="iso-laptop float-slow" style="animation-delay:-0.7s;">
-            <div class="laptop-lid">
-              <div class="laptop-screen-content">
-                <div class="lsc-bar" style="width:70%"></div>
-                <div class="lsc-bar" style="width:50%"></div>
-                <div class="lsc-block">
-                  <div class="lsc-sq cyan-sq"></div>
-                  <div class="lsc-sq orange-sq"></div>
-                  <div class="lsc-sq blue-sq"></div>
-                </div>
-              </div>
-            </div>
-            <div class="laptop-base">
-              <div class="laptop-trackpad"></div>
-            </div>
-            <div class="laptop-shadow"></div>
-          </div>
-
-          <!-- Floating orbs -->
-          <div class="iso-orb orb-cyan float-fast" style="animation-delay:-0.3s;"></div>
-          <div class="iso-orb orb-blue float-medium" style="animation-delay:-1.8s;"></div>
-          <div class="iso-orb orb-small float-slow" style="animation-delay:-3s;"></div>
-
-          <!-- Floating data labels -->
-          <div class="data-tag tag-1">
-            <span class="dt-icon">↑</span> +12.4%
-          </div>
-          <div class="data-tag tag-2">
-            📊 \$142K
-          </div>
-          <div class="data-tag tag-3">
-            ⚡ 4.2x ROAS
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    <!-- Scroll indicator -->
-    <div class="scroll-indicator">
-      <div class="scroll-mouse"><div class="scroll-dot"></div></div>
-      <span>Scroll to explore</span>
-    </div>
-  </section>
-
-  <!-- ═══════════════════ FEATURES ═══════════════════ -->
-  <section class="features" id="features">
-    <div class="section-container">
-      <div class="section-header">
-        <div class="section-tag reveal-up">FEATURES</div>
-        <h2 class="section-title reveal-up delay-1">Take Advantage of Our<br />Unique Features</h2>
-        <a href="/waitlist" class="btn-outline reveal-up delay-2" id="viewAllFeaturesBtn">VIEW ALL FEATURES <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></a>
-      </div>
-      <div class="features-grid">
-        <div class="feature-card reveal-up delay-1" id="featureCard1">
-          <div class="feature-icon cyan-icon">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="4" width="8" height="8" rx="2" fill="currentColor" opacity="0.7"/><rect x="16" y="4" width="8" height="8" rx="2" fill="currentColor"/><rect x="4" y="16" width="8" height="8" rx="2" fill="currentColor"/><rect x="16" y="16" width="8" height="8" rx="2" fill="currentColor" opacity="0.7"/></svg>
-          </div>
-          <h3 class="feature-title">Real-time Conversion Scoring</h3>
-          <p class="feature-desc">NOLIX analyzes every visitor to your store in milliseconds, calculating their intent to purchase and identifying hesitation instantly.</p>
-        </div>
-        <div class="feature-card reveal-up delay-2" id="featureCard2">
-          <div class="feature-icon orange-icon">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M4 24l8-12 5 5 7-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <h3 class="feature-title">Dynamic Discount Prevention</h3>
-          <p class="feature-desc">Stop losing margin. NOLIX hides discounts from users who are already willing to buy, and exclusively targets hesitant shoppers.</p>
-        </div>
-        <div class="feature-card reveal-up delay-3" id="featureCard3">
-          <div class="feature-icon purple-icon">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="8" fill="currentColor" opacity="0.7"/><circle cx="14" cy="14" r="4" fill="#fff"/></svg>
-          </div>
-          <h3 class="feature-title">Zeno AI Revenue Operator</h3>
-          <p class="feature-desc">Meet Zeno, an autonomous AI that monitors your campaigns and deploys strategic smart popups to prevent cart abandonment without manual work.</p>
-        </div>
-        <div class="feature-card reveal-up delay-2" id="featureCard4">
-          <div class="feature-icon blue-icon">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="6" y="6" width="16" height="10" rx="2" fill="currentColor" opacity="0.3"/><circle cx="14" cy="18" r="4" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="14" cy="18" r="1.5" fill="currentColor"/></svg>
-          </div>
-          <h3 class="feature-title">Multi User Accounts</h3>
-          <p class="feature-desc">Invite partners or associates to your NOLIX account. Customize and control what they have access to.</p>
-        </div>
-        <div class="feature-card reveal-up delay-3" id="featureCard5">
-          <div class="feature-icon green-icon">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 4L4 9v6c0 5.5 4.3 10.7 10 12 5.7-1.3 10-6.5 10-12V9L14 4z" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.2"/><path d="M10 14l2.5 2.5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <h3 class="feature-title">Military Grade Security</h3>
-          <p class="feature-desc">We utilize the latest security protocols and encryption technology to protect your valuable data against cyber threats.</p>
-        </div>
-        <div class="feature-card reveal-up delay-4" id="featureCard6">
-          <div class="feature-icon red-icon">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="8" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.15"/><path d="M14 10v4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </div>
-          <h3 class="feature-title">Limitless Capabilities</h3>
-          <p class="feature-desc">Setup, Track, Rotate & Split-Test Unlimited Campaigns, Offers, Landing Pages, Paths & More.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════ ABOUT ═══════════════════ -->
-  <section class="about" id="about">
-    <div class="about-bg"></div>
-    <div class="section-container about-container">
-      <div class="about-visual reveal-left">
-        <div class="about-screen">
-          <div class="about-screen-header">
-            <div class="about-dots"><span></span><span></span><span></span></div>
-          </div>
-          <div class="about-screen-body">
-            <div class="ab-row">
-              <div class="ab-platform">
-                <div class="ab-platform-icon" style="background:#1877F2">f</div>
-                <div class="ab-platform-info">
-                  <div class="ab-platform-name">Meta Ads</div>
-                  <div class="ab-bar"><div class="ab-fill" style="width:78%;background:#1877F2"></div></div>
-                </div>
-                <div class="ab-platform-val">\$48K</div>
-              </div>
-              <div class="ab-platform">
-                <div class="ab-platform-icon" style="background:#EA4335">G</div>
-                <div class="ab-platform-info">
-                  <div class="ab-platform-name">Google Ads</div>
-                  <div class="ab-bar"><div class="ab-fill" style="width:65%;background:#EA4335"></div></div>
-                </div>
-                <div class="ab-platform-val">\$39K</div>
-              </div>
-              <div class="ab-platform">
-                <div class="ab-platform-icon" style="background:#010101;border:1px solid #333">T</div>
-                <div class="ab-platform-info">
-                  <div class="ab-platform-name">TikTok Ads</div>
-                  <div class="ab-bar"><div class="ab-fill" style="width:45%;background:#69C9D0"></div></div>
-                </div>
-                <div class="ab-platform-val">\$27K</div>
-              </div>
-              <div class="ab-platform">
-                <div class="ab-platform-icon" style="background:#0A66C2">in</div>
-                <div class="ab-platform-info">
-                  <div class="ab-platform-name">LinkedIn Ads</div>
-                  <div class="ab-bar"><div class="ab-fill" style="width:30%;background:#0A66C2"></div></div>
-                </div>
-                <div class="ab-platform-val">\$18K</div>
-              </div>
-            </div>
-            <div class="ab-total">
-              <span class="ab-total-label">Total Attributed Revenue</span>
-              <span class="ab-total-val">\$142,850</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="about-content reveal-right">
-        <div class="section-tag">ABOUT</div>
-        <h2 class="section-title">What is NOLIX?</h2>
-        <p class="about-text">NOLIX is not a standard tracking tool. It's a living AI Revenue Operator embedded directly in your store. Empowered by Zeno AI, NOLIX observes every single visitor behavior in real time, determining who needs a discount to convert and who doesn't, automatically increasing your profit margin.</p>
-        <ul class="about-list">
-          <li><span class="check cyan">✓</span> AI-driven intent scoring system</li>
-          <li><span class="check cyan">✓</span> Dynamic autonomous popups</li>
-          <li><span class="check cyan">✓</span> Immediate reduction in cart abandonment</li>
-          <li><span class="check cyan">✓</span> Hyper-personalized visitor journey</li>
-        </ul>
-        <a href="/waitlist" class="btn-primary" id="getStartedAboutBtn">GET STARTED <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════ PRICING ═══════════════════ -->
-  <section class="pricing" id="pricing">
-    <div class="section-container">
-      <div class="section-header">
-        <div class="section-tag reveal-up">PRICING</div>
-        <h2 class="section-title reveal-up delay-1">Pricing Plans</h2>
-        <div class="billing-toggle reveal-up delay-2">
-          <span class="toggle-label active" id="monthlyLabel">MONTHLY</span>
-          <button class="toggle-switch" id="billingToggle" role="switch" aria-checked="false">
-            <span class="toggle-thumb"></span>
-          </button>
-          <span class="toggle-label" id="yearlyLabel">YEARLY</span>
-          <span class="save-badge">SAVE 25%</span>
-        </div>
-      </div>
-      <div class="pricing-grid">
-        <div class="pricing-card reveal-up delay-1" id="pricingCardBasic">
-          <div class="plan-header">
-            <div class="plan-name">BASIC</div>
-            <div class="plan-tag" style="color:#EF4444">STARTS HERE</div>
-          </div>
-          <div class="plan-price">
-            <span class="currency">\$</span>
-            <span class="amount" data-monthly="74" data-yearly="55">74</span>
-            <span class="period">PER MONTH</span>
-          </div>
-          <div class="plan-desc">For newly established stores focused on analyzing traffic and converting their first batches of recurring customers.</div>
-          <a href="/waitlist" class="btn-plan" id="basicPlanBtn">GET STARTED <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></a>
-          <ul class="plan-features">
-            <li>✓ 10,000 monthly visitors</li>
-            <li>✓ 1 Website Domain</li>
-            <li>✓ Standard Decision AI</li>
-            <li>✓ Core Popup Themes</li>
-            <li>✓ Basic Revenue Analytics</li>
-          </ul>
-          <div class="plan-section-title">Platform Features</div>
-          <ul class="plan-features">
-            <li>✓ Standard Integrations</li>
-            <li>✓ Automatic Cart Recovery</li>
-            <li>✓ AI Profit Protection</li>
-            <li>✓ Email Support</li>
-          </ul>
-        </div>
-        <div class="pricing-card popular reveal-up delay-2" id="pricingCardAdvanced">
-          <div class="popular-badge">★ POPULAR</div>
-          <div class="plan-header">
-            <div class="plan-name">ADVANCED</div>
-            <div class="plan-tag" style="color:#EF4444">BEST VALUE</div>
-          </div>
-          <div class="plan-price">
-            <span class="currency">\$</span>
-            <span class="amount" data-monthly="149" data-yearly="112">149</span>
-            <span class="period">PER MONTH</span>
-          </div>
-          <div class="plan-desc">For established businesses looking for high conversion rates and advanced Zeno AI revenue optimization.</div>
-          <a href="/waitlist" class="btn-plan popular-btn" id="advancedPlanBtn">GET STARTED <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></a>
-          <ul class="plan-features">
-            <li>✓ 50,000 monthly visitors</li>
-            <li>✓ 3 Website Domains</li>
-            <li>✓ Advanced Behavioral AI</li>
-            <li>✓ A/B Variant Testing</li>
-            <li>✓ Detailed Intent Scoring</li>
-          </ul>
-          <div class="plan-section-title">Includes ALL Basic Features, plus:</div>
-          <ul class="plan-features">
-            <li>✓ Custom Timing Control</li>
-            <li>✓ Fraud User Detection</li>
-            <li>✓ Live Priority Support</li>
-            <li>✓ Zapier & Webhook Sync</li>
-          </ul>
-        </div>
-        <div class="pricing-card reveal-up delay-3" id="pricingCardPremium">
-          <div class="plan-header">
-            <div class="plan-name">ENTERPRISE</div>
-            <div class="plan-tag" style="color:#A855F7">ENTERPRISE</div>
-          </div>
-          <div class="plan-price">
-            <span class="currency">\$</span>
-            <span class="amount" data-monthly="224" data-yearly="168">224</span>
-            <span class="period">PER MONTH</span>
-          </div>
-          <div class="plan-desc">For scaling enterprise teams managing massive traffic that need robust custom AI model training to maximize margins.</div>
-          <a href="/waitlist" class="btn-plan" id="premiumPlanBtn">GET STARTED <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></a>
-          <ul class="plan-features">
-            <li>✓ 500,000+ monthly visitors</li>
-            <li>✓ Unlimited Domains</li>
-            <li>✓ Dedicated AI Agent Training</li>
-            <li>✓ Dedicated Infrastructure</li>
-            <li>✓ Access to Custom Popup HTML</li>
-          </ul>
-          <div class="plan-section-title">Includes ALL Advanced Features, plus:</div>
-          <ul class="plan-features">
-            <li>✓ Access to Developer API</li>
-            <li>✓ SLA Uptime Guarantee</li>
-            <li>✓ Dedicated Account Manager</li>
-            <li>✓ VIP Technical Support</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════ FAQ ═══════════════════ -->
-  <section class="faq" id="faq">
-    <div class="section-container">
-      <div class="section-header">
-        <div class="section-tag reveal-up">FAQ</div>
-        <h2 class="section-title reveal-up delay-1">Frequently Asked<br />Questions</h2>
-      </div>
-      <div class="faq-grid">
-        <div class="faq-item reveal-up delay-1" id="faqItem1">
-          <button class="faq-question" aria-expanded="false">
-            <span>Will NOLIX slow down my store's loading speed?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer">
-            <p>Absolutely not. The NOLIX tracking pixel weighs less than 12KB and loads asynchronously. It will never block your store's render time or affect Web Vitals.</p>
-          </div>
-        </div>
-        <div class="faq-item reveal-up delay-2" id="faqItem2">
-          <button class="faq-question" aria-expanded="false">
-            <span>How does Zeno AI decide when to show a popup?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer">
-            <p>Zeno analyzes over 100 data points including cursor movement, scroll depth, time on page, and traffic source. It then calculates an 'Intent Score'. If the system detects friction or hesitation, it instantly displays a strategic offer to close the sale.</p>
-          </div>
-        </div>
-        <div class="faq-item reveal-up delay-1" id="faqItem3">
-          <button class="faq-question" aria-expanded="false">
-            <span>Does NOLIX work with custom-built stores or just Shopify?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer">
-            <p>NOLIX is platform-agnostic. While we have 1-click apps for Shopify and WooCommerce, you can embed the NOLIX AI script on any custom HTML, Next.js, or React platform.</p>
-          </div>
-        </div>
-        <div class="faq-item reveal-up delay-2" id="faqItem4">
-          <button class="faq-question" aria-expanded="false">
-            <span>What makes NOLIX different from regular popup builders?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer">
-            <p>Traditional tools show popups to everyone, wasting your margins on customers who would've bought anyway. NOLIX only targets high-risk, hesitant buyers using machine learning to maximize conversions without burning money.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════ BLOG ═══════════════════ -->
-  <section class="blog" id="blog">
-    <div class="section-container">
-      <div class="blog-header">
-        <div>
-          <div class="section-tag reveal-up">BLOG</div>
-          <h2 class="section-title reveal-up delay-1">Blog</h2>
-        </div>
-        <a href="/waitlist" class="btn-outline reveal-up delay-1" id="viewAllArticlesBtn">VIEW ALL ARTICLES <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></a>
-      </div>
-      <div class="blog-grid">
-        <div class="blog-card reveal-up delay-1" id="blogCard1">
-          <div class="blog-img" style="background:linear-gradient(135deg,#1e3a5f,#0d1f36)">
-            <div class="blog-img-content"><div class="blog-img-icon">📱</div></div>
-            <div class="blog-category-tag">TIPS & TRICKS</div>
-          </div>
-          <div class="blog-content">
-            <h3 class="blog-title">How to Make Landing Pages Optimized for...</h3>
-            <p class="blog-excerpt">A lander is a crucial part of any performance marketing campaign.</p>
-            <a href="/waitlist" class="blog-read-more" id="readMoreBtn1">Read More →</a>
-          </div>
-        </div>
-        <div class="blog-card reveal-up delay-2" id="blogCard2">
-          <div class="blog-img" style="background:linear-gradient(135deg,#1f3a1e,#0d200d)">
-            <div class="blog-img-content"><div class="blog-img-icon">📋</div></div>
-            <div class="blog-category-tag">CASE STUDY</div>
-          </div>
-          <div class="blog-content">
-            <h3 class="blog-title">Case Study: Why Adextrem Moved From a...</h3>
-            <p class="blog-excerpt">In this case study, you'll learn about AdExtrem and their business needs.</p>
-            <a href="/waitlist" class="blog-read-more" id="readMoreBtn2">Read More →</a>
-          </div>
-        </div>
-        <div class="blog-card reveal-up delay-3" id="blogCard3">
-          <div class="blog-img" style="background:linear-gradient(135deg,#3a1f1e,#200d0d)">
-            <div class="blog-img-content"><div class="blog-img-icon">📈</div></div>
-            <div class="blog-category-tag">TIPS & TRICKS</div>
-          </div>
-          <div class="blog-content">
-            <h3 class="blog-title">How to Improve Banner Ads Optimized for...</h3>
-            <p class="blog-excerpt">Back in the early days of the Internet, advertising was a lot simpler affair.</p>
-            <a href="/waitlist" class="blog-read-more" id="readMoreBtn3">Read More →</a>
-          </div>
-        </div>
-        <div class="blog-card reveal-up delay-4" id="blogCard4">
-          <div class="blog-img" style="background:linear-gradient(135deg,#1e1a3a,#0d0d20)">
-            <div class="blog-img-content"><div class="blog-img-icon">🎬</div></div>
-            <div class="blog-category-tag">WEBINAR</div>
-          </div>
-          <div class="blog-content">
-            <h3 class="blog-title">Online Video Ads in 2025: Notable Trends to Watch</h3>
-            <p class="blog-excerpt">There is no faster growing advertising format in the world than online video.</p>
-            <a href="/waitlist" class="blog-read-more" id="readMoreBtn4">Read More →</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════ CTA BANNER ═══════════════════ -->
-  <section class="cta-banner">
-    <div class="cta-glow"></div>
-    <div class="section-container cta-container">
-      <div class="cta-left reveal-left">
-        <h2 class="cta-title">Ready to Boost Your<br /><span class="cyan-text">Store's Revenue?</span></h2>
-        <p class="cta-sub">Join innovative brands that trust NOLIX AI to secure their margins and dramatically reduce cart abandonment rates.</p>
-      </div>
-      <div class="cta-right reveal-right">
-        <a href="/waitlist" class="btn-primary large" id="ctaStartBtn">START FREE TRIAL <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></a>
-        <p class="cta-note">No credit card required · Cancel anytime</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════ FOOTER ═══════════════════ -->
-  <footer class="footer">
-    <div class="footer-top">
-      <div class="footer-logo">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28"><path d="M50 15 L85 35 L85 75 L50 95 L50 63 L65 54 L65 43 L50 34 L35 43 L35 54 L50 63 L50 95 L15 75 L15 35 Z" fill="#EF4444" /></svg>
-        <span class="logo-text" style="display:flex;align-items:center;font-weight:900;letter-spacing:1px;font-size:1.1rem;"><span style="color:#fff">NOLI</span><span style="color:#EF4444">X</span></span>
-      </div>
-    </div>
-    <nav class="footer-nav">
-      <a href="#features" id="footerFeatures">FEATURES</a>
-      <a href="/waitlist" id="footerPricing">PRICING</a>
-      <a href="#faq" id="footerFaq">FAQ</a>
-      <a href="#blog" id="footerBlog">BLOG</a>
-      <a href="/waitlist" id="footerTerms">TERMS & CONDITIONS</a>
-      <a href="/waitlist" id="footerPrivacy">PRIVACY POLICY</a>
-      <a href="/waitlist" id="footerDisclaimer">DISCLAIMER</a>
-      <a href="/waitlist" id="footerContact">CONTACT US</a>
-    </nav>
-    <div class="footer-bottom">
-      <p>© 2025 NOLIX. All rights reserved.</p>
-    </div>
-  </footer>
-
-  <button class="back-to-top" id="backToTop" aria-label="Back to top">↑</button>
-
-  `;
+  const isLoading = validationState === "validating" || validationState === "analyzing";
+  const hasError = validationState === "invalid" || validationState === "unreachable";
+  const isReady = validationState === "valid";
 
   return (
-    <>
-      <link rel="stylesheet" href="/iso-style.css" />
-      <link rel="stylesheet" href="/iso-animations.css" />
-      <div dangerouslySetInnerHTML={{ __html: htmlContent + heroHTML }} />
-      <Script src="/iso-app.js" strategy="lazyOnload" />
-    </>
+    <div className={styles.page}>
+      {/* ── HEADER ── */}
+      <header className={styles.header}>
+        <div className={styles.container}>
+          <div className={styles.nav}>
+            <div className={styles.logo}>
+              Nolix<span className={styles.logoAccent}>.ai</span>
+            </div>
+            <a href="#analyzer" className={styles.navCta}>
+              Analyze My Store
+            </a>
+          </div>
+        </div>
+      </header>
+
+      {/* ── HERO ── */}
+      <section className={styles.hero} id="analyzer">
+        <div className={styles.heroGlow} aria-hidden />
+        <div className={styles.container}>
+          <div className={styles.heroEyebrow}>
+            <span className={styles.eyebrowDot} />
+            Zeno Health Score — Real Analysis, Not Guesswork
+          </div>
+
+          <h1 className={styles.heroTitle}>
+            Find out your store&apos;s{" "}
+            <span className={styles.gradient}>real revenue leaks</span>
+          </h1>
+          <p className={styles.heroSub}>
+            Enter your store URL and Zeno will fetch real page data, score your
+            store 0–100, and tell you exactly what&apos;s losing you money.
+          </p>
+
+          {/* ── ANALYZER INPUT ── */}
+          <form
+            className={styles.analyzerForm}
+            onSubmit={handleAnalyze}
+            id="analyzer-form"
+          >
+            <div
+              className={`${styles.inputWrap} ${
+                hasError ? styles.inputError : isReady ? styles.inputValid : ""
+              }`}
+            >
+              <span className={styles.inputIcon}>
+                {isLoading ? (
+                  <span className={styles.spinnerSmall} />
+                ) : isReady ? (
+                  "✅"
+                ) : hasError ? (
+                  "❌"
+                ) : (
+                  "🌐"
+                )}
+              </span>
+              <input
+                id="store-url-input"
+                type="text"
+                className={styles.urlInput}
+                placeholder="Enter your store URL (e.g. yourstore.com)"
+                value={url}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                disabled={isLoading}
+              />
+              <button
+                id="analyze-btn"
+                type="submit"
+                className={styles.analyzeBtn}
+                disabled={isLoading || !url.trim()}
+              >
+                {validationState === "validating" ? (
+                  <>
+                    <span className={styles.btnSpinner} />
+                    Checking…
+                  </>
+                ) : validationState === "analyzing" ? (
+                  <>
+                    <span className={styles.btnSpinner} />
+                    Analyzing…
+                  </>
+                ) : isReady ? (
+                  <>View Score →</>
+                ) : (
+                  "Analyze My Store →"
+                )}
+              </button>
+            </div>
+
+            {/* Error message */}
+            {hasError && errorMessage && (
+              <div className={styles.errorBanner} role="alert">
+                <span>⚠️</span>
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Valid confirmation */}
+            {isReady && !hasError && (
+              <div className={styles.validBanner}>
+                <span>✅</span>
+                <span>
+                  <strong>{validDomain}</strong> verified
+                  {isShopify ? " · Shopify store detected" : ""}
+                  {" · Click the button to see your Zeno Health Score"}
+                </span>
+              </div>
+            )}
+
+            {/* Trust badges */}
+            <div className={styles.trustRow}>
+              {TRUST.map((t) => (
+                <div key={t.text} className={styles.trustBadge}>
+                  <span>{t.icon}</span>
+                  <span>{t.text}</span>
+                </div>
+              ))}
+            </div>
+          </form>
+        </div>
+      </section>
+
+      {/* ── 3-STEP FLOW ── */}
+      <section className={styles.stepsSection}>
+        <div className={styles.container}>
+          <div className={styles.sectionLabel}>How It Works</div>
+          <div className={styles.stepsGrid}>
+            {STEPS.map((s, i) => (
+              <div key={s.num} className={styles.stepCard}>
+                <div className={styles.stepTop}>
+                  <div className={styles.stepNum}>{s.num}</div>
+                  <div className={styles.stepIcon}>{s.icon}</div>
+                </div>
+                <h3 className={styles.stepTitle}>{s.title}</h3>
+                <p className={styles.stepDesc}>{s.desc}</p>
+                {i < STEPS.length - 1 && (
+                  <div className={styles.stepArrow} aria-hidden>
+                    →
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── ZENO HEALTH SCORE PREVIEW ── */}
+      <section className={styles.previewSection}>
+        <div className={styles.container}>
+          <div className={styles.sectionLabel}>What You Get</div>
+          <h2 className={styles.previewTitle}>
+            Your Zeno Health Score — a real breakdown of your store
+          </h2>
+          <p className={styles.previewSub}>
+            Not generic advice. Real signals extracted from your actual store page.
+          </p>
+
+          <div className={styles.healthScorePreview}>
+            <div className={styles.healthScoreCard}>
+              <div className={styles.healthScoreLocked}>
+                <div className={styles.scoreLockOverlay}>
+                  🔒 Analyze your store to unlock
+                </div>
+                <div className={styles.scoreCircle}>
+                  <div className={styles.scoreNumber}>??</div>
+                  <div className={styles.scoreLabel}>/ 100</div>
+                </div>
+                <div className={styles.scoreTitle}>Zeno Health Score</div>
+              </div>
+              <div className={styles.scoreBreakdown}>
+                {[
+                  { label: "Conversion Performance", pts: "?/25" },
+                  { label: "Checkout Friction", pts: "?/25" },
+                  { label: "Trust Signals", pts: "?/25" },
+                  { label: "Offer Optimization", pts: "?/25" },
+                ].map((b) => (
+                  <div key={b.label} className={styles.breakdownRow}>
+                    <span className={styles.breakdownLabel}>{b.label}</span>
+                    <span className={styles.breakdownPts}>{b.pts}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.previewIssues}>
+              {[
+                { icon: "🔒", label: "Trust signals audit" },
+                { icon: "🛒", label: "Checkout friction score" },
+                { icon: "📱", label: "Mobile readiness check" },
+                { icon: "💰", label: "Revenue loss estimate" },
+                { icon: "🤖", label: "Zeno's #1 fix for you" },
+              ].map((item) => (
+                <div key={item.label} className={styles.previewIssueRow}>
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                  <span className={styles.previewLock}>🔒</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FINAL CTA ── */}
+      <section className={styles.ctaSection}>
+        <div className={styles.container}>
+          <div className={styles.ctaBox}>
+            <div className={styles.ctaGlow} aria-hidden />
+            <h2 className={styles.ctaTitle}>
+              Stop guessing. Get your real score.
+            </h2>
+            <p className={styles.ctaSub}>
+              Zeno analyzes your actual store page — not industry averages.
+              See your score in 15 seconds.
+            </p>
+            <a href="#analyzer" className={styles.analyzeBtn} id="cta-analyze-btn">
+              Get My Zeno Score — It&apos;s Free →
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer className={styles.footer}>
+        <div className={styles.container}>
+          <div className={styles.logo}>
+            Nolix<span className={styles.logoAccent}>.ai</span>
+          </div>
+          <p className={styles.footerTagline}>
+            AI-Powered Revenue Analysis for E-Commerce Stores
+          </p>
+          <div className={styles.footerLinks}>
+            <a href="/dashboard">Dashboard</a>
+            <a href="#analyzer">Analyze</a>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

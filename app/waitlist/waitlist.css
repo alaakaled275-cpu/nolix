@@ -1,0 +1,521 @@
+/* ═══════════════════════════════════════════════════════
+   NOLIX — Waitlist / Register Page
+   Design System: 100% Home Page DNA
+   ═══════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&display=swap');
+
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Base Page — identical to landing .page ── */
+.page {
+  min-height: 100vh;
+  position: relative;
+  background: #050508;
+  color: #f1f5f9;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── Video Background — extremely subtle, dark dominates ── */
+.videoBg {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0.05;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── Dark Overlay + Purple Radial Glow (matches heroGlow exactly) ── */
+.overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #050508;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.overlay::before {
+  content: '';
+  position: absolute;
+  top: -140px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 720px;
+  height: 520px;
+  background: radial-gradient(ellipse, rgba(124,58,237,0.16) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ── Sticky Header — identical to landing .header ── */
+.topHeader {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  background: rgba(5, 5, 8, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 40px;
+}
+
+/* ── Logo — identical to landing .logo ── */
+.brandWrap {
+  display: flex;
+  align-items: center;
+}
+
+.logoText {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: -0.5px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.logoTextAccent {
+  color: #7c3aed;
+}
+
+/* Hide old elements */
+.logoIcon,
+.logoTextWhite,
+.logoTextX {
+  display: none !important;
+}
+
+/* ── Page Layout ── */
+.contentContainer {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  min-height: 100vh;
+  padding: 100px 40px 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 80px;
+  align-items: center;
+}
+
+/* ── Left Column ── */
+.leftCol {
+  flex: 1;
+  max-width: 540px;
+}
+
+/* Eyebrow pill — identical to landing .heroEyebrow */
+.leftEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  color: #a78bfa;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  margin-bottom: 28px;
+  text-transform: uppercase;
+}
+
+/* Blinking dot before eyebrow — identical to landing .eyebrowDot */
+.leftEyebrow::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7c3aed;
+  animation: blink 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* H1 — identical to landing .heroTitle */
+.headerTitle {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(32px, 4.5vw, 54px);
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.12;
+  letter-spacing: -1.5px;
+  margin-bottom: 20px;
+}
+
+/* Gradient text span — identical to landing .gradient */
+.headerTitle em {
+  font-style: normal;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.headerDesc {
+  font-size: 16px;
+  color: #94a3b8;
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+
+.headerDesc strong {
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+/* Trust badges — identical to landing .trustRow */
+.trustRow {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+
+.trustBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* ── Right Column ── */
+.rightCol {
+  flex: 0 0 440px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ── Form Box — glass card identical to landing .stepCard style ── */
+.formBox {
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Purple glow inside card top */
+.formBox::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  height: 200px;
+  background: radial-gradient(ellipse, rgba(124,58,237,0.09) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.formBox:hover {
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+/* Step Indicator — purple pill identical to eyebrow */
+.stepIndicator {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  color: #a78bfa;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 100px;
+  margin-bottom: 14px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Form Title — identical to landing .previewTitle */
+.formTitle {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: #f8fafc;
+  letter-spacing: -0.5px;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.formSubtitle {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  margin-top: -10px;
+}
+
+/* ── Input — identical to landing .inputWrap / .urlInput ── */
+.inputWrap {
+  position: relative;
+}
+
+.inputField {
+  width: 100%;
+  padding: 13px 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #f1f5f9;
+  font-size: 15px;
+  font-family: 'Inter', sans-serif;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  outline: none;
+}
+
+.inputField:focus {
+  border-color: rgba(124, 58, 237, 0.5);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.inputField::placeholder { color: #475569; }
+.inputField:disabled     { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Submit Button — identical to landing .analyzeBtn ── */
+.submitBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #7c3aed, #9333ea);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer on hover */
+.submitBtn::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transition: left 0.5s ease;
+}
+.submitBtn:hover:not(:disabled)::after { left: 140%; }
+
+.submitBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
+}
+
+.submitBtn:active:not(:disabled) { transform: translateY(0); }
+
+.submitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Slide-up animation for form transitions ── */
+.slideUp {
+  animation: slideUpForm 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes slideUpForm {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Error / Status Message ── */
+.message {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-top: 14px;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.messageError {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+/* ── Quiz Options Grid ── */
+.optionsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+/* Option card — matches landing .stepCard hover */
+.optionCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  color: #94a3b8;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.optionCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(124, 58, 237, 0);
+  transition: background 0.2s;
+  border-radius: inherit;
+}
+
+.optionCard:hover {
+  border-color: rgba(124, 58, 237, 0.3);
+  color: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.optionCard:hover::before {
+  background: rgba(124, 58, 237, 0.04);
+}
+
+/* Selected option */
+.optionCard.selected {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.4);
+  color: #f1f5f9;
+}
+
+/* Radio */
+.optionRadio {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.18s;
+}
+
+.optionCard.selected .optionRadio {
+  border-color: #7c3aed;
+  background: #7c3aed;
+}
+
+.radioInner {
+  width: 7px;
+  height: 7px;
+  background: #fff;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.optionCard.selected .radioInner { opacity: 1; }
+
+/* ── Social Icons ── */
+.socialIcons {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.socialIcon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  color: #64748b;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.socialIcon:hover {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.3);
+  color: #a78bfa;
+  transform: translateY(-1px);
+}
+
+/* ── Wide box for quiz step ── */
+.wideBox {
+  max-width: 560px;
+}
+
+/* ── Fade in for custom text input ── */
+.fade-in {
+  animation: fadeInCustom 0.3s ease both;
+}
+
+@keyframes fadeInCustom {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 960px) {
+  .contentContainer {
+    flex-direction: column;
+    padding: 100px 24px 48px;
+    gap: 48px;
+    align-items: stretch;
+  }
+  .leftCol  { max-width: 100%; }
+  .rightCol { flex: none; width: 100%; }
+  .headerTitle { font-size: clamp(28px, 7vw, 42px); letter-spacing: -1px; }
+  .topHeader   { padding: 0 24px; }
+  .formBox     { padding: 28px 24px; }
+}
+
+@media (max-width: 480px) {
+  .formBox { padding: 24px 20px; border-radius: 16px; }
+  .formTitle { font-size: 22px; }
+  .submitBtn { padding: 13px 20px; font-size: 14px; }
+}
